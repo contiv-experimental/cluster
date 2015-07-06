@@ -1,0 +1,79 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+provision_common = <<SCRIPT
+## setup the environment file. Export the env-vars passed as args to 'vagrant up'
+echo Args passed: [[ $@ ]]
+echo > /etc/profile.d/envvar.sh
+if [ $# -gt 0 ]; then
+    echo "export $@" >> /etc/profile.d/envvar.sh
+fi
+
+source /etc/profile.d/envvar.sh
+
+## instal utilities
+(yum install -y unzip tcpdump net-tools) || exit 1
+
+## install serf
+(cd /tmp && \
+curl -L  https://dl.bintray.com/mitchellh/serf/0.6.4_linux_amd64.zip -o 0.6.4_linux_amd64.zip && \
+unzip 0.6.4_linux_amd64.zip && \
+mv ./serf  /usr/bin/ ) || exit 1
+SCRIPT
+
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+    config.vm.box = "contiv/centos/v1"
+    config.vm.box_url = "https://cisco.box.com/shared/static/1xy47xdg2but03llzhz2tbm5tp1qvw0i.box"
+    #config.vm.box = "contiv/centos6.6"
+    #config.vm.box_url = "https://github.com/tommy-muehle/puppet-vagrant-boxes/releases/download/1.0.0/centos-6.6-x86_64.box"
+    #config.vm.box = "contiv/centos7"
+    #config.vm.box_url = "https://github.com/holms/vagrant-centos7-box/releases/download/7.1.1503.001/CentOS-7.1.1503-x86_64-netboot.box"
+    num_nodes = 1
+    if ENV['CONTIV_NODES'] && ENV['CONTIV_NODES'] != "" then
+        num_nodes = ENV['CONTIV_NODES'].to_i
+    end
+    base_ip = "192.168.2."
+    node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
+    node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" } 
+    num_nodes.times do |n|
+        node_name = node_names[n]
+        node_addr = node_ips[n]
+        config.vm.define node_name do |node|
+            node.vm.hostname = node_name
+            # create an interface for cluster (control) traffic
+            node.vm.network :private_network, ip: node_addr, virtualbox__intnet: "true"
+            node.vm.provider "virtualbox" do |v|
+                # make all nics 'virtio' to take benefit of builtin vlan tag
+                # support, which otherwise needs to be enabled in Intel drivers,
+                # which are used by default by virtualbox
+                v.customize ['modifyvm', :id, '--nictype1', 'virtio']
+                v.customize ['modifyvm', :id, '--nictype2', 'virtio']
+                v.customize ['modifyvm', :id, '--nicpromisc2', 'allow-all']
+            end
+            node.vm.provision "shell" do |s|
+                s.inline = provision_common
+                s.args = ENV['CONTIV_ENV']
+            end
+provision_node = <<SCRIPT
+# reload network-manager connection explicitly inorder to keep the static IP
+# address for eth1. This is fixed in Vagrant v1.7.3.
+# See: https://github.com/mitchellh/vagrant/issues/5590
+(nmcli con reload eth1 &&
+ systemctl restart network) || exit 1
+
+# install necessary iptables to let mdns work
+(iptables -I INPUT -p udp --dport 5353 -i eth1  -j ACCEPT &&
+ iptables -I INPUT -p udp --sport 5353 -i eth1  -j ACCEPT &&
+ iptables -I IN_public_allow -p tcp -j ACCEPT) || exit 1
+
+## start serf
+(echo serf agent -discover mycluster -iface eth1)
+(nohup serf agent -discover mycluster -iface eth1 0<&- &>/tmp/serf.log &) || exit 1
+SCRIPT
+            node.vm.provision "shell" do |s|
+                s.inline = provision_node
+            end
+        end
+    end
+end

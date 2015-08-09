@@ -1,0 +1,6 @@
+---
+
+- hosts: all
+  tasks:
+  - name: cleanup
+    shell: rm /tmp/yay

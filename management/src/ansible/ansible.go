@@ -1,0 +1,56 @@
+package ansible
+
+import (
+	"bytes"
+	"os"
+	"os/exec"
+
+	log "github.com/Sirupsen/logrus"
+)
+
+// Runner facillitaes running a playbook on specifed inventory
+type Runner struct {
+	inventory   Inventory
+	playbook    string
+	user        string
+	privKeyFile string
+}
+
+// NewRunner returns an instance of Runner for specified playbook and inventory
+func NewRunner(inventory Inventory, playbook, user, privKeyFile string) *Runner {
+	return &Runner{
+		inventory:   inventory,
+		playbook:    playbook,
+		user:        user,
+		privKeyFile: privKeyFile,
+	}
+}
+
+// Run runs a playbook and return's it's status as well the stdout and
+// stderr outputs respectively.
+func (r *Runner) Run() ([]byte, []byte, error) {
+	var (
+		hostsFile *os.File
+		cmd       *exec.Cmd
+		stdout    bytes.Buffer
+		stderr    bytes.Buffer
+		err       error
+	)
+	if hostsFile, err = NewInventoryFile(r.inventory); err != nil {
+		return nil, nil, err
+	}
+	defer os.Remove(hostsFile.Name())
+
+	log.Debugf("going to run playbook: %q with hosts file: %q", r.playbook, hostsFile.Name())
+	cmd = exec.Command("ansible-playbook", "-i", hostsFile.Name(), "--user", r.user,
+		"--private-key", r.privKeyFile, r.playbook)
+	// turn off host key checking as we are in non-interactive mode
+	cmd.Env = append(cmd.Env, "ANSIBLE_HOST_KEY_CHECKING=false")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err = cmd.Run(); err != nil {
+		return stdout.Bytes(), stderr.Bytes(), err
+	}
+	log.Debugf("stdout:\n%s\nstderr:\n%s\n", stdout.Bytes(), stderr.Bytes())
+	return stdout.Bytes(), stderr.Bytes(), nil
+}

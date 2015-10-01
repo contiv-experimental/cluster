@@ -1,0 +1,6 @@
+---
+
+- hosts: all
+  tasks:
+  - name: provision
+    shell: touch /tmp/yay

@@ -1,0 +1,6 @@
+---
+
+- hosts: all
+  tasks:
+  - name: upgrade
+    shell: touch /tmp/yay.updated

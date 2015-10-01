@@ -1,0 +1,107 @@
+{
+	"ImportPath": "github.com/contiv/cluster/management/src",
+	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go.net/internal/iana",
+			"Comment": "null-240",
+			"Rev": "937a34c9de13c766c814510f76bca091dee06028"
+		},
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.7.3-13-g81e2611",
+			"Rev": "81e2611f37acccd8cb5e4e1a5a4a5f6c9c7f4537"
+		},
+		{
+			"ImportPath": "github.com/armon/circbuf",
+			"Rev": "f092b4f207b6e5cce0569056fba9e1a2735cb6cf"
+		},
+		{
+			"ImportPath": "github.com/armon/go-metrics",
+			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-143-ga65b733",
+			"Rev": "a65b733b303f0055f8d324d805f393cd3e7a7904"
+		},
+		{
+			"ImportPath": "github.com/golang/mock/gomock",
+			"Rev": "06883d979f10cc178f2716846215c8cf90f9e363"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "215affda49addc4c8ef7e2534915df2c8c35c6cd"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "47e8f450ef38c857cdd922ec08862ca9d65a1c6d"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-msgpack/codec",
+			"Rev": "fa3f63826f7c23912c15263591e65d54d080b458"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-syslog",
+			"Rev": "42a2b573b664dbf281bd48c3cc12c086b17a39ba"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go.net/ipv4",
+			"Rev": "cbad13bf000d0cbdbc71506b26e94bcc72bbe74d"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go.net/ipv6",
+			"Rev": "cbad13bf000d0cbdbc71506b26e94bcc72bbe74d"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/logutils",
+			"Rev": "0dc08b1671f34c4250ce212759ebd880f743d883"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/mdns",
+			"Rev": "2b439d37011456df8ff83a70ffd1cd6046410113"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/memberlist",
+			"Rev": "3636f9694d601b5f68da11676d59cdf8a4c9dfe3"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/command/agent",
+			"Comment": "v0.6.4-27-gffdb036",
+			"Rev": "ffdb036ea0f1f04d0d0b341960eb4175ab2fdcd6"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/serf",
+			"Comment": "v0.6.4-27-gffdb036",
+			"Rev": "ffdb036ea0f1f04d0d0b341960eb4175ab2fdcd6"
+		},
+		{
+			"ImportPath": "github.com/mapuri/serf/client",
+			"Comment": "v0.6.4-27-gefe9d05",
+			"Rev": "efe9d05643ef43462c5c624d90e7c235219e2e86"
+		},
+		{
+			"ImportPath": "github.com/mapuri/serfer",
+			"Rev": "6da307efe1a462e73235287df6591014f9fc52c1"
+		},
+		{
+			"ImportPath": "github.com/miekg/dns",
+			"Rev": "ad7777796ea3016887696a887f16140cee2d7612"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/cli",
+			"Rev": "8102d0ed5ea2709ade1243798785888175f6e415"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/mapstructure",
+			"Rev": "2caf8efc93669b6c43e0441cdc6aed17546c96f3"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "cc04154d65fb9296747569b107cfd05380b1ea3e"
+		}
+	]
+}

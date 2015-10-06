@@ -1,0 +1,13 @@
+language: go
+
+sudo: required
+
+services:
+  - docker
+
+install: true
+
+script:
+  - cd management/src
+  - make build
+  - make unit-test 

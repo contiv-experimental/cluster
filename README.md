@@ -1,3 +1,5 @@
+[![Build Status](https://magnum.travis-ci.com/contiv/cluster.svg?token=8AZXpTLBDvBJDQEGSJky)](https://magnum.travis-ci.com/contiv/cluster)
+
 ##Overview
 Contiv provides an integrated stack of components to launch containerized applications in
 a multi-tenant environment. The stack offers following features:

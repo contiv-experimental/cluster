@@ -1,5 +1,8 @@
-.PHONY: checks check-format check-code deps generate unit-test test-app
+.PHONY: checks check-format check-code clean deps generate unit-test
 
+work_dir:=/go/src/github.com/contiv/cluster/management/src
+docker_run:=docker run --rm -u `id -u`:`id -g` -v `pwd`:$(work_dir) \
+	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.4
 all: build unit-test
 
 deps:
@@ -40,13 +43,13 @@ check-code:
 
 build: checks generate
 	@echo "building..."
-	@godep go install ./...
+	@$(docker_run) godep go install ./...
 	@make clean-generate
 	@echo "done building..."
 
 unit-test: checks generate
 	@echo "running unit-tests"
-	@godep go list ./... | xargs -n1 go test
+	@$(docker_run) sh -c "godep go list ./... | xargs -n1 godep go test"
 	@make clean-generate
 	@echo "done running unit-tests"
 

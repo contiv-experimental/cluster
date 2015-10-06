@@ -3,10 +3,16 @@
 ### 1. checkout and build the code
 ```
 cd $GOPATH/src/github.com/contiv/
-git clone https://github.com/mapuri/cluster.git
+git clone https://github.com/contiv/cluster.git
 cd cluster/management/src
-git checkout collins
 make build
+```
+
+**Note**: `build` is run inside a docker container, so it requires docker to be installed
+and running on the host. To avoid having to use `sudo` for builds you can add the current
+user to `docker` group once by using the following command:
+```
+sudo adduser `id -un` docker
 ```
 
 ### 2. launch three vagrant nodes. 

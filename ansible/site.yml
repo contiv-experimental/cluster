@@ -1,0 +1,26 @@
+---
+# This playbook deploys the configuration based on special purpose host-groups.
+
+# devtest hosts correspond to the dev, lab and vagrant based machines for contiv projects.
+# Here we will install the base packages needed for those environments.
+# XXX: this is used by the 'contiv/build' project right now. But hopefully soon
+# we can use it as replacement for 'contiv/lab' with some more refinements
+- hosts: devtest
+  sudo: true
+  environment: env
+  roles:
+  - base
+
+# service-master hosts correspond to cluster machines that run the master/controller
+# logic of the infra services
+- hosts: service-master
+  sudo: true
+  roles:
+  - etcd
+
+# service-worker hosts correspond to cluster machines that run the worker/driver
+# logic of the infra services.
+- hosts: service-worker
+  sudo: true
+  roles:
+  - etcd

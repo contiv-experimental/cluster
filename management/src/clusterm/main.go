@@ -68,9 +68,9 @@ func readConfig(c *cli.Context) ([]byte, error) {
 			"configure-playbook": "site.yml",
 			"cleanup-playbook": "cleanup.yml",
 			"upgrade-playbook": "rolling-upgrade.yml",
-			"playbook-location": "/vagrant/src/demo/files/",
+			"playbook-location": "/vagrant/vendor/configuration/ansible",
 			"user": "vagrant",
-			"priv_key_file": "/vagrant/src/demo/files/insecure_private_key"
+			"priv_key_file": "/vagrant/management/src/demo/files/insecure_private_key"
 		},
 		"manager" : {
 			"Addr" : "localhost:9999"

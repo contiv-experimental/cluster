@@ -33,6 +33,8 @@ type Subsys interface {
 
 // SubsysAsset denotes a single asset in inventory subsystem
 type SubsysAsset interface {
+	//GetStatus return the current status of the asset
+	GetStatus() (AssetStatus, AssetState)
 	// MarshalJSON satisfies the json marshaller interface and shall encode asset info in json
 	MarshalJSON() ([]byte, error)
 }

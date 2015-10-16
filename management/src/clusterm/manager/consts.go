@@ -21,3 +21,10 @@ const (
 	// to fetch info for all know assets
 	GetNodesInfo = "info/nodes"
 )
+
+const (
+	ansibleMasterGroupName         = "service-master"
+	ansibleNodeNameHostVar         = "node_name"
+	ansibleNodeAddrHostVar         = "node_addr"
+	ansibleOnlineMasterAddrHostVar = "online_master_addr"
+)

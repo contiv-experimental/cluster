@@ -1,0 +1,8 @@
+[Unit]
+Description=Net Master
+After=auditd.service systemd-user-sessions.service time-sync.target etcd.service consul.service
+
+[Service]
+EnvironmentFile=/etc/default/netmaster
+ExecStart=/opt/golang/bin/netmaster $NETMASTER_ARGS
+KillMode=process

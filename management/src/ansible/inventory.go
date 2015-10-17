@@ -11,14 +11,16 @@ type InventoryHost struct {
 	Alias string
 	Addr  string
 	group HostGroup
+	Vars  map[string]string
 }
 
 // NewInventoryHost instantiates and returns ansible inventory host info structure
-func NewInventoryHost(alias, addr, group string) InventoryHost {
+func NewInventoryHost(alias, addr, group string, hostVars map[string]string) InventoryHost {
 	return InventoryHost{
 		Alias: alias,
 		Addr:  addr,
 		group: HostGroup(group),
+		Vars:  hostVars,
 	}
 }
 
@@ -58,7 +60,7 @@ func NewInventoryFile(inventory Inventory) (*os.File, error) {
 
 	templateText := `
 {{/* walk over the groups and print the group name*/}}{{ range $group, $hosts := .Hosts }}[{{ $group }}]
-{{/* walk over the hosts in the group and print the host name and address*/}}{{ range $i, $host := $hosts }}{{ $host.Alias }} ansible_ssh_host={{ $host.Addr }}
+{{/* walk over the hosts in the group and print the host name and address*/}}{{ range $i, $host := $hosts }}{{ $host.Alias }} ansible_ssh_host={{ $host.Addr }} {{ range $var, $val := $host.Vars }} {{ $var }}={{ $val }} {{ end }}
 {{ end }}
 {{ end }}
 	`

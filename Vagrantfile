@@ -14,25 +14,10 @@ if [ $# -gt 0 ]; then
 fi
 
 source /etc/profile.d/envvar.sh
-
-### instal utilities
-(yum install -y unzip tcpdump net-tools epel-release vim lshw) || exit 1
-
-### install serf
-#(cd /tmp && \
-#curl -L  https://dl.bintray.com/mitchellh/serf/0.6.4_linux_amd64.zip -o 0.6.4_linux_amd64.zip && \
-#unzip 0.6.4_linux_amd64.zip && \
-#mv ./serf  /usr/bin/ ) || exit 1
 SCRIPT
 
 # provision script for control vm specific packages
 provision_control = <<SCRIPT
-### install ansible
-#(yum install -y ansible) || exit 1
-
-### install docker
-#(curl -sSL https://get.docker.com/ | sh) || exit 1
-
 ## pass the env-var args to docker. This helps passing stuff like http-proxy etc
 if [ $# -gt 0 ]; then
     (mkdir /usr/lib/systemd/system/docker.service.d) || exit 1
@@ -56,22 +41,22 @@ SCRIPT
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-    config.vm.box = "contiv/centos/v1/custom"
+    #config.vm.box = "contiv/centos71-netplugin"
+    #config.vm.box_version = "0.2.2"
+    config.vm.box = "contiv/centos71-netplugin/custom"
     config.vm.box_url = "https://cisco.box.com/shared/static/v91yrddriwhlbq7mbkgsbbdottu5bafj.box"
-    #config.vm.box = "contiv/centos/v1"
-    #config.vm.box_url = "https://cisco.box.com/shared/static/1xy47xdg2but03llzhz2tbm5tp1qvw0i.box"
     num_nodes = 1
     if ENV['CONTIV_NODES'] && ENV['CONTIV_NODES'] != "" then
         num_nodes = ENV['CONTIV_NODES'].to_i
     end
     base_ip = "192.168.2."
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
-    node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" } 
+    node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" }
     # this is to avoid the issue: https://github.com/mitchellh/vagrant/issues/5186
     config.ssh.insert_key = false
     # use a private key from within the repo for demo environment. This is used for
     # pushing configuration
-    config.ssh.private_key_path = "./src/demo/files/insecure_private_key"
+    config.ssh.private_key_path = "./management/src/demo/files/insecure_private_key"
     num_nodes.times do |n|
         node_name = node_names[n]
         node_addr = node_ips[n]
@@ -94,6 +79,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             # The first vm stimulates the first manually **configured** nodes
             # in a cluster
             if n == 0 then
+                # mount vagrant directory such that symbolic links are copied
+                #config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__args: ["--verbose", "-rLptgoD", "--delete", "-z"]
                 # mount the host's gobin path for cluster related binaries to be available
                 node.vm.synced_folder "#{ENV['GOPATH']}/bin", gobin_dir
                 node.vm.provision "shell" do |s|
@@ -112,8 +99,7 @@ provision_node = <<SCRIPT
 ## install necessary iptables to let mdns work
 (echo setting up iptables for mdns)
 (iptables -I INPUT -p udp --dport 5353 -i eth1  -j ACCEPT && \
- iptables -I INPUT -p udp --sport 5353 -i eth1  -j ACCEPT && \
- iptables -I IN_public_allow -p tcp -j ACCEPT) || exit 1
+ iptables -I INPUT -p udp --sport 5353 -i eth1  -j ACCEPT) || exit 1
 
 ## start serf
 (echo starting serf)

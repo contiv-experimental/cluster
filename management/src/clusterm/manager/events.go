@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
+	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
@@ -39,7 +40,11 @@ func (e *nodeDiscovered) process() error {
 		e.mgr.nodes[name] = &node{
 			// XXX: node's role/group shall come from manager's role assignment logic or
 			// from user configuration
-			cInfo: configuration.NewAnsibleHost(name, e.node.GetMgmtAddress(), "master"),
+			cInfo: configuration.NewAnsibleHost(name, e.node.GetMgmtAddress(),
+				ansibleMasterGroupName, map[string]string{
+					ansibleNodeNameHostVar: name,
+					ansibleNodeAddrHostVar: e.node.GetMgmtAddress(),
+				}),
 		}
 	}
 	node := e.mgr.nodes[name]
@@ -198,10 +203,24 @@ func (e *nodeConfigure) process() error {
 		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
 	}
 
+	hostInfo := e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost)
+	onlineMasterAddr := ""
+	// update the online master address if this is second node that is being commissioned
+	for name, node := range e.mgr.nodes {
+		if name == e.nodeName {
+			// skip this node
+			continue
+		}
+		if status, state := node.iInfo.GetStatus(); status != inventory.Allocated || state != inventory.Discovered {
+			// skip hosts that are not yet provisioned or not in discovered state
+			continue
+		}
+		// found our node
+		onlineMasterAddr = node.mInfo.GetMgmtAddress()
+	}
+	hostInfo.SetVar(ansibleOnlineMasterAddrHostVar, onlineMasterAddr)
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Configure(
-		configuration.SubsysHosts([]configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].cInfo.(configuration.AnsibleHost),
-		}))
+		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}))
 	select {
 	case err := <-errCh:
 		if err != nil {
@@ -262,8 +281,8 @@ func (e *nodeCleanup) process() error {
 	}
 
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Cleanup(
-		configuration.SubsysHosts([]configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].cInfo.(configuration.AnsibleHost),
+		configuration.SubsysHosts([]*configuration.AnsibleHost{
+			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
 		}))
 	select {
 	case err := <-errCh:
@@ -319,8 +338,8 @@ func (e *nodeUpgrade) process() error {
 	}
 
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Upgrade(
-		configuration.SubsysHosts([]configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].cInfo.(configuration.AnsibleHost),
+		configuration.SubsysHosts([]*configuration.AnsibleHost{
+			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
 		}))
 	select {
 	case err := <-errCh:

@@ -42,21 +42,21 @@ And info for a single node can be fetched by using `clusterctl node get <node-na
 clusterctl node commission <node-name>
 ```
 
-Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. For now a simple playbook `src/demo/files/site.yml` is used that creates the file `/tmp/yay` on commissioned node.
+Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Right now commissioning a node configures etcd service on that node. To check it worked, you can run `etcdctl member list` on the node. It shall list the commissioned members in the list.
 
 #### Decommision a node
 ```
 clusterctl node decommission <node-name>
 ```
 
-Decommissioning a node involves stopping and cleaning the configuration for infra services on that node using `ansible` based configuration management.  For now a simple playbook `src/demo/files/cleanup.yml` is used that deletes the file `/tmp/yay` from decommissioned node.
+Decommissioning a node involves stopping and cleaning the configuration for infra services on that node using `ansible` based configuration management.
 
 #### Perform an upgrade
 ```
 clusterctl node maintain <node-name>
 ```
 
-Upgrading a node involves upgrading the configuration for infra services on that node using `ansible` based configuration management. For now a simple playbook `src/demo/files/ansible.yml` is used that touches the file `/tmp/yay` on node being maintined.
+Upgrading a node involves upgrading the configuration for infra services on that node using `ansible` based configuration management.
 
 #### Managing multiple nodes
 

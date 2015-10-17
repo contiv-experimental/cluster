@@ -1,9 +1,8 @@
-.PHONY: checks check-format check-code clean deps generate unit-test
+.PHONY: build checks check-format check-code clean clean-generate deps generate unit-test
 
 work_dir:=/go/src/github.com/contiv/cluster/management/src
 docker_run:=docker run --rm -u `id -u`:`id -g` -v `pwd`:$(work_dir) \
 	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.4
-all: build unit-test
 
 deps:
 	@echo "checking and downloading dependencies"

@@ -8,7 +8,7 @@ obsoleted once we have milestone/release level feature tracking in place.
 have. They shall be tracked through github issues.
 
 - [ ] cluster manager to provide APIs for batched node operations
-- [ ] cluster manager to accept it's configuration as command line arguments
+- [x] cluster manager to accept it's configuration as command line arguments
 - [ ] cluster manager to allow changing some of the configuration without requiring
       a restart.
 - [ ] auto commission of nodes
@@ -22,7 +22,8 @@ have. They shall be tracked through github issues.
     - [ ] ovs
   - [ ] volmaster/volplugin service
     - [ ] ceph
-  - [ ] etcd/consul datastore
+  - [x] etcd datastore
+  - [ ] consul datastore
   - [ ] VIP service for high availability
   - [ ] docker stack including daemon, swarm and orca containers
   - [ ] what else?

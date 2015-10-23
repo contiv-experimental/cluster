@@ -1,8 +1,0 @@
-[Unit]
-Description=Net Plugin
-After=auditd.service systemd-user-sessions.service time-sync.target etcd.service consul.service
-
-[Service]
-EnvironmentFile=/etc/default/netplugin
-ExecStart=/opt/golang/bin/netplugin $NETPLUGIN_ARGS
-KillMode=process

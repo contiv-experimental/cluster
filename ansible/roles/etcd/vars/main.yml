@@ -1,0 +1,7 @@
+---
+# role variable for the etcd service
+
+etcd_client_port1: 2379
+etcd_client_port2: 4001
+etcd_peer_port1: 2380
+etcd_peer_port2: 7001

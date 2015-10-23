@@ -15,12 +15,20 @@
 # logic of the infra services
 - hosts: service-master
   sudo: true
+  environment: env
   roles:
-  - etcd
+  - { role: docker }
+  - { role: etcd }
+  - { role: swarm, run_as: master }
+  - { role: contiv_network, run_as: master }
 
 # service-worker hosts correspond to cluster machines that run the worker/driver
 # logic of the infra services.
 - hosts: service-worker
   sudo: true
+  environment: env
   roles:
-  - etcd
+  - { role: docker }
+  - { role: etcd }
+  - { role: swarm, run_as: worker }
+  - { role: contiv_network, run_as: worker }

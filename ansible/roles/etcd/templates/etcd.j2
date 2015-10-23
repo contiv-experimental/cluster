@@ -1,8 +1,8 @@
 #!/bin/bash
 
-usage="$0 <start|stop>"
+usage="$0 <start|stop|post-stop>"
 if [ $# -ne 1 ]; then
-    echo $usage
+    echo USAGE: $usage
     exit 1
 fi
 
@@ -10,20 +10,20 @@ export ETCD_NAME={{ node_name }}
 export ETCD_DATA_DIR=/var/lib/etcd
 export ETCD_INITIAL_CLUSTER_STATE=new
 export ETCD_INITIAL_CLUSTER_TOKEN=contiv-cluster
-export ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379,http://0.0.0.0:4001
-export ETCD_ADVERTISE_CLIENT_URLS=http://{{ node_addr }}:2379,http://{{ node_addr }}:4001
-export ETCD_INITIAL_ADVERTISE_PEER_URLS=http://{{ node_addr }}:2380,http://{{ node_addr }}:7001
-export ETCD_LISTEN_PEER_URLS=http://{{ node_addr }}:2380
-export ETCD_INITIAL_CLUSTER="{{ node_name }}=http://{{ node_addr }}:2380,{{ node_name }}=http://{{ node_addr }}:7001"
+export ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:{{ etcd_client_port1 }},http://0.0.0.0:{{ etcd_client_port2 }}
+export ETCD_ADVERTISE_CLIENT_URLS=http://{{ node_addr }}:{{ etcd_client_port1 }},http://{{ node_addr }}:{{ etcd_client_port2 }}
+export ETCD_INITIAL_ADVERTISE_PEER_URLS=http://{{ node_addr }}:{{ etcd_peer_port1 }},http://{{ node_addr }}:{{ etcd_peer_port2 }}
+export ETCD_LISTEN_PEER_URLS=http://{{ node_addr }}:{{ etcd_peer_port1 }}
+export ETCD_INITIAL_CLUSTER="{{ node_name }}=http://{{ node_addr }}:{{ etcd_peer_port1 }},{{ node_name }}=http://{{ node_addr }}:{{ etcd_peer_port2 }}"
 
 case $1 in
 start)
     ONLINE_MASTER_ADDR={{ online_master_addr }}
     # if a master address is provided then we need to ad dthe node to existing cluster
-    if [ "$ONLINE_MASTER_ADDR" != "" ]; then
+    if [ "$ONLINE_MASTER_ADDR" != "" -a "$ONLINE_MASTER_ADDR" != "{{ node_addr }}" ]; then
         # XXX: There seems an issue using etcdctl with ETCD_INITIAL_ADVERTISE_PEER_URLS so passing
         # ETCD_LISTEN_PEER_URLS for now
-        out=`etcdctl --peers="{{ online_master_addr }}:2379,{{ online_master_addr }}:4001" \
+        out=`etcdctl --peers="{{ online_master_addr }}:{{ etcd_client_port1 }},{{ online_master_addr }}:{{ etcd_client_port2 }}" \
             member add {{ node_name }} "$ETCD_LISTEN_PEER_URLS"`
         if [ $? -ne 0 ]; then
             echo "failed to add member {{ node_name }}"
@@ -35,7 +35,7 @@ start)
 
     #start etcd
     echo "==> starting etcd with environment:" `env`
-    /usr/bin/etcd > /tmp/etcd.log
+    /usr/bin/etcd
     ;;
 
 stop)
@@ -53,6 +53,6 @@ post-stop)
     ;;
 
 *)
-    echo $usage
+    echo USAGE: $usage
     exit 1
 esac

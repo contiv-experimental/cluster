@@ -14,15 +14,17 @@ type Runner struct {
 	playbook    string
 	user        string
 	privKeyFile string
+	extraVars   string
 }
 
 // NewRunner returns an instance of Runner for specified playbook and inventory
-func NewRunner(inventory Inventory, playbook, user, privKeyFile string) *Runner {
+func NewRunner(inventory Inventory, playbook, user, privKeyFile, extraVars string) *Runner {
 	return &Runner{
 		inventory:   inventory,
 		playbook:    playbook,
 		user:        user,
 		privKeyFile: privKeyFile,
+		extraVars:   extraVars,
 	}
 }
 
@@ -41,9 +43,9 @@ func (r *Runner) Run() ([]byte, []byte, error) {
 	}
 	defer os.Remove(hostsFile.Name())
 
-	log.Debugf("going to run playbook: %q with hosts file: %q", r.playbook, hostsFile.Name())
+	log.Debugf("going to run playbook: %q with hosts file: %q and vars: %s", r.playbook, hostsFile.Name(), r.extraVars)
 	cmd = exec.Command("ansible-playbook", "-i", hostsFile.Name(), "--user", r.user,
-		"--private-key", r.privKeyFile, r.playbook)
+		"--private-key", r.privKeyFile, "--extra-vars", r.extraVars, r.playbook)
 	// turn off host key checking as we are in non-interactive mode
 	cmd.Env = append(cmd.Env, "ANSIBLE_HOST_KEY_CHECKING=false")
 	cmd.Stdout = &stdout

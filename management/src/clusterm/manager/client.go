@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 var httpErrorResp = func(rsrc, status string, body []byte) error {
@@ -21,17 +23,22 @@ func NewClient(url string) *Client {
 	return &Client{url: url, httpC: http.DefaultClient}
 }
 
-func (c *Client) formURL(rsrc string) string {
-	return fmt.Sprintf("http://%s/%s", c.url, rsrc)
+func (c *Client) formURL(rsrc, extraVars string) string {
+	if strings.TrimSpace(extraVars) == "" {
+		return fmt.Sprintf("http://%s/%s", c.url, rsrc)
+	}
+	v := url.Values{}
+	v.Set(ExtraVarsQuery, strings.TrimSpace(extraVars))
+	return fmt.Sprintf("http://%s/%s?%s", c.url, rsrc, v.Encode())
 }
 
-func (c *Client) doPost(rsrc string) error {
+func (c *Client) doPost(rsrc, extraVars string) error {
 	var (
 		err  error
 		resp *http.Response
 	)
 
-	if resp, err = c.httpC.Post(c.formURL(rsrc), "application/json", nil); err != nil {
+	if resp, err = c.httpC.Post(c.formURL(rsrc, extraVars), "application/json", nil); err != nil {
 		return err
 	}
 
@@ -54,7 +61,7 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 		resp *http.Response
 	)
 
-	if resp, err = c.httpC.Get(c.formURL(rsrc)); err != nil {
+	if resp, err = c.httpC.Get(c.formURL(rsrc, "")); err != nil {
 		return nil, err
 	}
 
@@ -70,18 +77,18 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 }
 
 // PostNodeCommission posts the request to commission a node
-func (c *Client) PostNodeCommission(nodeName string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName))
+func (c *Client) PostNodeCommission(nodeName, extraVars string) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), extraVars)
 }
 
 // PostNodeDecommission posts the request to decommission a node
-func (c *Client) PostNodeDecommission(nodeName string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName))
+func (c *Client) PostNodeDecommission(nodeName, extraVars string) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), extraVars)
 }
 
 // PostNodeInMaintenance posts the request to put a node in-maintenance
-func (c *Client) PostNodeInMaintenance(nodeName string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName))
+func (c *Client) PostNodeInMaintenance(nodeName, extraVars string) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), extraVars)
 }
 
 // GetNode requests info of a specified node

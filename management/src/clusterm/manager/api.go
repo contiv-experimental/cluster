@@ -34,11 +34,12 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-func post(postCb func(tag string) error) func(http.ResponseWriter, *http.Request) {
+func post(postCb func(tag string, extraVars string) error) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		tag := vars["tag"]
-		if err := postCb(tag); err != nil {
+		extraVars := r.FormValue(ExtraVarsQuery)
+		if err := postCb(tag, extraVars); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -49,20 +50,41 @@ func post(postCb func(tag string) error) func(http.ResponseWriter, *http.Request
 	}
 }
 
-func (m *Manager) nodeCommission(tag string) error {
-	me := newWaitableEvent(newNodeCommissioned(m, tag))
+func (m *Manager) nodeCommission(tag, extraVars string) error {
+	if extraVars != "" {
+		// extra vars string should be valid json.
+		vars := &map[string]interface{}{}
+		if err := json.Unmarshal([]byte(extraVars), vars); err != nil {
+			return errInvalidJSON(ExtraVarsQuery, err)
+		}
+	}
+	me := newWaitableEvent(newNodeCommissioned(m, tag, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeDecommission(tag string) error {
-	me := newWaitableEvent(newNodeDecommissioned(m, tag))
+func (m *Manager) nodeDecommission(tag, extraVars string) error {
+	if extraVars != "" {
+		// extra vars string should be valid json.
+		vars := &map[string]interface{}{}
+		if err := json.Unmarshal([]byte(extraVars), vars); err != nil {
+			return errInvalidJSON(ExtraVarsQuery, err)
+		}
+	}
+	me := newWaitableEvent(newNodeDecommissioned(m, tag, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeMaintenance(tag string) error {
-	me := newWaitableEvent(newNodeInMaintenance(m, tag))
+func (m *Manager) nodeMaintenance(tag, extraVars string) error {
+	if extraVars != "" {
+		// extra vars string should be valid json.
+		vars := &map[string]interface{}{}
+		if err := json.Unmarshal([]byte(extraVars), vars); err != nil {
+			return errInvalidJSON(ExtraVarsQuery, err)
+		}
+	}
+	me := newWaitableEvent(newNodeInMaintenance(m, tag, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }

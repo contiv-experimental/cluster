@@ -10,6 +10,12 @@ import (
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
+// errInvalidJSON is the error returned when an invalid json value is specified for
+// the ansible extra variables configuration
+var errInvalidJSON = func(name string, err error) error {
+	return fmt.Errorf("%q should be a valid json. Error: %s", name, err)
+}
+
 // event associates an event to corresponding processing logic
 type event interface {
 	String() string
@@ -101,14 +107,16 @@ func (e *nodeDisappeared) process() error {
 }
 
 type nodeCommissioned struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeCommissioned(mgr *Manager, nodeName string) *nodeCommissioned {
+func newNodeCommissioned(mgr *Manager, nodeName, extraVars string) *nodeCommissioned {
 	return &nodeCommissioned{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -122,19 +130,21 @@ func (e *nodeCommissioned) process() error {
 		return err
 	}
 	// trigger node configuration event
-	e.mgr.reqQ <- newNodeConfigure(e.mgr, e.nodeName)
+	e.mgr.reqQ <- newNodeConfigure(e.mgr, e.nodeName, e.extraVars)
 	return nil
 }
 
 type nodeDecommissioned struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeDecommissioned(mgr *Manager, nodeName string) *nodeDecommissioned {
+func newNodeDecommissioned(mgr *Manager, nodeName, extraVars string) *nodeDecommissioned {
 	return &nodeDecommissioned{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -148,19 +158,21 @@ func (e *nodeDecommissioned) process() error {
 		return err
 	}
 	// trigger node clenup event
-	e.mgr.reqQ <- newNodeCleanup(e.mgr, e.nodeName)
+	e.mgr.reqQ <- newNodeCleanup(e.mgr, e.nodeName, e.extraVars)
 	return nil
 }
 
 type nodeInMaintenance struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeInMaintenance(mgr *Manager, nodeName string) *nodeInMaintenance {
+func newNodeInMaintenance(mgr *Manager, nodeName, extraVars string) *nodeInMaintenance {
 	return &nodeInMaintenance{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -174,19 +186,21 @@ func (e *nodeInMaintenance) process() error {
 		return err
 	}
 	// trigger node upgrade event
-	e.mgr.reqQ <- newNodeUpgrade(e.mgr, e.nodeName)
+	e.mgr.reqQ <- newNodeUpgrade(e.mgr, e.nodeName, e.extraVars)
 	return nil
 }
 
 type nodeConfigure struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeConfigure(mgr *Manager, nodeName string) *nodeConfigure {
+func newNodeConfigure(mgr *Manager, nodeName, extraVars string) *nodeConfigure {
 	return &nodeConfigure{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -204,8 +218,13 @@ func (e *nodeConfigure) process() error {
 	}
 
 	hostInfo := e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost)
+	nodeGroup := ansibleMasterGroupName
 	onlineMasterAddr := ""
-	// update the online master address if this is second node that is being commissioned
+	// update the online master address if this is second node that is being commissioned.
+	// Also set the group for second or later nodes to be worker, as right now services like
+	// swarm and netmaster can only have one master node and also we don't yet have a vip
+	// service.
+	// XXX: revisit this when the above changes
 	for name, node := range e.mgr.nodes {
 		if name == e.nodeName {
 			// skip this node
@@ -217,10 +236,12 @@ func (e *nodeConfigure) process() error {
 		}
 		// found our node
 		onlineMasterAddr = node.mInfo.GetMgmtAddress()
+		nodeGroup = ansibleWorkerGroupName
 	}
+	hostInfo.SetGroup(nodeGroup)
 	hostInfo.SetVar(ansibleOnlineMasterAddrHostVar, onlineMasterAddr)
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Configure(
-		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}))
+		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
 	select {
 	case err := <-errCh:
 		if err != nil {
@@ -256,14 +277,16 @@ func (e *nodeConfigure) process() error {
 }
 
 type nodeCleanup struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeCleanup(mgr *Manager, nodeName string) *nodeCleanup {
+func newNodeCleanup(mgr *Manager, nodeName, extraVars string) *nodeCleanup {
 	return &nodeCleanup{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -283,7 +306,7 @@ func (e *nodeCleanup) process() error {
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Cleanup(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
-		}))
+		}), e.extraVars)
 	select {
 	case err := <-errCh:
 		if err != nil {
@@ -303,7 +326,7 @@ func (e *nodeCleanup) process() error {
 			}
 			log.Errorf("cleanup failed.\nstdout:\n%s\nstderr:\n%s\nError: %s", stdout, stderr, err)
 		}
-		// set asset state to decommisioned
+		// set asset state to decommissioned
 		if err1 := e.mgr.inventory.SetAssetDecommissioned(e.nodeName); err1 != nil {
 			// XXX. Log this to collins
 			return err1
@@ -313,14 +336,16 @@ func (e *nodeCleanup) process() error {
 }
 
 type nodeUpgrade struct {
-	mgr      *Manager
-	nodeName string
+	mgr       *Manager
+	nodeName  string
+	extraVars string
 }
 
-func newNodeUpgrade(mgr *Manager, nodeName string) *nodeUpgrade {
+func newNodeUpgrade(mgr *Manager, nodeName, extraVars string) *nodeUpgrade {
 	return &nodeUpgrade{
-		mgr:      mgr,
-		nodeName: nodeName,
+		mgr:       mgr,
+		nodeName:  nodeName,
+		extraVars: extraVars,
 	}
 }
 
@@ -340,7 +365,7 @@ func (e *nodeUpgrade) process() error {
 	stdoutReader, stderrReader, errCh := e.mgr.configuration.Upgrade(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
-		}))
+		}), e.extraVars)
 	select {
 	case err := <-errCh:
 		if err != nil {

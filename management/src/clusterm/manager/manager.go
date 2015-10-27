@@ -60,6 +60,14 @@ func NewManager(config []byte) (*Manager, error) {
 		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
 	}
 
+	if mgrConfig.Ansible.ExtraVariables != "" {
+		vars := &map[string]interface{}{}
+		// extra vars string should be valid json.
+		if err := json.Unmarshal([]byte(mgrConfig.Ansible.ExtraVariables), vars); err != nil {
+			return nil, errInvalidJSON("ansible.ExtraVariables configuration", err)
+		}
+	}
+
 	m := &Manager{
 		monitor:       monitor.NewSerfSubsys(&mgrConfig.Serf),
 		configuration: configuration.NewAnsibleSubsys(&mgrConfig.Ansible),

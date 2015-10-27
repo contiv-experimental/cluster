@@ -16,7 +16,7 @@ have. They shall be tracked through github issues.
       command line
 - [ ] ability to assign roles/group to commissioned nodes both statically and dynamically
 - [ ] harden the node lifecycle especially to deal with failures
-- [ ] ansible playbooks to provision, upgrade, cleanup, verify 
+- [ ] ansible playbooks to provision 
   - [ ] netmaster/netplugin service
     - [ ] host level network configuration like bundling NICs
     - [ ] ovs
@@ -24,6 +24,16 @@ have. They shall be tracked through github issues.
     - [ ] ceph
   - [x] etcd datastore
   - [ ] consul datastore
-  - [ ] VIP service for high availability
-  - [ ] docker stack including daemon, swarm and orca containers
+  - [ ] VIP service for high availability. haproxy??
+  - [x] docker stack including daemon, swarm
+  - [x] orca containers
+  - [ ] cluster manager
+    - [ ] collins
+    - [ ] mysql over ceph storage
   - [ ] what else?
+- [ ] ansible playbooks for upgrade, cleanup and verify the above services
+- [ ] add system-tests
+- [ ] configuration steps for control/first node. The first node is special, so need a
+      special way to commission it. For instance, collins is started as a container on it,
+      we need to figure a way to keep it running when the control node is commissioned
+     (which may restart docker)

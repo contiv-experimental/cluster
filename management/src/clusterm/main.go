@@ -73,7 +73,7 @@ func readConfig(c *cli.Context) ([]byte, error) {
 			"priv_key_file": "/vagrant/management/src/demo/files/insecure_private_key"
 		},
 		"manager" : {
-			"Addr" : "localhost:9999"
+			"Addr" : "localhost:9876"
 		}
 	}`
 	if !c.GlobalIsSet("config") {

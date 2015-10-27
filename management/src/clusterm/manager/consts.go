@@ -20,10 +20,14 @@ const (
 	// GetNodesInfo is the prefix for the GET REST endpoint
 	// to fetch info for all know assets
 	GetNodesInfo = "info/nodes"
+	// ExtraVarsQuery is the key for the query variable used to specify the ansible extra
+	// variables for configuration actions. The variables shall be specified as a json map.
+	ExtraVarsQuery = "extra_vars"
 )
 
 const (
 	ansibleMasterGroupName         = "service-master"
+	ansibleWorkerGroupName         = "service-worker"
 	ansibleNodeNameHostVar         = "node_name"
 	ansibleNodeAddrHostVar         = "node_addr"
 	ansibleOnlineMasterAddrHostVar = "online_master_addr"

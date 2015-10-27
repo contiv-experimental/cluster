@@ -14,6 +14,7 @@ type AnsibleSubsysConfig struct {
 	CleanupPlaybook  string `json:"cleanup-playbook"`
 	UpgradePlaybook  string `json:"upgrade-playbook"`
 	PlaybookLocation string `json:"playbook-location"`
+	ExtraVariables   string `json:"extra-variables"`
 	// XXX: revisit the user credential configuration. We may need to allow other provisions.
 	User        string `json:"user"`
 	PrivKeyFile string `json:"priv_key_file"`
@@ -26,25 +27,30 @@ type AnsibleSubsys struct {
 
 // AnsibleHost describes host related info relevant for ansible inventory
 type AnsibleHost struct {
-	addr string
-	role string
-	tag  string
-	vars map[string]string
+	addr  string
+	group string
+	tag   string
+	vars  map[string]string
 }
 
 // NewAnsibleHost instantiates and returns AnsibleHost
-func NewAnsibleHost(tag, addr, role string, vars map[string]string) *AnsibleHost {
+func NewAnsibleHost(tag, addr, group string, vars map[string]string) *AnsibleHost {
 	return &AnsibleHost{
-		tag:  tag,
-		addr: addr,
-		role: role,
-		vars: vars,
+		tag:   tag,
+		addr:  addr,
+		group: group,
+		vars:  vars,
 	}
 }
 
 // SetVar sets a host variable value
 func (h *AnsibleHost) SetVar(key, val string) {
 	h.vars[key] = val
+}
+
+// SetGroup sets the host's group
+func (h *AnsibleHost) SetGroup(group string) {
+	h.group = group
 }
 
 // NewAnsibleSubsys instantiates and returns AnsibleSubsys
@@ -54,41 +60,55 @@ func NewAnsibleSubsys(config *AnsibleSubsysConfig) *AnsibleSubsys {
 	}
 }
 
-func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook string) (io.Reader, io.Reader, chan error) {
+func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars string) (io.Reader, io.Reader, chan error) {
 	iNodes := []ansible.InventoryHost{}
 	for _, n := range nodes {
-		iNodes = append(iNodes, ansible.NewInventoryHost(n.tag, n.addr, n.role, n.vars))
+		iNodes = append(iNodes, ansible.NewInventoryHost(n.tag, n.addr, n.group, n.vars))
 	}
-	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User, a.config.PrivKeyFile)
-	stdout := []byte{}
-	stderr := []byte{}
+	// Pick extra variables for ansible, if any.
+	// Precedence (top one taking higher precedence):
+	// - variables specified per action (i.e. configure, cleanup, upgrade)
+	// - varaibles as passed in configuration
+	// XXX: would merging the variables be better/desirable instead?
+	vars := "{}"
+	if strings.TrimSpace(extraVars) != "" {
+		vars = strings.TrimSpace(extraVars)
+	} else if strings.TrimSpace(a.config.ExtraVariables) != "" {
+		vars = strings.TrimSpace(a.config.ExtraVariables)
+	}
+	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User, a.config.PrivKeyFile, vars)
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
 	errCh := make(chan error)
-	go func(stdout []byte, stderr []byte, errCh chan error) {
-		var err error
-		if stdout, stderr, err = runner.Run(); err != nil {
+	go func(stdout *bytes.Buffer, stderr *bytes.Buffer, errCh chan error) {
+		if stdout1, stderr1, err := runner.Run(); err != nil {
+			stdout.Write(stdout1)
+			stderr.Write(stderr1)
 			errCh <- err
 			return
 		}
 		errCh <- nil
 		return
-	}(stdout, stderr, errCh)
-	return bytes.NewReader(stdout), bytes.NewReader(stderr), errCh
+	}(&stdout, &stderr, errCh)
+	return &stdout, &stderr, errCh
 }
 
 // Configure triggers the ansible playbook for configuration on specified nodes
-func (a *AnsibleSubsys) Configure(nodes SubsysHosts) (io.Reader, io.Reader, chan error) {
+func (a *AnsibleSubsys) Configure(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
-		a.config.ConfigurePlabook}, "/"))
+		a.config.ConfigurePlabook}, "/"), extraVars)
 }
 
 // Cleanup triggers the ansible playbook for cleanup on specified nodes
-func (a *AnsibleSubsys) Cleanup(nodes SubsysHosts) (io.Reader, io.Reader, chan error) {
+func (a *AnsibleSubsys) Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
-		a.config.CleanupPlaybook}, "/"))
+		a.config.CleanupPlaybook}, "/"), extraVars)
 }
 
 // Upgrade triggers the ansible playbook for upgrade on specified nodes
-func (a *AnsibleSubsys) Upgrade(nodes SubsysHosts) (io.Reader, io.Reader, chan error) {
+func (a *AnsibleSubsys) Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
-		a.config.UpgradePlaybook}, "/"))
+		a.config.UpgradePlaybook}, "/"), extraVars)
 }

@@ -19,8 +19,8 @@ sudo adduser `id -un` docker
 
 **Note:** If you look at the project's `Vagrantfile`, you will notice that all the vagrant nodes (except for the first node) boot up with stock centos7.1 os and a `serf` agent running. `serf` is used as the node discovery service. This is intentional to meet the goal of limiting the amount of services that user needs to setup to start bringing up a cluster and hence making management easier.
 ```
-cd ..
-CONTIV_ENV="http_proxy=$http_proxy https_proxy=$https_proxy" CONTIV_NODES=3 vagrant up
+cd ../..
+CONTIV_NODES=3 vagrant up
 ```
 
 ### 3. login to the first node to manage the cluster
@@ -35,6 +35,7 @@ CONTIV_NODES=3 vagrant ssh cluster-node1
 ```
 clusterctl nodes get
 ```
+
 And info for a single node can be fetched by using `clusterctl node get <node-name>`.
 
 #### Commision a node
@@ -42,7 +43,7 @@ And info for a single node can be fetched by using `clusterctl node get <node-na
 clusterctl node commission <node-name>
 ```
 
-Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Right now commissioning a node configures etcd service on that node. To check it worked, you can run `etcdctl member list` on the node. It shall list the commissioned members in the list.
+Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` groups in [ansible/site.yml](../vendor/configuration/ansible/site.yml) to find out more about the serivces that configured. To quickly check if commisioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
 
 #### Decommision a node
 ```
@@ -63,4 +64,4 @@ Upgrading a node involves upgrading the configuration for infra services on that
 **To be added**. This shall allow commission, decommission and rolling-upgrades of all or a subset of nodes.
 
 ##Want to learn more?
-Read the [design spec](DESIGN.md) and/or see the upcoming features in [roadmap](ROADMAP.md)
+Read the [design spec](DESIGN.md) and/or see the remaining/upcoming items in [roadmap](ROADMAP.md)

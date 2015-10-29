@@ -56,11 +56,6 @@
     content: "export PATH=/opt/golang/bin:/usr/local/go/bin:$PATH\nexport GOPATH=/opt/golang"
 - name: install docker
   shell: creates=/usr/bin/docker curl https://experimental.docker.com | bash
-- name: update docker config
-  lineinfile:
-    create: yes
-    dest: /etc/default/docker
-    line: ". /etc/profile.d/00golang.sh && . /etc/profile.d/envvar.sh"
 - name: add vagrant user to docker group
   user: name=vagrant groups=docker append=yes
 - name: download and install swarm
@@ -105,13 +100,6 @@
     dest: /tmp/consul.zip
 - name: install consul
   shell: "chdir=/tmp creates=/usr/bin/consul unzip /tmp/consul.zip && mv /tmp/consul /usr/bin"
-- name: download serf binary
-  get_url:
-    validate_certs: no
-    url: https://dl.bintray.com/mitchellh/serf/0.6.4_linux_amd64.zip
-    dest: /tmp/0.6.4_linux_amd64.zip
-- name: install serf
-  shell: "chdir=/tmp creates=/usr/bin/serf unzip /tmp/0.6.4_linux_amd64.zip && mv /tmp/serf /usr/bin"
 #- name: setup systemd files for services
 #  copy: src=files/{{ item }} dest=/etc/default/{{ item }}
 #  with_items:

@@ -3,48 +3,12 @@
 
 gobin_dir="/opt/gopath/bin"
 
-# provision script for common packages
-provision_common = <<SCRIPT
-## setup the environment file. Export the env-vars passed as args to 'vagrant up'
-echo Args passed: [[ $@ ]]
-echo > /etc/profile.d/envvar.sh
-echo PATH=$PATH:#{gobin_dir} >> /etc/profile.d/envvar.sh
-if [ $# -gt 0 ]; then
-    echo "export $@" >> /etc/profile.d/envvar.sh
-fi
-
-source /etc/profile.d/envvar.sh
-SCRIPT
-
-# provision script for control vm specific packages
-provision_control = <<SCRIPT
-## pass the env-var args to docker. This helps passing stuff like http-proxy etc
-if [ $# -gt 0 ]; then
-    (mkdir /usr/lib/systemd/system/docker.service.d) || exit 1
-    (echo [Service] > /usr/lib/systemd/system/docker.service.d/http-proxy.conf) || exit 1
-    (IFS=' '; for env in $@; \
-        do echo Environment="$env" >> /usr/lib/systemd/system/docker.service.d/http-proxy.conf; \
-        done) || exit 1
-fi
-
-## start docker service
-(systemctl daemon-reload && service docker restart) || exit 1
-
-## download and start collins container
-(docker run -dit -p 9000:9000 --name collins tumblr/collins) || exit 1
-
-## start cluster manager
-(echo starting cluster manager)
-(sleep 60 && clusterm 0<&- &>/tmp/clusterm.log &) || exit 1
-SCRIPT
-
-
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-    #config.vm.box = "contiv/centos71-netplugin"
-    #config.vm.box_version = "0.2.2"
-    config.vm.box = "contiv/centos71-netplugin/custom"
-    config.vm.box_url = "https://cisco.box.com/shared/static/v91yrddriwhlbq7mbkgsbbdottu5bafj.box"
+    config.vm.box = "contiv/centos71-netplugin"
+    config.vm.box_version = "0.2.3"
+    #config.vm.box = "contiv/centos71-netplugin/custom"
+    #config.vm.box_url = "https://cisco.box.com/shared/static/v91yrddriwhlbq7mbkgsbbdottu5bafj.box"
     num_nodes = 1
     if ENV['CONTIV_NODES'] && ENV['CONTIV_NODES'] != "" then
         num_nodes = ENV['CONTIV_NODES'].to_i
@@ -57,6 +21,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # use a private key from within the repo for demo environment. This is used for
     # pushing configuration
     config.ssh.private_key_path = "./management/src/demo/files/insecure_private_key"
+    host_env = { }
+    if ENV['CONTIV_ENV'] then
+        ENV['CONTIV_ENV'].split(" ").each do |env|
+            e = env.split("=")
+            host_env[e[0]]=e[1]
+        end
+    end
+    puts "Host environment: #{host_env}"
     num_nodes.times do |n|
         node_name = node_names[n]
         node_addr = node_ips[n]
@@ -72,10 +44,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 v.customize ['modifyvm', :id, '--nictype2', 'virtio']
                 v.customize ['modifyvm', :id, '--nicpromisc2', 'allow-all']
             end
-            node.vm.provision "shell" do |s|
-                s.inline = provision_common
-                s.args = ENV['CONTIV_ENV']
-            end
             # The first vm stimulates the first manually **configured** nodes
             # in a cluster
             if n == 0 then
@@ -83,34 +51,17 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 #config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__args: ["--verbose", "-rLptgoD", "--delete", "-z"]
                 # mount the host's gobin path for cluster related binaries to be available
                 node.vm.synced_folder "#{ENV['GOPATH']}/bin", gobin_dir
-                node.vm.provision "shell" do |s|
-                    s.inline = provision_control
-                    s.args = ENV['CONTIV_ENV']
+                node.vm.provision "ansible" do |ansible|
+                    ansible.groups = {
+                        "cluster-control" => [node_name]
+                    }
+                    ansible.playbook = "./vendor/configuration/ansible/site.yml"
+                    ansible.extra_vars = {
+                        env: host_env
+                    }
                 end
                 # expose collins port to host for ease of management
                 node.vm.network "forwarded_port", guest: 9000, host: 9000
-            end
-provision_node = <<SCRIPT
-## set hostname ourselves, somehow vagran't hostname config doesn't
-## work for the first vm
-(echo setting hostname)
-(hostnamectl set-hostname #{node_name}) || exit 1
-
-## install necessary iptables to let mdns work
-(echo setting up iptables for mdns)
-(iptables -I INPUT -p udp --dport 5353 -i eth1  -j ACCEPT && \
- iptables -I INPUT -p udp --sport 5353 -i eth1  -j ACCEPT) || exit 1
-
-## start serf
-(echo starting serf)
-(serf agent -discover mycluster -iface eth1 \
- -tag NodeLabel=`hostname` \
- -tag NodeSerial=`lshw -c system | grep serial | awk '{print $2}'` \
- -tag NodeAddr=#{node_addr} \
- 0<&- &>/tmp/serf.log &) || exit 1
-SCRIPT
-            node.vm.provision "shell" do |s|
-                s.inline = provision_node
             end
         end
     end

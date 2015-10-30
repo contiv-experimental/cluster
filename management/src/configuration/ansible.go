@@ -70,7 +70,7 @@ func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars 
 	// - variables specified per action (i.e. configure, cleanup, upgrade)
 	// - varaibles as passed in configuration
 	// XXX: would merging the variables be better/desirable instead?
-	vars := "{}"
+	vars := `{"env": {}}`
 	if strings.TrimSpace(extraVars) != "" {
 		vars = strings.TrimSpace(extraVars)
 	} else if strings.TrimSpace(a.config.ExtraVariables) != "" {

@@ -33,7 +33,9 @@ have. They shall be tracked through github issues.
   - [ ] what else?
 - [ ] ansible playbooks for upgrade, cleanup and verify the above services
 - [ ] add system-tests
-- [ ] configuration steps for control/first node. The first node is special, so need a
+- [x] configuration steps for control/first node. The first node is special, so need a
       special way to commission it. For instance, collins is started as a container on it,
       we need to figure a way to keep it running when the control node is commissioned
      (which may restart docker)
+     - This is addressed for now by fixing the ansible playbook for docker to not restart
+       it if it is not needed. Revisit in case that is no longer a good fix.

@@ -8,10 +8,6 @@ dummy:
 # INSTALL
 #########
 
-node_name: "{{ ansible_hostname }}"
-node_addr: "{{ ansible_enp0s8.ipv4.address }}" 
-online_master_addr: "192.168.24.10"
-
 #mon_group_name: mons
 #osd_group_name: osds
 #rgw_group_name: rgws

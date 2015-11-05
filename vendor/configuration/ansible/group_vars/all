@@ -1,0 +1,9 @@
+---
+# Variables here are applicable to all host groups
+
+# define an empty environment that can be overridden from command line
+env:
+
+node_name: "{{ ansible_hostname }}"
+node_addr: "{{ hostvars[ansible_hostname]['ansible_' + monitor_interface]['ipv4']['address'] }}"
+online_master_addr: "192.168.24.10"

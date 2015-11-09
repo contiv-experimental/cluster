@@ -30,16 +30,25 @@
   roles:
   - { role: docker }
   - { role: etcd }
+  - { role: ceph-mon, mon_group_name: service-master }
+  - { role: ceph-osd, osd_group_name: service-master }
   - { role: swarm, run_as: master }
   - { role: contiv_network, run_as: master }
+  - { role: contiv_storage, run_as: master }
 
 # service-worker hosts correspond to cluster machines that run the worker/driver
 # logic of the infra services.
 - hosts: service-worker
   sudo: true
   environment: env
+  # XXX: there is a limitation with starting etcd on mulitple workers at same
+  # time, so limiting to one host at a time for now. Revisit once etcd limitation
+  # is addressed.
+  serial: 1
   roles:
   - { role: docker }
   - { role: etcd }
+  - { role: ceph-osd, mon_group_name: service-master, osd_group_name: service-worker }
   - { role: swarm, run_as: worker }
   - { role: contiv_network, run_as: worker }
+  - { role: contiv_storage, run_as: worker }

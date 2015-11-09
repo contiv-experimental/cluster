@@ -55,13 +55,13 @@
     dest: /etc/profile.d/00golang.sh
     content: "export PATH=/opt/golang/bin:/usr/local/go/bin:$PATH\nexport GOPATH=/opt/golang"
 - name: install docker
-  shell: creates=/usr/bin/docker curl https://experimental.docker.com | bash
+  shell: creates=/usr/bin/docker curl https://get.docker.com | bash
 - name: add vagrant user to docker group
   user: name=vagrant groups=docker append=yes
 - name: download and install swarm
   get_url:
     validate_certs: no
-    url: https://cisco.box.com/shared/static/isn9te95op8qgmz9o0al45eps2zmfz7c
+    url: https://cisco.box.com/shared/static/0txiq5h7282hraujk09eleoevptd5jpl
     dest: /usr/bin/swarm
     mode: u=rwx,g=rx,o=rx
 - name: download ovs binaries (debian)

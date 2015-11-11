@@ -1,0 +1,5 @@
+{% if online_master_addr == node_addr or online_master_addr == "" %}
+VOLPLUGIN_ARGS='--debug'
+{% else %}
+VOLPLUGIN_ARGS='--debug --master {{ online_master_addr }}:9005'
+{% endif %}

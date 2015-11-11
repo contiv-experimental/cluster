@@ -1,1 +1,1 @@
-NETPLUGIN_ARGS='--native-integration'
+NETPLUGIN_ARGS='--native-integration --docker-plugin'

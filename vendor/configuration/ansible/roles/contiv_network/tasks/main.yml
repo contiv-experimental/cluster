@@ -4,7 +4,7 @@
 - name: download netmaster and netplugin
   get_url:
     validate_certs: no
-    url: https://github.com/contiv/netplugin/releases/download/v0.0.0-10-20-2015.21-05-36.UTC/netplugin-v0.0.0-10-20-2015.21-05-36.UTC.tar.bz2
+    url: https://github.com/contiv/netplugin/releases/download/v0.0.0-11-07-2015.02-43-45.UTC/netplugin-v0.0.0-11-07-2015.02-43-45.UTC.tar.bz2
     dest: /tmp/contivnet.tar.bz2
 
 - name: install netmaster and netplugin
@@ -33,3 +33,11 @@
 
 - name: start netplugin
   shell: systemctl daemon-reload && systemctl start netplugin
+
+- name: setup netmaster host alias on master
+  shell: echo "{{ node_addr }} netmaster" >> /etc/hosts
+  when: run_as == "master"
+
+- name: setup netmaster host alias on workers
+  shell: echo "{{ online_master_addr }} netmaster" >> /etc/hosts
+  when: run_as == "worker"

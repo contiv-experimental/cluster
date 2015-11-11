@@ -19,7 +19,9 @@
   sudo: true
   environment: env
   roles:
-  - { role: docker }
+  # XXX: docker role depends on a etcd specific variable, so just defining it here
+  # to make it available for cluster-control host-group otherwise this fails
+  - { role: docker, etcd_client_port1: 2379 }
   - { role: contiv_cluster }
 
 # service-master hosts correspond to cluster machines that run the master/controller

@@ -22,6 +22,13 @@
   - { role: docker }
   - { role: contiv_cluster }
 
+- hosts: ceph-hosts
+  sudo: true
+  environment: env
+  roles:
+  - { role: ceph-mon, mon_group_name: ceph-hosts }
+  - { role: ceph-osd, osd_group_name: ceph-hosts }
+
 # service-master hosts correspond to cluster machines that run the master/controller
 # logic of the infra services
 - hosts: service-master
@@ -30,8 +37,6 @@
   roles:
   - { role: docker }
   - { role: etcd }
-  - { role: ceph-mon, mon_group_name: service-master }
-  - { role: ceph-osd, osd_group_name: service-master }
   - { role: swarm, run_as: master }
   - { role: contiv_network, run_as: master }
   - { role: contiv_storage, run_as: master }
@@ -44,7 +49,6 @@
   roles:
   - { role: docker }
   - { role: etcd }
-  - { role: ceph-osd, mon_group_name: service-master, osd_group_name: service-worker }
   - { role: swarm, run_as: worker }
   - { role: contiv_network, run_as: worker }
   - { role: contiv_storage, run_as: worker }

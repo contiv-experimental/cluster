@@ -5,7 +5,7 @@
 - name: download storage service binaries
   get_url:
     validate_certs: no
-    url: https://github.com/mapuri/volplugin/releases/download/v0.0.0-11-03-2015.07-31-30.UTC/volplugin-v0.0.0-11-03-2015.07-31-30.UTC.tar.bz2
+    url: https://github.com/contiv/volplugin/releases/download/v0.0.0-11-10-2015.09-48-09.UTC/volplugin-v0.0.0-11-10-2015.09-48-09.UTC.tar.bz2 
     dest: /tmp/contivvol.tar.bz2
 
 - name: install storage service
@@ -23,7 +23,7 @@
   when: run_as == "master"
 
 - name: start volmaster
-  service: name=volmaster state=started
+  service: name=volmaster state=restarted
   when: run_as == "master"
 
 - name: copy environment file for volsupervisor
@@ -35,14 +35,14 @@
   when: run_as == "master"
 
 - name: start volsupervisor
-  service: name=volsupervisor state=started
+  service: name=volsupervisor state=restarted
   when: run_as == "master"
 
 - name: copy environment file for volplugin
-  copy: src=volplugin dest=/etc/default/volplugin
+  template: src=volplugin.j2 dest=/etc/default/volplugin
 
 - name: copy systemd units for volplugin
   copy: src=volplugin.service dest=/etc/systemd/system/volplugin.service
 
 - name: start volplugin
-  service: name=volplugin state=started
+  service: name=volplugin state=restarted

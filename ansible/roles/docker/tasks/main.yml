@@ -8,6 +8,10 @@
   template: src=env.conf.j2 dest=/etc/systemd/system/docker.service.d/env.conf
   register: docker_env_conf_result
 
+- name: copy systemd units for docker(enable cluster store)
+  template: src=docker-svc.j2 dest=/lib/systemd/system/docker.service
+  register: docker_svc_conf_result
+
 - name: copy systemd units for docker tcp socket settings
   template: src=docker-tcp.j2 dest=/etc/systemd/system/docker-tcp.socket
   register: docker_tcp_conf_result
@@ -18,4 +22,4 @@
 
 - name: restart docker
   shell: systemctl daemon-reload && systemctl stop docker && systemctl start docker-tcp.socket && systemctl start docker
-  when: docker_env_conf_result.changed or docker_tcp_conf_result.changed
+  when: docker_env_conf_result.changed or docker_tcp_conf_result.changed or docker_svc_conf_result.changed

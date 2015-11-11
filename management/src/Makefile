@@ -56,3 +56,40 @@ clean: deps
 	@echo "running clean"
 	@godep go clean -i -v ./...
 	@echo "done running clean"
+
+# We are using date based versioning, so for consistent version during a build
+# we evaluate and set the value of version once in a file and use it in 'tar'
+# and 'release' targets.
+NAME := cluster
+VERSION_FILE := /tmp/$(NAME)-version
+VERSION := `cat $(VERSION_FILE)`
+TAR_EXT := tar.bz2
+TAR_FILENAME := $(NAME)-$(VERSION).$(TAR_EXT)
+TAR_LOC := .
+TAR_FILE := $(TAR_LOC)/$(TAR_FILENAME)
+
+tar: build
+	@echo "building tarball"
+	@echo "v0.0.0-`date -u +%m-%d-%Y.%H-%M-%S.UTC`" > $(VERSION_FILE)
+	@tar -jcf $(TAR_FILE) -C $(GOPATH)/bin clusterctl clusterm
+	@echo "done building tarball"
+
+clean-tar:
+	@echo "cleaning tarball"
+	@rm -f $(TAR_LOC)/*.$(TAR_EXT)
+	@echo "done cleaning tarball"
+
+# GITHUB_USER and GITHUB_TOKEN are needed be set to run github-release
+release: tar
+	@echo "publishing release"
+	@go get github.com/aktau/github-release
+	@latest_tag=$$(git describe --tags `git rev-list --tags --max-count=1`); \
+		comparison="$$latest_tag..HEAD"; \
+		changelog=$$(git log $$comparison --oneline --no-merges --reverse); \
+		if [ -z "$$changelog" ]; then echo "No new changes to release!"; exit 0; fi; \
+		set -x; \
+		( ( github-release -v release -p -r cluster -t $(VERSION) -d "**Changelog**<br/>$$changelog" ) && \
+		( github-release -v upload -r cluster -t $(VERSION) -n $(TAR_FILENAME) -f $(TAR_FILE) || \
+		github-release -v delete -r cluster -t $(VERSION) ) ) || exit 1
+	@make clean-tar
+	@echo "done publishing release"

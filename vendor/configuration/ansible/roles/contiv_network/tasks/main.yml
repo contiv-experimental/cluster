@@ -4,7 +4,7 @@
 - name: download netmaster and netplugin
   get_url:
     validate_certs: no
-    url: https://github.com/contiv/netplugin/releases/download/v0.0.0-11-07-2015.02-43-45.UTC/netplugin-v0.0.0-11-07-2015.02-43-45.UTC.tar.bz2
+    url: https://github.com/contiv/netplugin/releases/download/v0.0.0-11-12-2015.00-55-50.UTC/netplugin-v0.0.0-11-12-2015.00-55-50.UTC.tar.bz2
     dest: /tmp/contivnet.tar.bz2
 
 - name: install netmaster and netplugin
@@ -41,3 +41,10 @@
 - name: setup netmaster host alias on workers
   shell: echo "{{ online_master_addr }} netmaster" >> /etc/hosts
   when: run_as == "worker"
+
+# XXX: need to move the following to correct roles
+- name: install contivctl
+  shell: source /etc/profile.d/00golang.sh && go get github.com/contiv/contivctl
+
+- name: install docker-compose
+  shell: pip install docker-compose

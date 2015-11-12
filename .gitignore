@@ -35,3 +35,12 @@ _testmain.go
 
 # tags
 cscope.*
+
+# vbox disk images
+*.vdi
+
+# ansible run temporary files
+vendor/configuration/ansible/fetch/*
+
+# shared files
+shared/*

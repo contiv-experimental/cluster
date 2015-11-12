@@ -13,6 +13,7 @@
 # XXX: revisit once we have cluster-manager releases available
 - name: download clusterm
   shell: /bin/true
+  ignore_errors: yes
 
 # XXX: revisit once we have cluster-manager releases available
 - name: install clusterm
@@ -20,6 +21,7 @@
   with_items:
     - { name: clusterm }
     - { name: clusterctl }
+  ignore_errors: yes
 
 - name: copy environment file for clusterm
   copy: src=clusterm dest=/etc/default/clusterm

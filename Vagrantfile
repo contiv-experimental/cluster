@@ -105,6 +105,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                     # if we are bringing up services as part of the cluster, then start
                     # master services on first vm
                     ansible_groups["service-master"] = [node_name]
+                    ansible_groups["ceph-hosts"] = [node_name]
                     ansible_extra_vars = ansible_extra_vars.merge(node_vars)
                 end
             elsif service_init then
@@ -114,6 +115,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                     ansible_groups["service-worker"] = [ ]
                 end
                 ansible_groups["service-worker"] << node_name
+                ansible_groups["ceph-hosts"] << node_name
                 ansible_extra_vars = ansible_extra_vars.merge(node_vars)
             end
 

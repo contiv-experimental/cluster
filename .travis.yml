@@ -9,5 +9,9 @@ install: true
 
 script:
   - cd management/src
-  - make build
-  - make unit-test 
+  - >
+    make build &&
+    make unit-test &&
+    if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
+        make release;
+    fi

@@ -116,6 +116,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 ansible_groups["service-worker"] << node_name
                 ansible_extra_vars = ansible_extra_vars.merge(node_vars)
             end
+
+            if service_init
+                # Share anything in `shared` to '/shared' on the cluster hosts.
+                node.vm.synced_folder "shared", "/shared"
+            end
+
             # Run the provisioner after all machines are up
             if n == (num_nodes - 1) then
                 node.vm.provision 'ansible' do |ansible|

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
+	"github.com/imdario/mergo"
 )
 
 type logLevel struct {
@@ -54,31 +56,11 @@ func main() {
 	app.Run(os.Args)
 }
 
-func readConfig(c *cli.Context) ([]byte, error) {
-	defConfig := `{
-		"serf" : {
-			"Addr" : "127.0.0.1:7373"
-		},
-		"collins" : {
-			"URL" : "http://localhost:9000",
-			"User": "blake",
-			"Password": "admin:first"
-		},
-		"ansible" : {
-			"configure-playbook": "site.yml",
-			"cleanup-playbook": "cleanup.yml",
-			"upgrade-playbook": "rolling-upgrade.yml",
-			"playbook-location": "/vagrant/vendor/configuration/ansible",
-			"user": "vagrant",
-			"priv_key_file": "/vagrant/management/src/demo/files/insecure_private_key"
-		},
-		"manager" : {
-			"Addr" : "localhost:9876"
-		}
-	}`
+func readConfig(c *cli.Context) (*manager.Config, error) {
+	mgrConfig := manager.DefaultConfig()
 	if !c.GlobalIsSet("config") {
 		log.Debugf("no configuration was specified, starting with default.")
-		return []byte(defConfig), nil
+		return mgrConfig, nil
 	}
 
 	var (
@@ -101,7 +83,17 @@ func readConfig(c *cli.Context) ([]byte, error) {
 	if config, err = ioutil.ReadAll(reader); err != nil {
 		return nil, err
 	}
-	return config, nil
+
+	userConfig := &manager.Config{}
+	if err := json.Unmarshal(config, userConfig); err != nil {
+		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
+	}
+
+	if err := mergo.MergeWithOverwrite(mgrConfig, userConfig); err != nil {
+		return nil, fmt.Errorf("failed to merge configuration. Error: %s", err)
+	}
+
+	return mgrConfig, nil
 }
 
 func startDaemon(c *cli.Context) {
@@ -111,7 +103,7 @@ func startDaemon(c *cli.Context) {
 
 	var (
 		err    error
-		config []byte
+		config *manager.Config
 	)
 	if config, err = readConfig(c); err != nil {
 		log.Fatalf("failed to read configuration. Error: %s", err)

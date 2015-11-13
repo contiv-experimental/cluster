@@ -48,3 +48,11 @@
 
 - name: install docker-compose
   shell: pip install docker-compose
+
+- name: install contiv-compose
+  shell: >
+     source /etc/profile.d/00golang.sh && \
+     go get github.com/contiv/libcompose && \
+     cd $GOPATH/src/github.com/contiv/libcompose && \
+     make binary && \
+     ln -s `pwd`/bundles/libcompose-cli_linux-amd64 $GOPATH/bin/contiv-compose

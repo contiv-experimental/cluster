@@ -44,10 +44,6 @@
 - hosts: service-worker
   sudo: true
   environment: env
-  # XXX: there is a limitation with starting etcd on mulitple workers at same
-  # time, so limiting to one host at a time for now. Revisit once etcd limitation
-  # is addressed.
-  serial: 1
   roles:
   - { role: docker }
   - { role: etcd, run_as: worker }

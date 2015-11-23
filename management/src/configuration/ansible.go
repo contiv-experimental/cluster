@@ -10,11 +10,11 @@ import (
 
 // AnsibleSubsysConfig describes the configuration for ansible based configuration management subsystem
 type AnsibleSubsysConfig struct {
-	ConfigurePlabook string `json:"configure-playbook"`
-	CleanupPlaybook  string `json:"cleanup-playbook"`
-	UpgradePlaybook  string `json:"upgrade-playbook"`
-	PlaybookLocation string `json:"playbook-location"`
-	ExtraVariables   string `json:"extra-variables"`
+	ConfigurePlaybook string `json:"configure-playbook"`
+	CleanupPlaybook   string `json:"cleanup-playbook"`
+	UpgradePlaybook   string `json:"upgrade-playbook"`
+	PlaybookLocation  string `json:"playbook-location"`
+	ExtraVariables    string `json:"extra-variables"`
 	// XXX: revisit the user credential configuration. We may need to allow other provisions.
 	User        string `json:"user"`
 	PrivKeyFile string `json:"priv_key_file"`
@@ -98,7 +98,7 @@ func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars 
 // Configure triggers the ansible playbook for configuration on specified nodes
 func (a *AnsibleSubsys) Configure(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
-		a.config.ConfigurePlabook}, "/"), extraVars)
+		a.config.ConfigurePlaybook}, "/"), extraVars)
 }
 
 // Cleanup triggers the ansible playbook for cleanup on specified nodes

@@ -79,6 +79,11 @@
 			"Rev": "ffdb036ea0f1f04d0d0b341960eb4175ab2fdcd6"
 		},
 		{
+			"ImportPath": "github.com/imdario/mergo",
+			"Comment": "0.2.0-8-gbb554f9",
+			"Rev": "bb554f9fd6ee4cd190eef868de608ced813aeda1"
+		},
+		{
 			"ImportPath": "github.com/mapuri/serf/client",
 			"Comment": "v0.6.4-27-gefe9d05",
 			"Rev": "efe9d05643ef43462c5c624d90e7c235219e2e86"

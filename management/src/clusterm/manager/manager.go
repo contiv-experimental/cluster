@@ -23,14 +23,42 @@ import (
 	"github.com/mapuri/serf/client"
 )
 
+type clustermConfig struct {
+	Addr string `json:"addr"`
+}
+
 // Config is the configuration to cluster manager daemon
 type Config struct {
 	Serf    client.Config                     `json:"serf"`
 	Collins collins.Config                    `json:"collins"`
 	Ansible configuration.AnsibleSubsysConfig `json:"ansible"`
-	Manager struct {
-		Addr string `json:"addr"`
-	} `json:"manager"`
+	Manager clustermConfig                    `json:"manager"`
+}
+
+// DefaultConfig returns the defautl configuration values for the cluster manager
+// and it's sub-systems
+func DefaultConfig() *Config {
+	return &Config{
+		Serf: client.Config{
+			Addr: "127.0.0.1:7373",
+		},
+		Collins: collins.Config{
+			URL:      "http://localhost:9000",
+			User:     "blake",
+			Password: "admin:first",
+		},
+		Ansible: configuration.AnsibleSubsysConfig{
+			ConfigurePlaybook: "site.yml",
+			CleanupPlaybook:   "cleanup.yml",
+			UpgradePlaybook:   "rolling-upgrade.yml",
+			PlaybookLocation:  "/vagrant/vendor/configuration/ansible",
+			User:              "vagrant",
+			PrivKeyFile:       "/vagrant/management/src/demo/files/insecure_private_key",
+		},
+		Manager: clustermConfig{
+			Addr: "localhost:9876",
+		},
+	}
 }
 
 // node is an aggregate structure that contains information about a cluster
@@ -54,30 +82,29 @@ type Manager struct {
 
 // NewManager initializes and returns an instance of the Manager. It returns nil
 // if a failure occurs as part of initialization.
-func NewManager(config []byte) (*Manager, error) {
-	mgrConfig := &Config{}
-	if err := json.Unmarshal(config, mgrConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
+func NewManager(config *Config) (*Manager, error) {
+	if config == nil {
+		return nil, fmt.Errorf("nil config passed")
 	}
 
-	if mgrConfig.Ansible.ExtraVariables != "" {
+	if config.Ansible.ExtraVariables != "" {
 		vars := &map[string]interface{}{}
 		// extra vars string should be valid json.
-		if err := json.Unmarshal([]byte(mgrConfig.Ansible.ExtraVariables), vars); err != nil {
+		if err := json.Unmarshal([]byte(config.Ansible.ExtraVariables), vars); err != nil {
 			return nil, errInvalidJSON("ansible.ExtraVariables configuration", err)
 		}
 	}
 
 	m := &Manager{
-		monitor:       monitor.NewSerfSubsys(&mgrConfig.Serf),
-		configuration: configuration.NewAnsibleSubsys(&mgrConfig.Ansible),
+		monitor:       monitor.NewSerfSubsys(&config.Serf),
+		configuration: configuration.NewAnsibleSubsys(&config.Ansible),
 		reqQ:          make(chan event, 100),
-		addr:          mgrConfig.Manager.Addr,
+		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
 	}
 
 	var err error
-	if m.inventory, err = inventory.NewCollinsSubsys(&mgrConfig.Collins); err != nil {
+	if m.inventory, err = inventory.NewCollinsSubsys(&config.Collins); err != nil {
 		return nil, err
 	}
 

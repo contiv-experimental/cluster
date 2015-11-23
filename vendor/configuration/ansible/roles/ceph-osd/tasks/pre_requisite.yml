@@ -19,3 +19,14 @@
     group=root
     mode=600
   when: cephx
+
+- name: copy client.admin key to `osd` only nodes as well to allow volplugin run rbd commands
+  copy: >
+    src=fetch/{{ fsid }}/etc/ceph/ceph.client.admin.keyring
+    dest=/etc/ceph/ceph.client.admin.keyring
+    owner=root
+    group=root
+    mode=600
+  when:
+      cephx and
+      '{{ mon_group_name }}' not in {{ group_names }}

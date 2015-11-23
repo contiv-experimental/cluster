@@ -8,4 +8,4 @@
   copy: src=etcd.service dest=/etc/systemd/system/etcd.service
 
 - name: start etcd
-  shell: systemctl daemon-reload && systemctl start etcd
+  service: name=etcd state=started

@@ -11,6 +11,7 @@ end
 
 service_init = false
 if ENV['CONTIV_SRV_INIT'] then
+    # in demo mode we initialize and bring up the services
     service_init = true
 end
 
@@ -35,7 +36,8 @@ ceph_vars = {
 ansible_groups = { }
 ansible_playbook = "./vendor/configuration/ansible/site.yml"
 ansible_extra_vars = {
-    "env" => host_env
+    "env" => host_env,
+    "service_vip" => "#{base_ip}252"
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 
@@ -56,7 +58,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         node_name = node_names[n]
         node_addr = node_ips[n]
         node_vars = {
-            "online_master_addr" => node_ips[0],
+            "etcd_master_addr" => node_ips[0],
+            "etcd_master_name" => node_names[0],
         }
         config.vm.define node_name do |node|
             node.vm.hostname = node_name
@@ -92,6 +95,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             if n == 0 then
                 # mount vagrant directory such that symbolic links are copied
                 #node.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__args: ["--verbose", "-rLptgoD", "--delete", "-z"]
+
                 # mount the host's gobin path for cluster related binaries to be available
                 node.vm.synced_folder "#{ENV['GOPATH']}/bin", gobin_dir
 
@@ -100,28 +104,28 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                 # add this node to cluster-control host group
                 ansible_groups["cluster-control"] = [node_name]
-
-                if service_init then
-                    # if we are bringing up services as part of the cluster, then start
-                    # master services on first vm
-                    ansible_groups["service-master"] = [node_name]
-                    ansible_groups["ceph-hosts"] = [node_name]
-                    ansible_extra_vars = ansible_extra_vars.merge(node_vars)
-                end
-            elsif service_init then
-                # if we are bringing up services as part of the cluster, then start
-                # worker services on rest of the vms
-                if ansible_groups["service-worker"] == nil then
-                    ansible_groups["service-worker"] = [ ]
-                end
-                ansible_groups["service-worker"] << node_name
-                ansible_groups["ceph-hosts"] << node_name
-                ansible_extra_vars = ansible_extra_vars.merge(node_vars)
             end
 
             if service_init
                 # Share anything in `shared` to '/shared' on the cluster hosts.
                 node.vm.synced_folder "shared", "/shared"
+
+                ansible_extra_vars = ansible_extra_vars.merge(node_vars)
+                if n == 0 then
+                    # if we are bringing up services as part of the cluster, then start
+                    # master services on the first vm
+                    if ansible_groups["service-master"] == nil then
+                        ansible_groups["service-master"] = [ ]
+                    end
+                    ansible_groups["service-master"] << node_name
+                else
+                    # if we are bringing up services as part of the cluster, then start
+                    # worker services on rest of the vms
+                    if ansible_groups["service-worker"] == nil then
+                        ansible_groups["service-worker"] = [ ]
+                    end
+                    ansible_groups["service-worker"] << node_name
+                end
             end
 
             # Run the provisioner after all machines are up

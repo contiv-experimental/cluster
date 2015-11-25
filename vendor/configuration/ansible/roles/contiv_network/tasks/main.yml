@@ -34,13 +34,8 @@
 - name: start netplugin
   shell: systemctl daemon-reload && systemctl start netplugin
 
-- name: setup netmaster host alias on master
-  shell: echo "{{ node_addr }} netmaster" >> /etc/hosts
-  when: run_as == "master"
-
-- name: setup netmaster host alias on workers
-  shell: echo "{{ online_master_addr }} netmaster" >> /etc/hosts
-  when: run_as == "worker"
+- name: setup netmaster host alias
+  shell: echo "{{ service_vip }} netmaster" >> /etc/hosts
 
 # XXX: need to move the following to correct roles
 - name: install contivctl

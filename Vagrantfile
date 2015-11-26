@@ -34,7 +34,7 @@ ceph_vars = {
 }
 
 ansible_groups = { }
-ansible_playbook = "./vendor/configuration/ansible/site.yml"
+ansible_playbook = "ansible/site.yml"
 ansible_extra_vars = {
     "env" => host_env,
     "service_vip" => "#{base_ip}252"

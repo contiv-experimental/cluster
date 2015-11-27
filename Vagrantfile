@@ -28,9 +28,11 @@ ceph_vars = {
     "fsid" => "4a158d27-f750-41d5-9e7f-26ce4c9d2d45",
     "monitor_secret" => "AQAWqilTCDh7CBAAawXt6kyTgLFCxSvJhTEmuw==",
     "journal_size" => 100,
+    "journal_collocation" => 'true',
     "monitor_interface" => "eth1",
     "cluster_network" => "#{base_ip}0/24",
-    "public_network" => "#{base_ip}0/24"
+    "public_network" => "#{base_ip}0/24",
+    "devices" => "[ '/dev/sdb', '/dev/sdc' ]"
 }
 
 ansible_groups = { }
@@ -44,7 +46,7 @@ ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.box = "contiv/centos71-netplugin"
-    config.vm.box_version = "0.3.1"
+    config.vm.box_version = "0.4.4"
     #config.vm.box = "contiv/centos71-netplugin/custom"
     #config.vm.box_url = "https://cisco.box.com/shared/static/v91yrddriwhlbq7mbkgsbbdottu5bafj.box"
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }

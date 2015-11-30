@@ -1,7 +1,7 @@
 package ansible
 
 import (
-	"bytes"
+	"io"
 	"os"
 	"os/exec"
 
@@ -30,16 +30,14 @@ func NewRunner(inventory Inventory, playbook, user, privKeyFile, extraVars strin
 
 // Run runs a playbook and return's it's status as well the stdout and
 // stderr outputs respectively.
-func (r *Runner) Run() ([]byte, []byte, error) {
+func (r *Runner) Run(stdout, stderr io.Writer) error {
 	var (
 		hostsFile *os.File
 		cmd       *exec.Cmd
-		stdout    bytes.Buffer
-		stderr    bytes.Buffer
 		err       error
 	)
 	if hostsFile, err = NewInventoryFile(r.inventory); err != nil {
-		return nil, nil, err
+		return err
 	}
 	defer os.Remove(hostsFile.Name())
 
@@ -48,11 +46,10 @@ func (r *Runner) Run() ([]byte, []byte, error) {
 		"--private-key", r.privKeyFile, "--extra-vars", r.extraVars, r.playbook)
 	// turn off host key checking as we are in non-interactive mode
 	cmd.Env = append(cmd.Env, "ANSIBLE_HOST_KEY_CHECKING=false")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	if err = cmd.Run(); err != nil {
-		return stdout.Bytes(), stderr.Bytes(), err
+		return err
 	}
-	log.Debugf("stdout:\n%s\nstderr:\n%s\n", stdout.Bytes(), stderr.Bytes())
-	return stdout.Bytes(), stderr.Bytes(), nil
+	return nil
 }

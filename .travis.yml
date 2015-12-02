@@ -12,6 +12,6 @@ script:
   - >
     make build &&
     make unit-test &&
-    if [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
+    if [ "${TRAVIS_PULL_REQUEST}" = "false" -a "${TRAVIS_BRANCH}" = "master" ]; then
         make release;
     fi

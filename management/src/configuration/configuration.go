@@ -8,9 +8,9 @@ import "io"
 type Subsys interface {
 	// Configure triggers the configuration logic on specified set of nodes.
 	// It return a error channel that the caller can wait on to get completion status.
-	Configure(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error)
-	Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error)
-	Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, io.Reader, chan error)
+	Configure(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
+	Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
+	Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
 }
 
 // SubsysHost denotes a host in configuration subsystem

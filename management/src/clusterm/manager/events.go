@@ -1,8 +1,10 @@
 package manager
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
@@ -208,6 +210,27 @@ func (e *nodeConfigure) String() string {
 	return fmt.Sprintf("nodeConfigure: %s", e.nodeName)
 }
 
+// helper function to log the stream of bytes from a reader while waiting on
+// the error channel. It returns on first error received on the channel
+func logOutputAndReturnStatus(r io.Reader, errCh chan error) error {
+	s := bufio.NewScanner(r)
+	ticker := time.Tick(50 * time.Millisecond)
+	for {
+		select {
+		case err := <-errCh:
+			for s.Scan() {
+				log.Infof("%s", s.Bytes())
+			}
+			return err
+		case <-ticker:
+			// scan any available output while waiting
+			if s.Scan() {
+				log.Infof("%s", s.Bytes())
+			}
+		}
+	}
+}
+
 func (e *nodeConfigure) process() error {
 	if _, ok := e.mgr.nodes[e.nodeName]; !ok {
 		return fmt.Errorf("the node %q doesn't exist", e.nodeName)
@@ -240,38 +263,21 @@ func (e *nodeConfigure) process() error {
 	}
 	hostInfo.SetGroup(nodeGroup)
 	hostInfo.SetVar(ansibleOnlineMasterAddrHostVar, onlineMasterAddr)
-	stdoutReader, stderrReader, errCh := e.mgr.configuration.Configure(
+	outReader, errCh := e.mgr.configuration.Configure(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			// XXX. Log configuration failure to collins
-			var (
-				stdout []byte
-				stderr []byte
-				err1   error
-			)
-			if stdout, err1 = ioutil.ReadAll(stdoutReader); err1 != nil {
-				stdout = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			if stderr, err1 = ioutil.ReadAll(stderrReader); err1 != nil {
-				stderr = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			log.Errorf("configuration failed.\nstdout:\n%s\nstderr:\n%s\nError: %s", stdout, stderr, err)
-			// set asset state back to unallocated
-			if err1 := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err1 != nil {
-				// XXX. Log this to collins
-				return err1
-			}
-			return err
-		}
-		// set asset state to commissioned
-		if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
+	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
+		log.Errorf("configuration failed. Error: %s", err)
+		// set asset state back to unallocated
+		if err1 := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err1 != nil {
 			// XXX. Log this to collins
-			return err
+			return err1
 		}
+		return err
+	}
+	// set asset state to commissioned
+	if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
+		// XXX. Log this to collins
+		return err
 	}
 	return nil
 }
@@ -303,36 +309,19 @@ func (e *nodeCleanup) process() error {
 		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
 	}
 
-	stdoutReader, stderrReader, errCh := e.mgr.configuration.Cleanup(
+	outReader, errCh := e.mgr.configuration.Cleanup(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
 		}), e.extraVars)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			// XXX. Log cleanup failure to collins and continue
-			var (
-				stdout []byte
-				stderr []byte
-				err1   error
-			)
-			if stdout, err1 = ioutil.ReadAll(stdoutReader); err1 != nil {
-				stdout = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			if stderr, err1 = ioutil.ReadAll(stderrReader); err1 != nil {
-				stderr = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			log.Errorf("cleanup failed.\nstdout:\n%s\nstderr:\n%s\nError: %s", stdout, stderr, err)
-		}
-		// set asset state to decommissioned
-		if err1 := e.mgr.inventory.SetAssetDecommissioned(e.nodeName); err1 != nil {
-			// XXX. Log this to collins
-			return err1
-		}
+	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
+		log.Errorf("cleanup failed. Error: %s", err)
+	}
+	// set asset state to decommissioned
+	if err := e.mgr.inventory.SetAssetDecommissioned(e.nodeName); err != nil {
+		// XXX. Log this to collins
 		return err
 	}
+	return nil
 }
 
 type nodeUpgrade struct {
@@ -362,42 +351,25 @@ func (e *nodeUpgrade) process() error {
 		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
 	}
 
-	stdoutReader, stderrReader, errCh := e.mgr.configuration.Upgrade(
+	outReader, errCh := e.mgr.configuration.Upgrade(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
 		}), e.extraVars)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			// XXX. Log upgrade failure to collins and continue
-			var (
-				stdout []byte
-				stderr []byte
-				err1   error
-			)
-			if stdout, err1 = ioutil.ReadAll(stdoutReader); err1 != nil {
-				stdout = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			if stderr, err1 = ioutil.ReadAll(stderrReader); err1 != nil {
-				stderr = []byte{}
-				log.Errorf("readall failed. Error: %s", err1)
-			}
-			log.Errorf("upgrade failed.\nstdout:\n%s\nstderr:\n%s\nError: %s", stdout, stderr, err)
-			// set asset state to provision-failed
-			if err1 := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err1 != nil {
-				// XXX. Log this to collins
-				return err1
-			}
-			return err
-		}
-		// set asset state to commissioned
-		if err1 := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err1 != nil {
+	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
+		log.Errorf("upgrade failed. Error: %s", err)
+		// set asset state to provision-failed
+		if err1 := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err1 != nil {
 			// XXX. Log this to collins
 			return err1
 		}
 		return err
 	}
+	// set asset state to commissioned
+	if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
+		// XXX. Log this to collins
+		return err
+	}
+	return nil
 }
 
 // waitableEvent provides a way to wait for event's processing to complete

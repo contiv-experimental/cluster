@@ -120,18 +120,9 @@ func (sm *SerfSubsys) Start() error {
 	sm.discoveredCb(events)
 
 	// start serf event loop for member join and leave events.
-	errCh := make(chan error)
-	go func(errCh chan error) {
-		err := sm.router.InitSerfFromConfigAndServe(sm.config)
-		if err != nil {
-			errCh <- err
-		}
-	}(errCh)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			log.Errorf("error occured in event loop. Error: %s", err)
-		}
+	if err := sm.router.InitSerfFromConfigAndServe(sm.config); err != nil {
+		log.Errorf("error occured in event loop. Error: %s", err)
 		return err
 	}
+	return nil
 }

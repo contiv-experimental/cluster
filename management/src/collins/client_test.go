@@ -7,7 +7,17 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	. "gopkg.in/check.v1"
 )
+
+// Hook up gocheck into the "go test" runner.
+func Test(t *testing.T) { TestingT(t) }
+
+type collinsSuite struct {
+}
+
+var _ = Suite(&collinsSuite{})
 
 var failureReturner = http.HandlerFunc(
 	func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +47,7 @@ func getHTTPTestClientAndServer(handler http.HandlerFunc) (*httptest.Server, *ht
 	return srvr, httpC
 }
 
-func TestCreateAsset(t *testing.T) {
+func (s *collinsSuite) TestCreateAsset(c *C) {
 	tag := "test"
 	status := "somestatus"
 	srvr, httpC := getHTTPTestClientAndServer(http.HandlerFunc(
@@ -55,12 +65,11 @@ func TestCreateAsset(t *testing.T) {
 		client: httpC,
 	}
 
-	if err := client.CreateAsset(tag, status); err != nil {
-		t.Fatalf("create asset failed. Error: %s", err)
-	}
+	err := client.CreateAsset(tag, status)
+	c.Assert(err, IsNil)
 }
 
-func TestCreateAssetStatusFailure(t *testing.T) {
+func (s *collinsSuite) TestCreateAssetStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -68,15 +77,12 @@ func TestCreateAssetStatusFailure(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "unexpected. Response body"
-	if err := client.CreateAsset("test", "status"); err == nil {
-		t.Fatalf("create asset succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("create asset failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := ".*unexpected. Response body.*test failure.*"
+	err := client.CreateAsset("test", "status")
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestCreateAssetStatusAlreadyExists(t *testing.T) {
+func (s *collinsSuite) TestCreateAssetStatusAlreadyExists(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(alreadyExistsReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -84,12 +90,11 @@ func TestCreateAssetStatusAlreadyExists(t *testing.T) {
 		client: httpC,
 	}
 
-	if err := client.CreateAsset("test", "status"); err != nil {
-		t.Fatalf("create asset failed. Error: %s", err)
-	}
+	err := client.CreateAsset("test", "status")
+	c.Assert(err, IsNil)
 }
 
-func TestGetAsset(t *testing.T) {
+func (s *collinsSuite) TestGetAsset(c *C) {
 	tag := "test"
 	status := "status"
 	state := "state"
@@ -132,16 +137,12 @@ func TestGetAsset(t *testing.T) {
 		client: httpC,
 	}
 
-	if rcvdAsset, err := client.GetAsset(tag); err != nil {
-		t.Fatalf("get asset failed. Error: %s", err)
-	} else if rcvdAsset.Tag != asset.Tag ||
-		rcvdAsset.Status != asset.Status ||
-		rcvdAsset.State.Name != asset.State.Name {
-		t.Fatalf("mismatching asset value. expctd: %+v rcvd: %+v", asset, rcvdAsset)
-	}
+	rcvdAsset, err := client.GetAsset(tag)
+	c.Assert(err, IsNil)
+	c.Assert(rcvdAsset, DeepEquals, asset)
 }
 
-func TestGetAssetStatusFailure(t *testing.T) {
+func (s *collinsSuite) TestGetAssetStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -149,15 +150,12 @@ func TestGetAssetStatusFailure(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "unexpected. Response body"
-	if _, err := client.GetAsset("test"); err == nil {
-		t.Fatalf("get asset succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("get asset failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := ".*unexpected. Response body.*test failure.*"
+	_, err := client.GetAsset("test")
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestGetAssetInvalidResponse(t *testing.T) {
+func (s *collinsSuite) TestGetAssetInvalidResponse(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(okReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -165,15 +163,12 @@ func TestGetAssetInvalidResponse(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "failed to unmarshal response"
-	if _, err := client.GetAsset("test"); err == nil {
-		t.Fatalf("get asset succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("get asset failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := "failed to unmarshal response.*"
+	_, err := client.GetAsset("test")
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestGetAllAssets(t *testing.T) {
+func (s *collinsSuite) TestGetAllAssets(c *C) {
 	tag := "test"
 	status := "status"
 	state := "state"
@@ -228,18 +223,13 @@ func TestGetAllAssets(t *testing.T) {
 		client: httpC,
 	}
 
-	if rcvdAssets, err := client.GetAllAssets(); err != nil {
-		t.Fatalf("get all assets failed. Error: %s", err)
-	} else if len(rcvdAssets) != 1 {
-		t.Fatalf("unexpected number of assets. exptd: 1, rcvd: %d", len(rcvdAssets))
-	} else if rcvdAssets[0].Tag != asset.Tag ||
-		rcvdAssets[0].Status != asset.Status ||
-		rcvdAssets[0].State.Name != asset.State.Name {
-		t.Fatalf("mismatching asset value. expctd: %+v rcvd: %+v", asset, rcvdAssets[0])
-	}
+	rcvdAssets, err := client.GetAllAssets()
+	c.Assert(err, IsNil)
+	c.Assert(len(rcvdAssets), Equals, 1)
+	c.Assert(rcvdAssets[0], DeepEquals, asset)
 }
 
-func TestGetAllAssetsStatusFailure(t *testing.T) {
+func (s *collinsSuite) TestGetAllAssetsStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -247,15 +237,12 @@ func TestGetAllAssetsStatusFailure(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "unexpected. Response body"
-	if _, err := client.GetAllAssets(); err == nil {
-		t.Fatalf("get all assets succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("get all assets failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := ".*unexpected. Response body.*test failure.*"
+	_, err := client.GetAllAssets()
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestGetAllAssetsInvalidResponse(t *testing.T) {
+func (s *collinsSuite) TestGetAllAssetsInvalidResponse(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(okReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -263,15 +250,12 @@ func TestGetAllAssetsInvalidResponse(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "failed to unmarshal response"
-	if _, err := client.GetAllAssets(); err == nil {
-		t.Fatalf("get all assets succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("get all assets failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := "failed to unmarshal response.*"
+	_, err := client.GetAllAssets()
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestCreateState(t *testing.T) {
+func (s *collinsSuite) TestCreateState(c *C) {
 	name := "test"
 	description := "somedescription"
 	status := "somestatus"
@@ -294,12 +278,11 @@ func TestCreateState(t *testing.T) {
 		client: httpC,
 	}
 
-	if err := client.CreateState(name, description, status); err != nil {
-		t.Fatalf("create state failed. Error: %s", err)
-	}
+	err := client.CreateState(name, description, status)
+	c.Assert(err, IsNil)
 }
 
-func TestCreateStateStatusFailure(t *testing.T) {
+func (s *collinsSuite) TestCreateStateStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -307,15 +290,12 @@ func TestCreateStateStatusFailure(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "unexpected. Response body"
-	if err := client.CreateState("test", "status", "description"); err == nil {
-		t.Fatalf("create state succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("create state failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := ".*unexpected. Response body.*test failure.*"
+	err := client.CreateState("test", "status", "description")
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestCreateStateStatusAlreadyExists(t *testing.T) {
+func (s *collinsSuite) TestCreateStateStatusAlreadyExists(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(alreadyExistsReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -323,12 +303,11 @@ func TestCreateStateStatusAlreadyExists(t *testing.T) {
 		client: httpC,
 	}
 
-	if err := client.CreateState("test", "status", "description"); err != nil {
-		t.Fatalf("create state failed. Error: %s", err)
-	}
+	err := client.CreateState("test", "status", "description")
+	c.Assert(err, IsNil)
 }
 
-func TestSetAssetStatus(t *testing.T) {
+func (s *collinsSuite) TestSetAssetStatus(c *C) {
 	tag := "test"
 	status := "status"
 	state := "state"
@@ -352,12 +331,11 @@ func TestSetAssetStatus(t *testing.T) {
 		client: httpC,
 	}
 
-	if err := client.SetAssetStatus(tag, status, state, reason); err != nil {
-		t.Fatalf("set status failed. Error: %s", err)
-	}
+	err := client.SetAssetStatus(tag, status, state, reason)
+	c.Assert(err, IsNil)
 }
 
-func TestSetAssetStatusStatusFailure(t *testing.T) {
+func (s *collinsSuite) TestSetAssetStatusStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
@@ -365,10 +343,7 @@ func TestSetAssetStatusStatusFailure(t *testing.T) {
 		client: httpC,
 	}
 
-	errStr := "unexpected. Response body"
-	if err := client.SetAssetStatus("test", "status", "state", "reason"); err == nil {
-		t.Fatalf("set status succeeded. expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("set status failed with unexpected error. rcvd: %s", err)
-	}
+	errStr := ".*unexpected. Response body.*test failure.*"
+	err := client.SetAssetStatus("test", "status", "state", "reason")
+	c.Assert(err, ErrorMatches, errStr)
 }

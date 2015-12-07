@@ -7,85 +7,90 @@ import (
 
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/golang/mock/gomock"
+	. "gopkg.in/check.v1"
 )
 
-func TestNewAsset(t *testing.T) {
-	ctrl := gomock.NewController(t)
+// Hook up gocheck into the "go test" runner.
+func Test(t *testing.T) { TestingT(t) }
+
+type inventorySuite struct {
+}
+
+var _ = Suite(&inventorySuite{})
+
+func (s *inventorySuite) TestNewAsset(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
+	mClient := NewMockCollinsClient(ctrl)
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Unallocated,
 		prevStatus: Incomplete,
 		state:      Discovered,
 		prevState:  Unknown,
 	}
-	mClient := NewMockCollinsClient(ctrl)
 	mClient.EXPECT().CreateAsset(eAsset.name, eAsset.status.String())
 	mClient.EXPECT().SetAssetStatus(eAsset.name, eAsset.status.String(),
 		eAsset.state.String(), description[eAsset.state])
-	if rAsset, err := NewAsset(mClient, eAsset.name); err != nil {
-		t.Fatalf("new asset failed. Error: %s", err)
-	} else if rAsset.name != eAsset.name ||
-		rAsset.status != eAsset.status ||
-		rAsset.state != eAsset.state ||
-		rAsset.prevStatus != eAsset.prevStatus ||
-		rAsset.prevState != eAsset.prevState {
-		t.Fatalf("mismatching asset info. expctd: %+v rcvd: %+v", eAsset, rAsset)
-	}
+	rAsset, err := NewAsset(mClient, eAsset.name)
+	c.Assert(err, IsNil)
+	c.Assert(rAsset, DeepEquals, eAsset)
 }
 
-func TestNewAssetCreateFailure(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestNewAssetCreateFailure(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
+	mClient := NewMockCollinsClient(ctrl)
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Unallocated,
 		prevStatus: Incomplete,
 		state:      Discovered,
 		prevState:  Unknown,
 	}
-	mClient := NewMockCollinsClient(ctrl)
 	mClient.EXPECT().CreateAsset(eAsset.name,
 		eAsset.status.String()).Return(fmt.Errorf("test error"))
-	if _, err := NewAsset(mClient, eAsset.name); err == nil {
-		t.Fatalf("new asset succeeded, expected to fail.")
-	}
+	_, err := NewAsset(mClient, eAsset.name)
+	c.Assert(err, NotNil)
 }
 
-func TestNewAssetSetStatusFailure(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestNewAssetSetStatusFailure(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
+	mClient := NewMockCollinsClient(ctrl)
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Unallocated,
 		prevStatus: Incomplete,
 		state:      Discovered,
 		prevState:  Unknown,
 	}
-	mClient := NewMockCollinsClient(ctrl)
 	mClient.EXPECT().CreateAsset(eAsset.name, eAsset.status.String())
 	mClient.EXPECT().SetAssetStatus(eAsset.name, eAsset.status.String(),
 		eAsset.state.String(), description[eAsset.state]).Return(fmt.Errorf("test error"))
-	if _, err := NewAsset(mClient, eAsset.name); err == nil {
-		t.Fatalf("new asset succeeded, expected to fail.")
-	}
+	_, err := NewAsset(mClient, eAsset.name)
+	c.Assert(err, NotNil)
 }
 
-func TestNewAssetFromCollins(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestNewAssetFromCollins(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
+	mClient := NewMockCollinsClient(ctrl)
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Provisioned,
 		prevStatus: Incomplete,
 		state:      Disappeared,
 		prevState:  Unknown,
 	}
-	mClient := NewMockCollinsClient(ctrl)
 	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{
 		Tag:    eAsset.name,
 		Status: eAsset.status.String(),
@@ -95,37 +100,31 @@ func TestNewAssetFromCollins(t *testing.T) {
 			Name: strings.ToUpper(eAsset.state.String()),
 		},
 	}, nil)
-	if rAsset, err := NewAssetFromCollins(mClient, eAsset.name); err != nil {
-		t.Fatalf("new asset failed. Error: %s", err)
-	} else if rAsset.name != eAsset.name ||
-		rAsset.status != eAsset.status ||
-		rAsset.state != eAsset.state ||
-		rAsset.prevStatus != eAsset.prevStatus ||
-		rAsset.prevState != eAsset.prevState {
-		t.Fatalf("mismatching asset info. expctd: %+v rcvd: %+v", eAsset, rAsset)
-	}
+	rAsset, err := NewAssetFromCollins(mClient, eAsset.name)
+	c.Assert(err, IsNil)
+	c.Assert(rAsset, DeepEquals, eAsset)
 }
 
-func TestNewAssetFromCollinsGetFailure(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestNewAssetFromCollinsGetFailure(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
+	mClient := NewMockCollinsClient(ctrl)
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Provisioned,
 		prevStatus: Incomplete,
 		state:      Disappeared,
 		prevState:  Unknown,
 	}
-	mClient := NewMockCollinsClient(ctrl)
 	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{}, fmt.Errorf("test failure"))
-	if _, err := NewAssetFromCollins(mClient, eAsset.name); err == nil {
-		t.Fatalf("new asset succeeded, expected to fail")
-	}
+	_, err := NewAssetFromCollins(mClient, eAsset.name)
+	c.Assert(err, NotNil)
 }
 
-func TestSetStatus(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestSetStatus(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
 	mClient := NewMockCollinsClient(ctrl)
@@ -138,6 +137,7 @@ func TestSetStatus(t *testing.T) {
 		prevState:  Unknown,
 	}
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Provisioning,
 		prevStatus: Unallocated,
@@ -146,18 +146,12 @@ func TestSetStatus(t *testing.T) {
 	}
 	mClient.EXPECT().SetAssetStatus(asset.name, eAsset.status.String(),
 		eAsset.state.String(), description[eAsset.state])
-	if err := asset.SetStatus(eAsset.status, eAsset.state); err != nil {
-		t.Fatalf("set asset status failed. Error: %s", err)
-	} else if asset.name != eAsset.name ||
-		asset.status != eAsset.status ||
-		asset.state != eAsset.state ||
-		asset.prevStatus != eAsset.prevStatus ||
-		asset.prevState != eAsset.prevState {
-		t.Fatalf("mismatching asset info. expctd: %+v rcvd: %+v", eAsset, asset)
-	}
+	err := asset.SetStatus(eAsset.status, eAsset.state)
+	c.Assert(err, IsNil)
+	c.Assert(asset, DeepEquals, eAsset)
 }
 
-func TestSetStatusNoTransition(t *testing.T) {
+func (s *inventorySuite) TestSetStatusNoTransition(c *C) {
 	asset := &Asset{
 		client:     nil,
 		name:       "foo",
@@ -167,24 +161,19 @@ func TestSetStatusNoTransition(t *testing.T) {
 		prevState:  Unknown,
 	}
 	eAsset := &Asset{
+		client:     nil,
 		name:       "foo",
 		status:     Unallocated,
 		prevStatus: Incomplete,
 		state:      Discovered,
 		prevState:  Unknown,
 	}
-	if err := asset.SetStatus(eAsset.status, eAsset.state); err != nil {
-		t.Fatalf("set asset status failed. Error: %s", err)
-	} else if asset.name != eAsset.name ||
-		asset.status != eAsset.status ||
-		asset.state != eAsset.state ||
-		asset.prevStatus != eAsset.prevStatus ||
-		asset.prevState != eAsset.prevState {
-		t.Fatalf("mismatching asset info. expctd: %+v rcvd: %+v", eAsset, asset)
-	}
+	err := asset.SetStatus(eAsset.status, eAsset.state)
+	c.Assert(err, IsNil)
+	c.Assert(asset, DeepEquals, eAsset)
 }
 
-func TestSetStatusInvalidStatusTransition(t *testing.T) {
+func (s *inventorySuite) TestSetStatusInvalidStatusTransition(c *C) {
 	asset := &Asset{
 		client:     nil,
 		name:       "foo",
@@ -194,21 +183,19 @@ func TestSetStatusInvalidStatusTransition(t *testing.T) {
 		prevState:  Unknown,
 	}
 	eAsset := &Asset{
+		client:     nil,
 		name:       "foo",
 		status:     Cancelled,
 		prevStatus: Unallocated,
 		state:      Disappeared,
 		prevState:  Discovered,
 	}
-	errStr := "is not allowed"
-	if err := asset.SetStatus(eAsset.status, eAsset.state); err == nil {
-		t.Fatalf("set asset status succeeded, expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("unexpected error. expctd: %s, rcvd: %s", errStr, err)
-	}
+	errStr := "transition from.*is not allowed"
+	err := asset.SetStatus(eAsset.status, eAsset.state)
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestSetStatusUnallowedState(t *testing.T) {
+func (s *inventorySuite) TestSetStatusUnallowedState(c *C) {
 	asset := &Asset{
 		client:     nil,
 		name:       "foo",
@@ -218,22 +205,20 @@ func TestSetStatusUnallowedState(t *testing.T) {
 		prevState:  Unknown,
 	}
 	eAsset := &Asset{
+		client:     nil,
 		name:       "foo",
 		status:     Incomplete,
 		prevStatus: Unallocated,
 		state:      Disappeared,
 		prevState:  Discovered,
 	}
-	errStr := "is not a valid state when asset is in"
-	if err := asset.SetStatus(eAsset.status, eAsset.state); err == nil {
-		t.Fatalf("set asset status succeeded, expected to fail")
-	} else if !strings.Contains(err.Error(), errStr) {
-		t.Fatalf("unexpected error. expctd: %s, rcvd: %s", errStr, err)
-	}
+	errStr := ".*is not a valid state when asset is in.*status"
+	err := asset.SetStatus(eAsset.status, eAsset.state)
+	c.Assert(err, ErrorMatches, errStr)
 }
 
-func TestSetStatusSetFailure(t *testing.T) {
-	ctrl := gomock.NewController(t)
+func (s *inventorySuite) TestSetStatusSetFailure(c *C) {
+	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
 	mClient := NewMockCollinsClient(ctrl)
@@ -246,6 +231,7 @@ func TestSetStatusSetFailure(t *testing.T) {
 		prevState:  Unknown,
 	}
 	eAsset := &Asset{
+		client:     mClient,
 		name:       "foo",
 		status:     Unallocated,
 		prevStatus: Incomplete,
@@ -254,13 +240,7 @@ func TestSetStatusSetFailure(t *testing.T) {
 	}
 	mClient.EXPECT().SetAssetStatus(asset.name, Provisioning.String(),
 		Discovered.String(), description[asset.state]).Return(fmt.Errorf("test failure"))
-	if err := asset.SetStatus(Provisioning, Discovered); err == nil {
-		t.Fatalf("set asset status succeeded expected to fail")
-	} else if asset.name != eAsset.name ||
-		asset.status != eAsset.status ||
-		asset.state != eAsset.state ||
-		asset.prevStatus != eAsset.prevStatus ||
-		asset.prevState != eAsset.prevState {
-		t.Fatalf("mismatching asset info. expctd: %+v rcvd: %+v", eAsset, asset)
-	}
+	err := asset.SetStatus(Provisioning, Discovered)
+	c.Assert(err, NotNil)
+	c.Assert(asset, DeepEquals, eAsset)
 }

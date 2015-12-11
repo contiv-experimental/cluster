@@ -24,6 +24,14 @@
 			"Rev": "a65b733b303f0055f8d324d805f393cd3e7a7904"
 		},
 		{
+			"ImportPath": "github.com/contiv/systemtests-utils",
+			"Rev": "c8687a787fd4e395fa2285abb2c03ccef80402c7"
+		},
+		{
+			"ImportPath": "github.com/contiv/vagrantssh",
+			"Rev": "475cbbc40146dac657c6c52426dd48ed0fbe91a4"
+		},
+		{
 			"ImportPath": "github.com/golang/mock/gomock",
 			"Rev": "06883d979f10cc178f2716846215c8cf90f9e363"
 		},
@@ -109,8 +117,12 @@
 			"Rev": "2caf8efc93669b6c43e0441cdc6aed17546c96f3"
 		},
 		{
-			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "cc04154d65fb9296747569b107cfd05380b1ea3e"
+			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "7b85b097bf7527677d54d3220065e966a0e3b613"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "7b85b097bf7527677d54d3220065e966a0e3b613"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",

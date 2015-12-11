@@ -1,8 +1,11 @@
-.PHONY: build checks check-format check-code clean clean-generate deps generate unit-test
+.PHONY: build checks check-format check-code clean clean-generate clean-tar deps generate unit-test system-test tar release
 
 work_dir:=/go/src/github.com/contiv/cluster/management/src
 docker_run:=docker run --rm -u `id -u`:`id -g` -v `pwd`:$(work_dir) \
 	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.5
+unittest_tag:=unittest
+systemtest_tag:=systemtest
+all_tags:=$(unittest_tag) $(systemtest_tag)
 
 deps:
 	@echo "checking and downloading dependencies"
@@ -36,8 +39,8 @@ check-format:
 
 check-code:
 	@echo "checking code..."
-	@test -z "$$(golint ./... | tee /dev/stderr)"
-	@godep go vet ./...
+	@test -z "$$(godep go list -tags "$(all_tags)" ./... | xargs -n1 golint | tee /dev/stderr)"
+	@godep go vet -tags "$(all_tags)" ./...
 	@echo "done checking code..."
 
 build: checks generate
@@ -48,9 +51,28 @@ build: checks generate
 
 unit-test: checks generate
 	@echo "running unit-tests"
-	@$(docker_run) sh -c "godep go list ./... | xargs -n1 godep go test"
+	@$(docker_run) sh -c "godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag)"
 	@make clean-generate
 	@echo "done running unit-tests"
+
+host-system-test: checks
+	@godep go test -v -tags $(systemtest_tag) github.com/contiv/cluster/management/src/systemtests -check.v
+
+system-test:
+	@echo "running system-tests"
+	CONTIV_NODES=1 vagrant up; \
+	time vagrant ssh cluster-node1 -c \
+	"export CONTIV_SOE=${CONTIV_SOE}; \
+	 export GOPATH=/opt/gopath/; \
+	 export PATH=\$$PATH:\$$GOPATH/bin; \
+	 if [ \"${http_proxy}\" != \"\" ]; then export http_proxy=${http_proxy}; fi; \
+	 if [ \"${https_proxy}\" != \"\" ]; then export https_proxy=${https_proxy}; fi; \
+	 cd \$$GOPATH/src/github.com/contiv/cluster/management/src; \
+	 make host-system-test"; \
+	if [ "$$?" != "0" ]; then res=1; else res=0; fi; \
+	if [ "$${res}" = "0" -o "${CONTIV_SOE}" = "" ]; then CONTIV_NODES=1 vagrant destroy -f; fi; \
+	exit $${res}
+	@echo "done running system-tests"
 
 clean: deps
 	@echo "running clean"

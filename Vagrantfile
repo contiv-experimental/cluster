@@ -22,6 +22,13 @@ if ENV['CONTIV_ENV'] then
         host_env[e[0]]=e[1]
     end
 end
+
+if ENV["http_proxy"]
+  host_env["HTTP_PROXY"]  = host_env["http_proxy"]  = ENV["http_proxy"]
+  host_env["HTTPS_PROXY"] = host_env["https_proxy"] = ENV["https_proxy"]
+  host_env["NO_PROXY"]    = host_env["no_proxy"]    = ENV["no_proxy"]
+end
+
 puts "Host environment: #{host_env}"
 
 ceph_vars = {

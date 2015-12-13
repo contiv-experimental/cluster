@@ -11,7 +11,7 @@ import (
 	"os"
 	"unsafe"
 
-	"code.google.com/p/go.net/internal/iana"
+	"github.com/hashicorp/go.net/internal/iana"
 )
 
 func setsockoptIPMreq(fd, name int, ifi *net.Interface, grp net.IP) error {

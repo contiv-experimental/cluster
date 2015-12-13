@@ -2,7 +2,7 @@
 
 work_dir:=/go/src/github.com/contiv/cluster/management/src
 docker_run:=docker run --rm -u `id -u`:`id -g` -v `pwd`:$(work_dir) \
-	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.4
+	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.5
 
 deps:
 	@echo "checking and downloading dependencies"

@@ -1,15 +1,10 @@
 {
 	"ImportPath": "github.com/contiv/cluster/management/src",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.1",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
-		{
-			"ImportPath": "code.google.com/p/go.net/internal/iana",
-			"Comment": "null-240",
-			"Rev": "937a34c9de13c766c814510f76bca091dee06028"
-		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.7.3-13-g81e2611",
@@ -49,12 +44,16 @@
 			"Rev": "42a2b573b664dbf281bd48c3cc12c086b17a39ba"
 		},
 		{
+			"ImportPath": "github.com/hashicorp/go.net/internal/iana",
+			"Rev": "104dcad90073cd8d1e6828b2af19185b60cf3e29"
+		},
+		{
 			"ImportPath": "github.com/hashicorp/go.net/ipv4",
-			"Rev": "cbad13bf000d0cbdbc71506b26e94bcc72bbe74d"
+			"Rev": "104dcad90073cd8d1e6828b2af19185b60cf3e29"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/go.net/ipv6",
-			"Rev": "cbad13bf000d0cbdbc71506b26e94bcc72bbe74d"
+			"Rev": "104dcad90073cd8d1e6828b2af19185b60cf3e29"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/logutils",
@@ -62,21 +61,26 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/mdns",
-			"Rev": "2b439d37011456df8ff83a70ffd1cd6046410113"
+			"Rev": "9d85cf22f9f8d53cb5c81c1b2749f438b2ee333f"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/memberlist",
-			"Rev": "3636f9694d601b5f68da11676d59cdf8a4c9dfe3"
+			"Rev": "c80391f99d2d3a3d60f24588c7ee6b2131f1be33"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/serf/command/agent",
-			"Comment": "v0.6.4-27-gffdb036",
-			"Rev": "ffdb036ea0f1f04d0d0b341960eb4175ab2fdcd6"
+			"Comment": "v0.6.4-151-gaa4d372",
+			"Rev": "aa4d372f45cd7347e26a4ce6de4945cfa5c44bf5"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/coordinate",
+			"Comment": "v0.6.4-151-gaa4d372",
+			"Rev": "aa4d372f45cd7347e26a4ce6de4945cfa5c44bf5"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/serf/serf",
-			"Comment": "v0.6.4-27-gffdb036",
-			"Rev": "ffdb036ea0f1f04d0d0b341960eb4175ab2fdcd6"
+			"Comment": "v0.6.4-151-gaa4d372",
+			"Rev": "aa4d372f45cd7347e26a4ce6de4945cfa5c44bf5"
 		},
 		{
 			"ImportPath": "github.com/imdario/mergo",

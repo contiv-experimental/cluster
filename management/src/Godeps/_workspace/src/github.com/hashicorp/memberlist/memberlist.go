@@ -89,6 +89,9 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start TCP listener. Err: %s", err)
 	}
+	if conf.BindPort == 0 {
+		conf.BindPort = tcpLn.Addr().(*net.TCPAddr).Port
+	}
 
 	udpAddr := &net.UDPAddr{IP: net.ParseIP(conf.BindAddr), Port: conf.BindPort}
 	udpLn, err := net.ListenUDP("udp", udpAddr)
@@ -100,10 +103,19 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 	// Set the UDP receive window size
 	setUDPRecvBuf(udpLn)
 
-	if conf.LogOutput == nil {
-		conf.LogOutput = os.Stderr
+	if conf.LogOutput != nil && conf.Logger != nil {
+		return nil, fmt.Errorf("Cannot specify both LogOutput and Logger. Please choose a single log configuration setting.")
 	}
-	logger := log.New(conf.LogOutput, "", log.LstdFlags)
+
+	logDest := conf.LogOutput
+	if logDest == nil {
+		logDest = os.Stderr
+	}
+
+	logger := conf.Logger
+	if logger == nil {
+		logger = log.New(logDest, "", log.LstdFlags)
+	}
 
 	m := &Memberlist{
 		config:         conf,

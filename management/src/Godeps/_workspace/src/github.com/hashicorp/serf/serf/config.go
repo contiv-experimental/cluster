@@ -15,7 +15,6 @@ var ProtocolVersionMap map[uint8]uint8
 
 func init() {
 	ProtocolVersionMap = map[uint8]uint8{
-		5: 3,
 		4: 2,
 		3: 2,
 		2: 2,
@@ -190,6 +189,12 @@ type Config struct {
 	// node stays while the other node will leave the cluster and exit.
 	EnableNameConflictResolution bool
 
+	// DisableCoordinates controls if Serf will maintain an estimate of this
+	// node's network coordinate internally. A network coordinate is useful
+	// for estimating the network distance (i.e. round trip time) between
+	// two nodes. Enabling this option adds some overhead to ping messages.
+	DisableCoordinates bool
+
 	// KeyringFile provides the location of a writable file where Serf can
 	// persist changes to the encryption keyring.
 	KeyringFile string
@@ -231,5 +236,6 @@ func DefaultConfig() *Config {
 		MemberlistConfig:             memberlist.DefaultLANConfig(),
 		QueryTimeoutMult:             16,
 		EnableNameConflictResolution: true,
+		DisableCoordinates:           false,
 	}
 }

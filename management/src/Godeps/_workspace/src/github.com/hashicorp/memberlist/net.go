@@ -18,7 +18,15 @@ import (
 // range. This range is inclusive.
 const (
 	ProtocolVersionMin uint8 = 1
-	ProtocolVersionMax       = 3
+
+	// Version 3 added support for TCP pings but we kept the default
+	// protocol version at 2 to ease transition to this new feature.
+	// A memberlist speaking version 2 of the protocol will attempt
+	// to TCP ping another memberlist who understands version 3 or
+	// greater.
+	ProtocolVersion2Compatible = 2
+
+	ProtocolVersionMax = 3
 )
 
 // messageType is an integer ID of a type of message that can be received
@@ -281,6 +289,10 @@ func (m *Memberlist) udpListen() {
 			continue
 		}
 
+		// Capture the reception time of the packet as close to the
+		// system calls as possible.
+		lastPacket = time.Now()
+
 		// Check the length
 		if n < 1 {
 			m.logger.Printf("[ERR] memberlist: UDP packet too short (%d bytes). From: %s",
@@ -288,16 +300,13 @@ func (m *Memberlist) udpListen() {
 			continue
 		}
 
-		// Capture the current time
-		lastPacket = time.Now()
-
 		// Ingest this packet
 		metrics.IncrCounter([]string{"memberlist", "udp", "received"}, float32(n))
-		m.ingestPacket(buf[:n], addr)
+		m.ingestPacket(buf[:n], addr, lastPacket)
 	}
 }
 
-func (m *Memberlist) ingestPacket(buf []byte, from net.Addr) {
+func (m *Memberlist) ingestPacket(buf []byte, from net.Addr, timestamp time.Time) {
 	// Check if encryption is enabled
 	if m.config.EncryptionEnabled() {
 		// Decrypt the payload
@@ -312,10 +321,10 @@ func (m *Memberlist) ingestPacket(buf []byte, from net.Addr) {
 	}
 
 	// Handle the command
-	m.handleCommand(buf, from)
+	m.handleCommand(buf, from, timestamp)
 }
 
-func (m *Memberlist) handleCommand(buf []byte, from net.Addr) {
+func (m *Memberlist) handleCommand(buf []byte, from net.Addr, timestamp time.Time) {
 	// Decode the message type
 	msgType := messageType(buf[0])
 	buf = buf[1:]
@@ -323,16 +332,16 @@ func (m *Memberlist) handleCommand(buf []byte, from net.Addr) {
 	// Switch on the msgType
 	switch msgType {
 	case compoundMsg:
-		m.handleCompound(buf, from)
+		m.handleCompound(buf, from, timestamp)
 	case compressMsg:
-		m.handleCompressed(buf, from)
+		m.handleCompressed(buf, from, timestamp)
 
 	case pingMsg:
 		m.handlePing(buf, from)
 	case indirectPingMsg:
 		m.handleIndirectPing(buf, from)
 	case ackRespMsg:
-		m.handleAck(buf, from)
+		m.handleAck(buf, from, timestamp)
 
 	case suspectMsg:
 		fallthrough
@@ -382,7 +391,7 @@ func (m *Memberlist) udpHandler() {
 	}
 }
 
-func (m *Memberlist) handleCompound(buf []byte, from net.Addr) {
+func (m *Memberlist) handleCompound(buf []byte, from net.Addr, timestamp time.Time) {
 	// Decode the parts
 	trunc, parts, err := decodeCompoundMessage(buf)
 	if err != nil {
@@ -397,7 +406,7 @@ func (m *Memberlist) handleCompound(buf []byte, from net.Addr) {
 
 	// Handle each message
 	for _, part := range parts {
-		m.handleCommand(part, from)
+		m.handleCommand(part, from, timestamp)
 	}
 }
 
@@ -441,16 +450,10 @@ func (m *Memberlist) handleIndirectPing(buf []byte, from net.Addr) {
 	destAddr := &net.UDPAddr{IP: ind.Target, Port: int(ind.Port)}
 
 	// Setup a response handler to relay the ack
-	sent := time.Now()
-	respHandler := func(payload []byte) {
+	respHandler := func(payload []byte, timestamp time.Time) {
 		ack := ackResp{ind.SeqNo, nil}
 		if err := m.encodeAndSendMsg(from, ackRespMsg, &ack); err != nil {
 			m.logger.Printf("[ERR] memberlist: Failed to forward ack: %s", err)
-		}
-		if m.config.Ping != nil {
-			if n, ok := m.nodeMap[ind.Node]; ok {
-				m.config.Ping.NotifyPingComplete(&n.Node, time.Now().Sub(sent), payload)
-			}
 		}
 	}
 	m.setAckHandler(localSeqNo, respHandler, m.config.ProbeTimeout)
@@ -461,13 +464,13 @@ func (m *Memberlist) handleIndirectPing(buf []byte, from net.Addr) {
 	}
 }
 
-func (m *Memberlist) handleAck(buf []byte, from net.Addr) {
+func (m *Memberlist) handleAck(buf []byte, from net.Addr, timestamp time.Time) {
 	var ack ackResp
 	if err := decode(buf, &ack); err != nil {
 		m.logger.Printf("[ERR] memberlist: Failed to decode ack response: %s", err)
 		return
 	}
-	m.invokeAckHandler(ack)
+	m.invokeAckHandler(ack, timestamp)
 }
 
 func (m *Memberlist) handleSuspect(buf []byte, from net.Addr) {
@@ -513,7 +516,7 @@ func (m *Memberlist) handleUser(buf []byte, from net.Addr) {
 }
 
 // handleCompressed is used to unpack a compressed message
-func (m *Memberlist) handleCompressed(buf []byte, from net.Addr) {
+func (m *Memberlist) handleCompressed(buf []byte, from net.Addr, timestamp time.Time) {
 	// Try to decode the payload
 	payload, err := decompressPayload(buf)
 	if err != nil {
@@ -522,7 +525,7 @@ func (m *Memberlist) handleCompressed(buf []byte, from net.Addr) {
 	}
 
 	// Recursively handle the payload
-	m.handleCommand(payload, from)
+	m.handleCommand(payload, from, timestamp)
 }
 
 // encodeAndSendMsg is used to combine the encoding and sending steps
@@ -952,7 +955,7 @@ func (m *Memberlist) mergeRemoteState(join bool, remoteNodes []pushNodeState, us
 	m.mergeState(remoteNodes)
 
 	// Invoke the delegate for user state
-	if m.config.Delegate != nil {
+	if userBuf != nil && m.config.Delegate != nil{
 		m.config.Delegate.MergeRemoteState(userBuf, join)
 	}
 	return nil

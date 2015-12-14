@@ -44,7 +44,7 @@ type nodeState struct {
 
 // ackHandler is used to register handlers for incoming acks
 type ackHandler struct {
-	handler func([]byte)
+	handler func([]byte, time.Time)
 	timer   *time.Timer
 }
 
@@ -215,8 +215,7 @@ func (m *Memberlist) probeNode(node *nodeState) {
 
 	// Setup an ack handler.
 	ackCh := make(chan ackMessage, m.config.IndirectChecks+1)
-	sent := time.Now()
-	deadline := sent.Add(m.config.ProbeInterval)
+	deadline := time.Now().Add(m.config.ProbeInterval)
 	m.setAckChannel(ping.SeqNo, ackCh, m.config.ProbeInterval)
 
 	// Send the ping message.
@@ -225,12 +224,18 @@ func (m *Memberlist) probeNode(node *nodeState) {
 		return
 	}
 
+	// Mark the sent time here, which should be after any pre-processing and
+	// system calls to do the actual send. This probably under-reports a bit,
+	// but it's the best we can do.
+	sent := time.Now()
+
 	// Wait for response or round-trip-time.
 	select {
 	case v := <-ackCh:
 		if v.Complete == true {
 			if m.config.Ping != nil {
-				m.config.Ping.NotifyPingComplete(&node.Node, time.Now().Sub(sent), v.Payload)
+				rtt := v.Timestamp.Sub(sent)
+				m.config.Ping.NotifyPingComplete(&node.Node, rtt, v.Payload)
 			}
 			return
 		}
@@ -241,6 +246,7 @@ func (m *Memberlist) probeNode(node *nodeState) {
 			ackCh <- v
 		}
 	case <-time.After(m.config.ProbeTimeout):
+		m.logger.Printf("[DEBUG] memberlist: Failed UDP ping: %v (timeout reached)", node.Name)
 	}
 
 	// Get some random live nodes.
@@ -263,8 +269,13 @@ func (m *Memberlist) probeNode(node *nodeState) {
 	// but can still speak TCP (which also means they can possibly report
 	// misinformation to other nodes via anti-entropy), avoiding flapping in
 	// the cluster.
+	//
+	// This is a little unusual because we will attempt a TCP ping to any
+	// member who understands version 3 of the protocol, regardless of
+	// which protocol version we are speaking. That's why we've included a
+	// config option to turn this off if desired.
 	fallbackCh := make(chan bool)
-	if m.ProtocolVersion() >= 3 && node.PMax >= 3 {
+	if (!m.config.DisableTcpPings) && (node.PMax >= 3) {
 		destAddr := &net.TCPAddr{IP: node.Addr, Port: int(node.Port)}
 		go func() {
 			defer close(fallbackCh)
@@ -540,17 +551,18 @@ func (m *Memberlist) estNumNodes() int {
 }
 
 type ackMessage struct {
-	Complete bool
-	Payload  []byte
+	Complete  bool
+	Payload   []byte
+	Timestamp time.Time
 }
 
 // setAckChannel is used to attach a channel to receive a message when an ack with a given
 // sequence number is received. The `complete` field of the message will be false on timeout
 func (m *Memberlist) setAckChannel(seqNo uint32, ch chan ackMessage, timeout time.Duration) {
 	// Create a handler function
-	handler := func(payload []byte) {
+	handler := func(payload []byte, timestamp time.Time) {
 		select {
-		case ch <- ackMessage{true, payload}:
+		case ch <- ackMessage{true, payload, timestamp}:
 		default:
 		}
 	}
@@ -567,7 +579,7 @@ func (m *Memberlist) setAckChannel(seqNo uint32, ch chan ackMessage, timeout tim
 		delete(m.ackHandlers, seqNo)
 		m.ackLock.Unlock()
 		select {
-		case ch <- ackMessage{false, nil}:
+		case ch <- ackMessage{false, nil, time.Now()}:
 		default:
 		}
 	})
@@ -576,7 +588,7 @@ func (m *Memberlist) setAckChannel(seqNo uint32, ch chan ackMessage, timeout tim
 // setAckHandler is used to attach a handler to be invoked when an
 // ack with a given sequence number is received. If a timeout is reached,
 // the handler is deleted
-func (m *Memberlist) setAckHandler(seqNo uint32, handler func(payload []byte), timeout time.Duration) {
+func (m *Memberlist) setAckHandler(seqNo uint32, handler func([]byte, time.Time), timeout time.Duration) {
 	// Add the handler
 	ah := &ackHandler{handler, nil}
 	m.ackLock.Lock()
@@ -592,7 +604,7 @@ func (m *Memberlist) setAckHandler(seqNo uint32, handler func(payload []byte), t
 }
 
 // Invokes an Ack handler if any is associated, and reaps the handler immediately
-func (m *Memberlist) invokeAckHandler(ack ackResp) {
+func (m *Memberlist) invokeAckHandler(ack ackResp, timestamp time.Time) {
 	m.ackLock.Lock()
 	ah, ok := m.ackHandlers[ack.SeqNo]
 	delete(m.ackHandlers, ack.SeqNo)
@@ -601,7 +613,7 @@ func (m *Memberlist) invokeAckHandler(ack ackResp) {
 		return
 	}
 	ah.timer.Stop()
-	ah.handler(ack.Payload)
+	ah.handler(ack.Payload, timestamp)
 }
 
 // aliveNode is invoked by the network layer when we get a message about a
@@ -703,9 +715,6 @@ func (m *Memberlist) aliveNode(a *alive, notify chan struct{}, bootstrap bool) {
 		return
 	}
 
-	// Update metrics
-	metrics.IncrCounter([]string{"memberlist", "msg", "alive"}, 1)
-
 	// Store the old state and meta data
 	oldState := state.State
 	oldMeta := state.Meta
@@ -772,6 +781,9 @@ func (m *Memberlist) aliveNode(a *alive, notify chan struct{}, bootstrap bool) {
 			state.StateChange = time.Now()
 		}
 	}
+
+	// Update metrics
+	metrics.IncrCounter([]string{"memberlist", "msg", "alive"}, 1)
 
 	// Notify the delegate of any relevant updates
 	if m.config.Events != nil {

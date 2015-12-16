@@ -242,7 +242,8 @@ func (e *nodeConfigure) process() error {
 
 	hostInfo := e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost)
 	nodeGroup := ansibleMasterGroupName
-	onlineMasterAddr := ""
+	masterAddr := ""
+	masterName := ""
 	// update the online master address if this is second node that is being commissioned.
 	// Also set the group for second or later nodes to be worker, as right now services like
 	// swarm and netmaster can only have one master node and also we don't yet have a vip
@@ -257,12 +258,18 @@ func (e *nodeConfigure) process() error {
 			// skip hosts that are not yet provisioned or not in discovered state
 			continue
 		}
+		if node.cInfo.GetGroup() != ansibleMasterGroupName {
+			//skip the hosts that are not in master group
+			continue
+		}
 		// found our node
-		onlineMasterAddr = node.mInfo.GetMgmtAddress()
+		masterAddr = node.mInfo.GetMgmtAddress()
+		masterName = node.cInfo.GetTag()
 		nodeGroup = ansibleWorkerGroupName
 	}
 	hostInfo.SetGroup(nodeGroup)
-	hostInfo.SetVar(ansibleOnlineMasterAddrHostVar, onlineMasterAddr)
+	hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
+	hostInfo.SetVar(ansibleEtcdMasterNameHostVar, masterName)
 	outReader, errCh := e.mgr.configuration.Configure(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {

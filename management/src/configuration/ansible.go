@@ -42,6 +42,16 @@ func NewAnsibleHost(tag, addr, group string, vars map[string]string) *AnsibleHos
 	}
 }
 
+// GetTag return the ansible inventory name/tag for the host
+func (h *AnsibleHost) GetTag() string {
+	return h.tag
+}
+
+// GetGroup return the ansible inventory group/role for the host
+func (h *AnsibleHost) GetGroup() string {
+	return h.group
+}
+
 // SetVar sets a host variable value
 func (h *AnsibleHost) SetVar(key, val string) {
 	h.vars[key] = val

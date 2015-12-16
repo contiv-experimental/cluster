@@ -100,6 +100,7 @@ func startDaemon(c *cli.Context) {
 	// set log level
 	level := c.GlobalGeneric("debug").(*logLevel)
 	log.SetLevel(level.value)
+	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 
 	var (
 		err    error
@@ -114,7 +115,7 @@ func startDaemon(c *cli.Context) {
 	}
 
 	// start manager's processing loop
-	errCh := make(chan error)
+	errCh := make(chan error, 5)
 	go mgr.Run(errCh)
 	select {
 	case err := <-errCh:

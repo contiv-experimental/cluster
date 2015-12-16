@@ -77,7 +77,8 @@ func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars 
 	}
 	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User, a.config.PrivKeyFile, vars)
 	r, w := io.Pipe()
-	errCh := make(chan error)
+	// make error channel buffered, so it doesn't block
+	errCh := make(chan error, 1)
 	go func(outStream io.Writer, errCh chan error) {
 		defer r.Close()
 		if err := runner.Run(outStream, outStream); err != nil {

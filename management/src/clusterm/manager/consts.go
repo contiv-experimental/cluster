@@ -26,9 +26,10 @@ const (
 )
 
 const (
-	ansibleMasterGroupName         = "service-master"
-	ansibleWorkerGroupName         = "service-worker"
-	ansibleNodeNameHostVar         = "node_name"
-	ansibleNodeAddrHostVar         = "node_addr"
-	ansibleOnlineMasterAddrHostVar = "online_master_addr"
+	ansibleMasterGroupName       = "service-master"
+	ansibleWorkerGroupName       = "service-worker"
+	ansibleNodeNameHostVar       = "node_name"
+	ansibleNodeAddrHostVar       = "node_addr"
+	ansibleEtcdMasterAddrHostVar = "etcd_master_addr"
+	ansibleEtcdMasterNameHostVar = "etcd_master_name"
 )

@@ -56,6 +56,19 @@ func main() {
 	app.Run(os.Args)
 }
 
+func mergeConfig(dst *manager.Config, srcJSON []byte) (*manager.Config, error) {
+	src := &manager.Config{}
+	if err := json.Unmarshal(srcJSON, src); err != nil {
+		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
+	}
+
+	if err := mergo.MergeWithOverwrite(dst, src); err != nil {
+		return nil, fmt.Errorf("failed to merge configuration. Error: %s", err)
+	}
+
+	return dst, nil
+}
+
 func readConfig(c *cli.Context) (*manager.Config, error) {
 	mgrConfig := manager.DefaultConfig()
 	if !c.GlobalIsSet("config") {
@@ -84,16 +97,7 @@ func readConfig(c *cli.Context) (*manager.Config, error) {
 		return nil, err
 	}
 
-	userConfig := &manager.Config{}
-	if err := json.Unmarshal(config, userConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
-	}
-
-	if err := mergo.MergeWithOverwrite(mgrConfig, userConfig); err != nil {
-		return nil, fmt.Errorf("failed to merge configuration. Error: %s", err)
-	}
-
-	return mgrConfig, nil
+	return mergeConfig(mgrConfig, config)
 }
 
 func startDaemon(c *cli.Context) {

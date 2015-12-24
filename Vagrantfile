@@ -1,7 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-gobin_dir="/opt/gopath/bin"
+gopath_dir="/opt/gopath"
+gobin_dir="#{gopath_dir}/bin"
 base_ip = "192.168.2."
 
 num_nodes = 1
@@ -48,12 +49,15 @@ ansible_extra_vars = {
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 
+shell_provision = <<EOF
+#give write permission to go path directory to be able to run tests
+chown -R vagrant:vagrant #{gopath_dir}
+EOF
+
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.box = "contiv/centos71-netplugin"
-    config.vm.box_version = "0.3.1"
-    #config.vm.box = "contiv/centos71-netplugin/custom"
-    #config.vm.box_url = "https://cisco.box.com/shared/static/v91yrddriwhlbq7mbkgsbbdottu5bafj.box"
+    config.vm.box_version = "0.5.1"
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
     node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" }
     # this is to avoid the issue: https://github.com/mitchellh/vagrant/issues/5186
@@ -102,6 +106,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             if n == 0 then
                 # mount vagrant directory such that symbolic links are copied
                 #node.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__args: ["--verbose", "-rLptgoD", "--delete", "-z"]
+                #mount the repo directory to vm's go-path for running system-tests
+                node.vm.synced_folder ".", "#{gopath_dir}/src/github.com/contiv/cluster"
+                #mount the repo directory to a fixed directory, that get's referred
+                #in a test specific conf file (see the test-suite setup function)
+                node.vm.synced_folder ".", "/vagrant"
 
                 # mount the host's gobin path for cluster related binaries to be available
                 node.vm.synced_folder "#{ENV['GOPATH']}/bin", gobin_dir
@@ -111,6 +120,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                 # add this node to cluster-control host group
                 ansible_groups["cluster-control"] = [node_name]
+                node.vm.provision "shell" do |s|
+                    s.inline = shell_provision
+                end
             end
 
             if service_init

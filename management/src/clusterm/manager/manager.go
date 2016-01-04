@@ -51,7 +51,7 @@ func DefaultConfig() *Config {
 			ConfigurePlaybook: "site.yml",
 			CleanupPlaybook:   "cleanup.yml",
 			UpgradePlaybook:   "rolling-upgrade.yml",
-			PlaybookLocation:  "/vagrant/vendor/configuration/ansible",
+			PlaybookLocation:  "/vagrant/vendor/ansible",
 			User:              "vagrant",
 			PrivKeyFile:       "/vagrant/management/src/demo/files/insecure_private_key",
 		},

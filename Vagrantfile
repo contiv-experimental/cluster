@@ -38,11 +38,13 @@ ceph_vars = {
     "journal_size" => 100,
     "monitor_interface" => "eth1",
     "cluster_network" => "#{base_ip}0/24",
-    "public_network" => "#{base_ip}0/24"
+    "public_network" => "#{base_ip}0/24",
+    "journal_collocation" => "true",
+    "devices" => [ '/dev/sdb', '/dev/sdc' ],
 }
 
 ansible_groups = { }
-ansible_playbook = "./vendor/configuration/ansible/site.yml"
+ansible_playbook = "./vendor/ansible/site.yml"
 ansible_extra_vars = {
     "env" => host_env,
     "service_vip" => "#{base_ip}252"

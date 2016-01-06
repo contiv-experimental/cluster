@@ -54,12 +54,23 @@ ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 shell_provision = <<EOF
 #give write permission to go path directory to be able to run tests
 chown -R vagrant:vagrant #{gopath_dir}
+
+# if we are coming up in non-demo environment then load
+# the clusterm binaries from dev workspace
+if [ "#{service_init}" = "false" ]; then
+    echo mounting binaries from dev workspace
+    rm -f /usr/bin/clusterm /usr/bin/clusterctl
+    ln -s #{gobin_dir}/clusterm /usr/bin/clusterm
+    ln -s #{gobin_dir}/clusterctl /usr/bin/clusterctl
+else
+    echo using released binaries
+fi
 EOF
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-    config.vm.box = "contiv/centos71-netplugin"
-    config.vm.box_version = "0.5.1"
+    config.vm.box = "contiv/centos72"
+    config.vm.box_version = "0.1.1"
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
     node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" }
     # this is to avoid the issue: https://github.com/mitchellh/vagrant/issues/5186

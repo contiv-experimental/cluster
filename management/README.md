@@ -1,5 +1,10 @@
 ## 3 steps to Contiv Cluster Management
 
+### 0. Ensure correct dependencies are installed
+- docker 1.9 or higher
+- vagrant 1.7.3 or higher
+- virtualbox 5.0 or higher
+
 ### 1. checkout and build the code
 ```
 cd $GOPATH/src/github.com/contiv/

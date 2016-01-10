@@ -1,8 +1,17 @@
-.PHONY: build checks check-format check-code clean clean-generate clean-tar deps generate unit-test system-test tar release
+.PHONY: build build-docker-img build-docker-shell checks check-format check-code clean-generate clean-tar deps generate host-system-test unit-test system-test tar release
 
 work_dir:=/go/src/github.com/contiv/cluster/management/src
-docker_run:=docker run --rm -u `id -u`:`id -g` -v `pwd`:$(work_dir) \
-	-v $(GOPATH)/bin:/go/bin -w $(work_dir) golang:1.5
+docker_buildargs := \
+	--build-arg "uid=$$(id -u)" \
+	--build-arg "user=$$(id -un)" \
+	--build-arg "work_dir=$(work_dir)" \
+	$(if $(HTTP_PROXY), --build-arg "HTTP_PROXY=$(HTTP_PROXY)") \
+	$(if $(HTTPS_PROXY), --build-arg "HTTPS_PROXY=$(HTTPS_PROXY)") \
+	$(if $(http_proxy), --build-arg "http_proxy=$(http_proxy)") \
+	$(if $(https_proxy), --build-arg "https_proxy=$(https_proxy)")
+docker_img := cluster-dev$(if $(GIT_BRANCH),:$(GIT_BRANCH))
+docker_run:=docker run --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
+	-w $(work_dir) "$(docker_img)"
 unittest_tag:=unittest
 systemtest_tag:=systemtest
 all_tags:=$(unittest_tag) $(systemtest_tag)
@@ -43,16 +52,24 @@ check-code:
 	@godep go vet -tags "$(all_tags)" ./...
 	@echo "done checking code..."
 
-build: checks generate
+build-docker-img:
+	docker build -t "$(docker_img)" $(docker_buildargs) .
+
+build-docker-shell:
+	@$(docker_run) bash
+
+build: build-docker-img
 	@echo "building..."
-	@$(docker_run) godep go install ./...
-	@make clean-generate
+	@$(docker_run) sh -c "make checks generate && \
+		godep go install ./... && \
+		make clean-generate"
 	@echo "done building..."
 
-unit-test: checks generate
+unit-test: build-docker-img
 	@echo "running unit-tests"
-	@$(docker_run) sh -c "godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag)"
-	@make clean-generate
+	@$(docker_run) sh -c "make checks generate && \
+		godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag) &&\
+		make clean-generate"
 	@echo "done running unit-tests"
 
 host-system-test: checks
@@ -74,11 +91,6 @@ system-test:
 	exit $${res}
 	@echo "done running system-tests"
 
-clean: deps
-	@echo "running clean"
-	@godep go clean -i -v ./...
-	@echo "done running clean"
-
 # We are using date based versioning, so for consistent version during a build
 # we evaluate and set the value of version once in a file and use it in 'tar'
 # and 'release' targets.
@@ -93,7 +105,7 @@ TAR_FILE := $(TAR_LOC)/$(TAR_FILENAME)
 tar: build
 	@echo "building tarball"
 	@echo "v0.0.0-`date -u +%m-%d-%Y.%H-%M-%S.UTC`" > $(VERSION_FILE)
-	@tar -jcf $(TAR_FILE) -C $(GOPATH)/bin clusterctl clusterm
+	@tar -jcf $(TAR_FILE) -C ./bin clusterctl clusterm
 	@echo "done building tarball"
 
 clean-tar:

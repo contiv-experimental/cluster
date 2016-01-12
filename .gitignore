@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+management/src/bin/*
 
 # Folders
 _obj

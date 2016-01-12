@@ -60,8 +60,8 @@ chown -R vagrant:vagrant #{gopath_dir}
 if [ "#{service_init}" = "false" ]; then
     echo mounting binaries from dev workspace
     rm -f /usr/bin/clusterm /usr/bin/clusterctl
-    ln -s #{gobin_dir}/clusterm /usr/bin/clusterm
-    ln -s #{gobin_dir}/clusterctl /usr/bin/clusterctl
+    ln -s #{gopath_dir}/src/github.com/contiv/clustermanagement/src/bin/clusterm /usr/bin/clusterm
+    ln -s #{gopath_dir}/src/github.com/contiv/clustermanagement/src/bin/clusterctl /usr/bin/clusterctl
 else
     echo using released binaries
 fi
@@ -124,9 +124,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 #mount the repo directory to a fixed directory, that get's referred
                 #in a test specific conf file (see the test-suite setup function)
                 node.vm.synced_folder ".", "/vagrant"
-
-                # mount the host's gobin path for cluster related binaries to be available
-                node.vm.synced_folder "#{ENV['GOPATH']}/bin", gobin_dir
 
                 # expose collins port to host for ease of management
                 node.vm.network "forwarded_port", guest: 9000, host: 9000

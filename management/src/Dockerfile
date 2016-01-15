@@ -6,7 +6,7 @@ ENV GOPATH=/go
 ARG user
 ARG uid
 # give permissions on gopath dir to the build user and then set it as current user
-RUN useradd --uid ${uid} --password foo ${user}
+RUN getent passwd ${user}; if [ "$?" != "0" ]; then useradd --uid ${uid} --password foo ${user}; fi
 RUN chown -R ${uid}:${uid} ${GOPATH}
 USER ${user}
 

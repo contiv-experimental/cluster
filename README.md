@@ -1,4 +1,4 @@
-[![Build Status](https://magnum.travis-ci.com/contiv/cluster.svg?token=8AZXpTLBDvBJDQEGSJky)](https://magnum.travis-ci.com/contiv/cluster)
+[![Build Status](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/badge/icon)](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/)
 
 ##Overview
 Contiv provides an integrated stack of components to launch containerized applications in

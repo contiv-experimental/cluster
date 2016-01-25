@@ -47,7 +47,8 @@ ansible_groups = { }
 ansible_playbook = "./vendor/ansible/site.yml"
 ansible_extra_vars = {
     "env" => host_env,
-    "service_vip" => "#{base_ip}252"
+    "service_vip" => "#{base_ip}252",
+    "validate_certs" => "no",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 

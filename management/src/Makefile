@@ -77,17 +77,18 @@ host-system-test: checks
 
 system-test:
 	@echo "running system-tests"
-	CONTIV_NODES=1 vagrant up; \
+	CONTIV_NODES=2 time vagrant up; \
 	time vagrant ssh cluster-node1 -c \
 	"export CONTIV_SOE=${CONTIV_SOE}; \
 	 export GOPATH=/opt/gopath/; \
 	 export PATH=\$$PATH:\$$GOPATH/bin; \
+	 export CONTIV_NODE_IPS='192.168.2.10,192.168.2.11'; \
 	 if [ \"${http_proxy}\" != \"\" ]; then export http_proxy=${http_proxy}; fi; \
 	 if [ \"${https_proxy}\" != \"\" ]; then export https_proxy=${https_proxy}; fi; \
 	 cd \$$GOPATH/src/github.com/contiv/cluster/management/src; \
 	 make host-system-test"; \
 	if [ "$$?" != "0" ]; then res=1; else res=0; fi; \
-	if [ "$${res}" = "0" -o "${CONTIV_SOE}" = "" ]; then CONTIV_NODES=1 vagrant destroy -f; fi; \
+	if [ "$${res}" = "0" -o "${CONTIV_SOE}" = "" ]; then CONTIV_NODES=2 vagrant destroy -f; fi; \
 	exit $${res}
 	@echo "done running system-tests"
 

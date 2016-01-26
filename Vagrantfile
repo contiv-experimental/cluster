@@ -61,8 +61,8 @@ chown -R vagrant:vagrant #{gopath_dir}
 if [ "#{service_init}" = "false" ]; then
     echo mounting binaries from dev workspace
     rm -f /usr/bin/clusterm /usr/bin/clusterctl
-    ln -s #{gopath_dir}/src/github.com/contiv/clustermanagement/src/bin/clusterm /usr/bin/clusterm
-    ln -s #{gopath_dir}/src/github.com/contiv/clustermanagement/src/bin/clusterctl /usr/bin/clusterctl
+    ln -s #{gopath_dir}/src/github.com/contiv/cluster/management/src/bin/clusterm /usr/bin/clusterm
+    ln -s #{gopath_dir}/src/github.com/contiv/cluster/management/src/bin/clusterctl /usr/bin/clusterctl
 else
     echo using released binaries
 fi

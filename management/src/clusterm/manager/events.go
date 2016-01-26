@@ -8,7 +8,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
-	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
@@ -44,7 +43,8 @@ func (e *nodeDiscovered) process() error {
 	//XXX: need to form the name that adheres to collins tag requirements
 	name := e.node.GetLabel() + "-" + e.node.GetSerial()
 
-	if _, ok := e.mgr.nodes[name]; !ok {
+	enode, err := e.mgr.findNode(name)
+	if err.Error() == nodeNotExistsError(name).Error() {
 		e.mgr.nodes[name] = &node{
 			// XXX: node's role/group shall come from manager's role assignment logic or
 			// from user configuration
@@ -54,19 +54,21 @@ func (e *nodeDiscovered) process() error {
 					ansibleNodeAddrHostVar: e.node.GetMgmtAddress(),
 				}),
 		}
+		enode = e.mgr.nodes[name]
+	} else if err != nil {
+		return err
 	}
-	node := e.mgr.nodes[name]
-	// update node's monitoring info to the one received in the event
-	node.mInfo = e.node
-	node.iInfo = e.mgr.inventory.GetAsset(name)
 
-	if node.iInfo == nil {
+	// update node's monitoring info to the one received in the event
+	enode.mInfo = e.node
+	enode.iInfo = e.mgr.inventory.GetAsset(name)
+	if enode.iInfo == nil {
 		if err := e.mgr.inventory.AddAsset(name); err != nil {
 			// XXX. Log this to collins
 			log.Errorf("adding asset %q to discovered in inventory failed. Error: %s", name, err)
 			return err
 		}
-		node.iInfo = e.mgr.inventory.GetAsset(name)
+		enode.iInfo = e.mgr.inventory.GetAsset(name)
 	} else if err := e.mgr.inventory.SetAssetDiscovered(name); err != nil {
 		// XXX. Log this to collins
 		log.Errorf("setting asset %q to discovered in inventory failed. Error: %s", name, err)
@@ -95,10 +97,12 @@ func (e *nodeDisappeared) process() error {
 	//XXX: need to form the name that adheres to collins tag requirements
 	name := e.node.GetLabel() + "-" + e.node.GetSerial()
 
+	node, err := e.mgr.findNode(name)
+	if err != nil {
+		return err
+	}
+
 	// update node's monitoring info to the one received in the event.
-	// We assume that a node always starts from discovered state first, so
-	// an entry should exisit in cluster manager's internal state.
-	node := e.mgr.nodes[name]
 	node.mInfo = e.node
 
 	if err := e.mgr.inventory.SetAssetDisappeared(name); err != nil {
@@ -131,6 +135,7 @@ func (e *nodeCommissioned) process() error {
 		// XXX. Log this to collins
 		return err
 	}
+
 	// trigger node configuration event
 	e.mgr.reqQ <- newNodeConfigure(e.mgr, e.nodeName, e.extraVars)
 	return nil
@@ -155,6 +160,43 @@ func (e *nodeDecommissioned) String() string {
 }
 
 func (e *nodeDecommissioned) process() error {
+	isMasterNode, err := e.mgr.isMasterNode(e.nodeName)
+	if err != nil {
+		return err
+	}
+
+	// before setting the node cancelled and triggering the cleanup make sure
+	// that the master node is decommissioned only if there are no more worker nodes.
+	// XXX: revisit this check once we are able to support multiple master nodes.
+	if isMasterNode {
+		for name := range e.mgr.nodes {
+			if name == e.nodeName {
+				// skip this node
+				continue
+			}
+
+			isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
+			if err != nil || !isDiscoveredAndAllocated {
+				if err != nil {
+					log.Debugf("a node check failed for %q. Error: %s", name, err)
+				}
+				// skip hosts that are not yet provisioned or not in discovered state
+				continue
+			}
+
+			isWorkerNode, err := e.mgr.isWorkerNode(name)
+			if err != nil {
+				// skip this node
+				log.Debugf("a node check failed for %q. Error: %s", name, err)
+				continue
+			}
+
+			if isWorkerNode {
+				return fmt.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeName)
+			}
+		}
+	}
+
 	if err := e.mgr.inventory.SetAssetCancelled(e.nodeName); err != nil {
 		// XXX. Log this to collins
 		return err
@@ -232,15 +274,16 @@ func logOutputAndReturnStatus(r io.Reader, errCh chan error) error {
 }
 
 func (e *nodeConfigure) process() error {
-	if _, ok := e.mgr.nodes[e.nodeName]; !ok {
-		return fmt.Errorf("the node %q doesn't exist", e.nodeName)
+	node, err := e.mgr.findNode(e.nodeName)
+	if err != nil {
+		return err
 	}
 
-	if e.mgr.nodes[e.nodeName].cInfo == nil {
-		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
+	if node.cInfo == nil {
+		return nodeConfigNotExistsError(e.nodeName)
 	}
 
-	hostInfo := e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost)
+	hostInfo := node.cInfo.(*configuration.AnsibleHost)
 	nodeGroup := ansibleMasterGroupName
 	masterAddr := ""
 	masterName := ""
@@ -254,18 +297,30 @@ func (e *nodeConfigure) process() error {
 			// skip this node
 			continue
 		}
-		if status, state := node.iInfo.GetStatus(); status != inventory.Allocated || state != inventory.Discovered {
+
+		isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
+		if err != nil || !isDiscoveredAndAllocated {
+			if err != nil {
+				log.Debugf("a node check failed for %q. Error: %s", name, err)
+			}
 			// skip hosts that are not yet provisioned or not in discovered state
 			continue
 		}
-		if node.cInfo.GetGroup() != ansibleMasterGroupName {
+
+		isMasterNode, err := e.mgr.isMasterNode(name)
+		if err != nil || !isMasterNode {
+			if err != nil {
+				log.Debugf("a node check failed for %q. Error: %s", name, err)
+			}
 			//skip the hosts that are not in master group
 			continue
 		}
+
 		// found our node
 		masterAddr = node.mInfo.GetMgmtAddress()
 		masterName = node.cInfo.GetTag()
 		nodeGroup = ansibleWorkerGroupName
+		break
 	}
 	hostInfo.SetGroup(nodeGroup)
 	hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
@@ -308,12 +363,13 @@ func (e *nodeCleanup) String() string {
 }
 
 func (e *nodeCleanup) process() error {
-	if _, ok := e.mgr.nodes[e.nodeName]; !ok {
-		return fmt.Errorf("the node %q doesn't exist", e.nodeName)
+	node, err := e.mgr.findNode(e.nodeName)
+	if err != nil {
+		return err
 	}
 
-	if e.mgr.nodes[e.nodeName].cInfo == nil {
-		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
+	if node.cInfo == nil {
+		return nodeConfigNotExistsError(e.nodeName)
 	}
 
 	outReader, errCh := e.mgr.configuration.Cleanup(
@@ -350,12 +406,13 @@ func (e *nodeUpgrade) String() string {
 }
 
 func (e *nodeUpgrade) process() error {
-	if _, ok := e.mgr.nodes[e.nodeName]; !ok {
-		return fmt.Errorf("the node %q doesn't exist", e.nodeName)
+	node, err := e.mgr.findNode(e.nodeName)
+	if err != nil {
+		return err
 	}
 
-	if e.mgr.nodes[e.nodeName].cInfo == nil {
-		return fmt.Errorf("the configuration info for node %q doesn't exist", e.nodeName)
+	if node.cInfo == nil {
+		return nodeConfigNotExistsError(e.nodeName)
 	}
 
 	outReader, errCh := e.mgr.configuration.Upgrade(

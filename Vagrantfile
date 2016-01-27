@@ -91,6 +91,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             # create an interface for cluster (control) traffic
             node.vm.network :private_network, ip: node_addr, virtualbox__intnet: "true"
             node.vm.provider "virtualbox" do |v|
+                # give enough ram and memory for docker to run fine
+                v.customize ['modifyvm', :id, '--memory', "4096"]
+                v.customize ["modifyvm", :id, "--cpus", "2"]
                 # make all nics 'virtio' to take benefit of builtin vlan tag
                 # support, which otherwise needs to be enabled in Intel drivers,
                 # which are used by default by virtualbox

@@ -105,6 +105,7 @@ func (s *CliTestSuite) TearDownSuite(c *C) {
 		return
 	}
 	s.tbn1 = nil
+	s.tbn2 = nil
 	s.tb.Teardown()
 }
 
@@ -124,6 +125,8 @@ func (s *CliTestSuite) SetUpTest(c *C) {
 	//cleanup an existing dummy file, if any that our test ansible will create. Ignore error, if any.
 	file := dummyAnsibleFile
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("rm %s", file))
+	c.Logf("dummy file cleanup. Error: %s, Output: %s", err, out)
+	out, err = s.tbn2.RunCommandWithOutput(fmt.Sprintf("rm %s", file))
 	c.Logf("dummy file cleanup. Error: %s, Output: %s", err, out)
 
 	// XXX: we cleanup up assets from collins instead of restarting it to save test time.

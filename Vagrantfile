@@ -49,6 +49,9 @@ ansible_extra_vars = {
     "env" => host_env,
     "service_vip" => "#{base_ip}252",
     "validate_certs" => "no",
+    "control_interface" => "eth1",
+    "netplugin_if" => "eth2",
+    "docker_version" => "1.10.1",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 
@@ -85,6 +88,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         node_vars = {
             "etcd_master_addr" => node_ips[0],
             "etcd_master_name" => node_names[0],
+            "swarm_bootstrap_node_addr" => node_ips[0],
+            "ucp_bootstrap_node_addr" => node_ips[0],
         }
         config.vm.define node_name do |node|
             node.vm.hostname = node_name
@@ -144,9 +149,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 node.vm.synced_folder "shared", "/shared"
 
                 ansible_extra_vars = ansible_extra_vars.merge(node_vars)
-                if n == 0 then
+                if n <= 2 then
                     # if we are bringing up services as part of the cluster, then start
-                    # master services on the first vm
+                    # master services on the first three vms
                     if ansible_groups["service-master"] == nil then
                         ansible_groups["service-master"] = [ ]
                     end

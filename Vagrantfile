@@ -82,7 +82,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # use a private key from within the repo for demo environment. This is used for
     # pushing configuration
     config.ssh.private_key_path = "./management/src/demo/files/insecure_private_key"
-    num_nodes.times do |n|
+    (0..num_nodes-1).reverse_each do |n|
         node_name = node_names[n]
         node_addr = node_ips[n]
         node_vars = {
@@ -95,6 +95,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             node.vm.hostname = node_name
             # create an interface for cluster (control) traffic
             node.vm.network :private_network, ip: node_addr, virtualbox__intnet: "true"
+            # create an interface for cluster (data) traffic
+            node.vm.network :private_network, ip: "0.0.0.0", virtualbox__intnet: "true"
             node.vm.provider "virtualbox" do |v|
                 # give enough ram and memory for docker to run fine
                 v.customize ['modifyvm', :id, '--memory', "4096"]
@@ -104,7 +106,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 # which are used by default by virtualbox
                 v.customize ['modifyvm', :id, '--nictype1', 'virtio']
                 v.customize ['modifyvm', :id, '--nictype2', 'virtio']
+                v.customize ['modifyvm', :id, '--nictype3', 'virtio']
                 v.customize ['modifyvm', :id, '--nicpromisc2', 'allow-all']
+                v.customize ['modifyvm', :id, '--nicpromisc3', 'allow-all']
                 # create disks for ceph
                 (0..1).each do |d|
                   disk_path = "disk-#{n}-#{d}"
@@ -123,6 +127,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                                '--medium', vdi_disk_path]
                 end
             end
+
+            # provision base packages needed for cluster management
+            if ansible_groups["cluster-node"] == nil then
+                ansible_groups["cluster-node"] = [ ]
+            end
+            ansible_groups["cluster-node"] << node_name
+
             # The first vm stimulates the first manually **configured** nodes
             # in a cluster
             if n == 0 then
@@ -139,9 +150,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                 # add this node to cluster-control host group
                 ansible_groups["cluster-control"] = [node_name]
-                node.vm.provision "shell" do |s|
-                    s.inline = shell_provision
-                end
             end
 
             if service_init
@@ -167,12 +175,17 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             end
 
             # Run the provisioner after all machines are up
-            if n == (num_nodes - 1) then
+            if n == 0 then
                 node.vm.provision 'ansible' do |ansible|
                     ansible.groups = ansible_groups
                     ansible.playbook = ansible_playbook
                     ansible.extra_vars = ansible_extra_vars
                     ansible.limit = 'all'
+                end
+                # run shell provisioner for first node to correctly mount dev
+                # binaries if needed
+                node.vm.provision "shell" do |s|
+                    s.inline = shell_provision
                 end
             end
         end

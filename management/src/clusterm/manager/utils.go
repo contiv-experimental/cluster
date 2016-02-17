@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/inventory"
 )
 
@@ -34,6 +35,7 @@ func (m *Manager) isMasterNode(name string) (bool, error) {
 	if n.cInfo == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
+	log.Debugf("node: %q, group: %q", name, n.cInfo.GetGroup())
 	return n.cInfo.GetGroup() == ansibleMasterGroupName, nil
 }
 
@@ -45,6 +47,7 @@ func (m *Manager) isWorkerNode(name string) (bool, error) {
 	if n.cInfo == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
+	log.Debugf("node: %q, group: %q", name, n.cInfo.GetGroup())
 	return n.cInfo.GetGroup() == ansibleWorkerGroupName, nil
 }
 
@@ -57,5 +60,6 @@ func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 		return false, nodeInventoryNotExistsError(name)
 	}
 	status, state := n.iInfo.GetStatus()
+	log.Debugf("node: %q, status: %q, state: %q", name, status, state)
 	return state == inventory.Discovered && status == inventory.Allocated, nil
 }

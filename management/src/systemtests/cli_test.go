@@ -112,9 +112,9 @@ func (s *CliTestSuite) TearDownSuite(c *C) {
 func (s *CliTestSuite) nukeNodeInCollins(c *C, nodeName string) {
 	// Ignore errors here as asset might not exist.
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d status="Decommissioned" -d reason="test" -X POST http://localhost:9000/api/asset/%s`, nodeName))
-	c.Logf("asset decommission result: %s. Output: %s", err, out)
+	c.Logf("asset decommission result: %v. Output: %s", err, out)
 	out, err = s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d reason=test -X DELETE http://localhost:9000/api/asset/%s`, nodeName))
-	c.Logf("asset deletion result: %s. Output: %s", err, out)
+	c.Logf("asset deletion result: %v. Output: %s", err, out)
 }
 
 func (s *CliTestSuite) SetUpTest(c *C) {
@@ -125,9 +125,9 @@ func (s *CliTestSuite) SetUpTest(c *C) {
 	//cleanup an existing dummy file, if any that our test ansible will create. Ignore error, if any.
 	file := dummyAnsibleFile
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("rm %s", file))
-	c.Logf("dummy file cleanup. Error: %s, Output: %s", err, out)
+	c.Logf("dummy file cleanup. Error: %v, Output: %s", err, out)
 	out, err = s.tbn2.RunCommandWithOutput(fmt.Sprintf("rm %s", file))
-	c.Logf("dummy file cleanup. Error: %s, Output: %s", err, out)
+	c.Logf("dummy file cleanup. Error: %v, Output: %s", err, out)
 
 	// XXX: we cleanup up assets from collins instead of restarting it to save test time.
 	for _, name := range validNodeNames {

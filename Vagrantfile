@@ -82,7 +82,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # use a private key from within the repo for demo environment. This is used for
     # pushing configuration
     config.ssh.private_key_path = "./management/src/demo/files/insecure_private_key"
-    (0..num_nodes-1).reverse_each do |n|
+    (0..num_nodes-1).each do |n|
         node_name = node_names[n]
         node_addr = node_ips[n]
         node_vars = {
@@ -148,6 +148,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 # expose collins port to host for ease of management
                 node.vm.network "forwarded_port", guest: 9000, host: 9000
 
+                # expose UCP UI to the host on port 8080
+                node.vm.network "forwarded_port", guest: 443, host: 8080
+
                 # add this node to cluster-control host group
                 ansible_groups["cluster-control"] = [node_name]
             end
@@ -174,7 +177,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 end
             end
 
-            # Run the provisioner after all machines are up
+            # Run the provisoner for bootstrap node (ucp specific)
             if n == 0 then
                 node.vm.provision 'ansible' do |ansible|
                     ansible.groups = ansible_groups
@@ -188,6 +191,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                     s.inline = shell_provision
                 end
             end
+
+            # Run the provisioner after all machines are up
+            if n == (num_nodes - 1) then
+                node.vm.provision 'ansible' do |ansible|
+                    ansible.groups = ansible_groups
+                    ansible.playbook = ansible_playbook
+                    ansible.extra_vars = ansible_extra_vars
+                    # Turn off init cluster as this is a member-add scenario
+                    ansible.extra_vars["etcd_init_cluster"] = false
+                    ansible.limit = 'all'
+                end
+            end
+
         end
     end
 end

@@ -177,7 +177,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 end
             end
 
-            # Run the provisoner for bootstrap node (ucp specific)
+            # Run the provisoner for bootstrap node
             if n == 0 then
                 node.vm.provision 'ansible' do |ansible|
                     ansible.groups = ansible_groups

@@ -88,7 +88,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         node_vars = {
             "etcd_master_addr" => node_ips[0],
             "etcd_master_name" => node_names[0],
-            "swarm_bootstrap_node_addr" => node_ips[0],
+            "swarm_bootstrap_node_name" => node_names[0],
             "ucp_bootstrap_node_addr" => node_ips[0],
         }
         config.vm.define node_name do |node|

@@ -30,8 +30,6 @@ if ENV["http_proxy"]
   host_env["NO_PROXY"]    = host_env["no_proxy"]    = ENV["no_proxy"]
 end
 
-puts "Host environment: #{host_env}"
-
 ceph_vars = {
     "fsid" => "4a158d27-f750-41d5-9e7f-26ce4c9d2d45",
     "monitor_secret" => "AQAWqilTCDh7CBAAawXt6kyTgLFCxSvJhTEmuw==",
@@ -44,7 +42,8 @@ ceph_vars = {
 }
 
 ansible_groups = { }
-ansible_playbook = "./vendor/ansible/site.yml"
+bootstrap_node_ansible_groups = { }
+ansible_playbook = ENV["CONTIV_ANSIBLE_PLAYBOOK"] || "./vendor/ansible/site.yml"
 ansible_extra_vars = {
     "env" => host_env,
     "service_vip" => "#{base_ip}252",
@@ -52,6 +51,7 @@ ansible_extra_vars = {
     "control_interface" => "eth1",
     "netplugin_if" => "eth2",
     "docker_version" => "1.10.2",
+    "scheduler_provider" => "native-swarm",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 
@@ -88,8 +88,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         node_vars = {
             "etcd_master_addr" => node_ips[0],
             "etcd_master_name" => node_names[0],
-            "swarm_bootstrap_node_name" => node_names[0],
-            "ucp_bootstrap_node_addr" => node_ips[0],
+            "ucp_bootstrap_node_name" => node_names[0],
         }
         config.vm.define node_name do |node|
             node.vm.hostname = node_name
@@ -161,6 +160,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
                 ansible_extra_vars = ansible_extra_vars.merge(node_vars)
                 if n <= 2 then
+                    # for bootstrap-node we need to use a separate host group variable
+                    # as otherwise `vagrant provision` ends up running on all hosts.
+                    # This seems to be due to difference in provisioning behavior
+                    # between `vagrant up` and `vagrant provision`
+                    if n == 0 then
+                        if bootstrap_node_ansible_groups["service-master"] == nil then
+                            bootstrap_node_ansible_groups["service-master"] = [ ]
+                        end
+                        bootstrap_node_ansible_groups["service-master"] << node_name
+                    end
                     # if we are bringing up services as part of the cluster, then start
                     # master services on the first three vms
                     if ansible_groups["service-master"] == nil then
@@ -177,10 +186,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 end
             end
 
-            # Run the provisoner for bootstrap node
+            # Run the provisoner for ucp bootstrap node
             if n == 0 then
                 node.vm.provision 'ansible' do |ansible|
-                    ansible.groups = ansible_groups
+                    ansible.groups = bootstrap_node_ansible_groups
                     ansible.playbook = ansible_playbook
                     ansible.extra_vars = ansible_extra_vars
                     ansible.limit = 'all'
@@ -203,7 +212,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                     ansible.limit = 'all'
                 end
             end
-
         end
     end
 end

@@ -162,6 +162,37 @@ func (s *managerSuite) TestPostInMaintenanceWithVarsSuccess(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *managerSuite) TestPostGlobalsWithVarsSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s?%s=%s",
+		baseURL, PostGlobals, ExtraVarsQuery, testExtraVars)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostGlobals(testExtraVars)
+	c.Assert(err, IsNil)
+}
+
+func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostGlobals)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostGlobals("")
+	c.Assert(err, IsNil)
+}
+
 func (s *managerSuite) TestPostError(c *C) {
 	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, nodeName)
 	expURL, err := url.Parse(expURLStr)
@@ -205,6 +236,22 @@ func (s *managerSuite) TestGetNodesSuccess(c *C) {
 	}
 
 	resp, err := clstrC.GetNode(nodeName)
+	c.Assert(err, IsNil)
+	c.Assert(resp, DeepEquals, testGetData)
+}
+
+func (s *managerSuite) TestGetGlobalsSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, GetGlobals)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okGetReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	resp, err := clstrC.GetGlobals()
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }

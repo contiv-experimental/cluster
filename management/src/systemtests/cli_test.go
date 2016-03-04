@@ -230,7 +230,7 @@ func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.Test
 
 	// verify that site.yml got executed on the node and created the dummy file
 	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
+	out, err = nut.RunCommandWithOutput(fmt.Sprintf("sudo echo 2 > /proc/sys/vm/drop_caches; stat -t %s", file))
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
@@ -249,7 +249,7 @@ func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.Te
 
 	// verify that cleanup.yml got executed on the node and deleted the dummy file
 	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
+	out, err = nut.RunCommandWithOutput(fmt.Sprintf("sudo echo 2 > /proc/sys/vm/drop_caches; stat -t %s", file))
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 }
 
@@ -289,6 +289,36 @@ func (s *CliTestSuite) TestDecommissionFailureRemainingWorkerNodes(c *C) {
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptdOut := fmt.Sprintf(".*%s.*is a master node and it can only be decommissioned after all worker nodes have been decommissioned.*", nodeName1)
+	// XXX: somehow the following checker doesn't match the expression,
+	// so resorting to a regex check here.
+	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))
+	if match, err := regexp.MatchString(exptdOut, out); err != nil || !match {
+		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
+	}
+}
+
+func (s *CliTestSuite) TestSetGetGlobalExtraVarsSuccess(c *C) {
+	cmdStr := fmt.Sprintf(`clusterctl global set -e '{\\\"foo\\\":\\\"bar\\\"}'`)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+
+	cmdStr = fmt.Sprintf(`clusterctl global get`)
+	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	exptdOut := fmt.Sprintf(`.*"foo":.*"bar".*`)
+	// XXX: somehow the following checker doesn't match the expression,
+	// so resorting to a regex check here.
+	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))
+	if match, err := regexp.MatchString(exptdOut, out); err != nil || !match {
+		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
+	}
+}
+
+func (s *CliTestSuite) TestSetGetGlobalExtraVarsFailureInvalidJSON(c *C) {
+	cmdStr := fmt.Sprintf(`clusterctl global set -e '{\\\"foo\\\":}'`)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := `.*Request: globals.*extra_vars.*should be a valid json.*`
 	// XXX: somehow the following checker doesn't match the expression,
 	// so resorting to a regex check here.
 	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))

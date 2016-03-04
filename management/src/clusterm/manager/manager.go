@@ -13,7 +13,6 @@
 package manager
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/contiv/cluster/management/src/collins"
@@ -87,12 +86,11 @@ func NewManager(config *Config) (*Manager, error) {
 		return nil, fmt.Errorf("nil config passed")
 	}
 
-	if config.Ansible.ExtraVariables != "" {
-		vars := &map[string]interface{}{}
-		// extra vars string should be valid json.
-		if err := json.Unmarshal([]byte(config.Ansible.ExtraVariables), vars); err != nil {
-			return nil, errInvalidJSON("ansible.ExtraVariables configuration", err)
-		}
+	var err error
+	config.Ansible.ExtraVariables, err = validateAndSanitizeEmptyExtraVars(
+		"ansible.ExtraVariables configuration", config.Ansible.ExtraVariables)
+	if err != nil {
+		return nil, err
 	}
 
 	m := &Manager{
@@ -102,8 +100,6 @@ func NewManager(config *Config) (*Manager, error) {
 		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
 	}
-
-	var err error
 	if m.inventory, err = inventory.NewCollinsSubsys(&config.Collins); err != nil {
 		return nil, err
 	}

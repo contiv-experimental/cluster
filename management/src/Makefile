@@ -16,6 +16,11 @@ unittest_tag:=unittest
 systemtest_tag:=systemtest
 all_tags:=$(unittest_tag) $(systemtest_tag)
 
+# set CONTIV_TEST_FLAGS in environment to run specific system tests
+# Eg. CONTIV_TEST_FLAGS="-check.f=TestDecommission*"
+CONTIV_TEST_FLAGS:= \
+	$(if $(CONTIV_TEST_FLAGS),"$(CONTIV_TEST_FLAGS)", "")
+
 deps:
 	@echo "checking and downloading dependencies"
 	@go get github.com/tools/godep
@@ -68,12 +73,12 @@ build: build-docker-img
 unit-test: build-docker-img
 	@echo "running unit-tests"
 	@$(docker_run) sh -c "make checks generate && \
-		godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag) &&\
+		godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag) -check.v $(CONTIV_TEST_FLAGS) &&\
 		make clean-generate"
 	@echo "done running unit-tests"
 
 host-system-test: checks
-	@godep go test -v -tags $(systemtest_tag) github.com/contiv/cluster/management/src/systemtests -check.v
+	@godep go test -v -tags $(systemtest_tag) github.com/contiv/cluster/management/src/systemtests -check.v $(CONTIV_TEST_FLAGS)
 
 system-test:
 	@echo "running system-tests"
@@ -86,7 +91,7 @@ system-test:
 	 if [ \"${http_proxy}\" != \"\" ]; then export http_proxy=${http_proxy}; fi; \
 	 if [ \"${https_proxy}\" != \"\" ]; then export https_proxy=${https_proxy}; fi; \
 	 cd \$$GOPATH/src/github.com/contiv/cluster/management/src; \
-	 make host-system-test"; \
+	 CONTIV_TEST_FLAGS=$(CONTIV_TEST_FLAGS) make host-system-test"; \
 	if [ "$$?" != "0" ]; then res=1; else res=0; fi; \
 	if [ "$${res}" = "0" -o "${CONTIV_SOE}" = "" ]; then CONTIV_NODES=2 vagrant destroy -f; fi; \
 	exit $${res}

@@ -12,6 +12,8 @@ docker_buildargs := \
 docker_img := cluster-dev$(if $(GIT_BRANCH),:$(GIT_BRANCH))
 docker_run:=docker run --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
 	-w $(work_dir) "$(docker_img)"
+docker_run_interactive:=docker run -it --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
+	-w $(work_dir) "$(docker_img)"
 unittest_tag:=unittest
 systemtest_tag:=systemtest
 all_tags:=$(unittest_tag) $(systemtest_tag)
@@ -60,25 +62,31 @@ check-code:
 build-docker-img:
 	docker build -t "$(docker_img)" $(docker_buildargs) .
 
-build-docker-shell:
-	@$(docker_run) bash
+build-docker-shell: build-docker-img
+	@$(docker_run_interactive) bash
 
 build: build-docker-img
-	@echo "building..."
-	@$(docker_run) sh -c "make checks generate && \
+	@echo "building test image..."
+	@$(docker_run) bash -c "make checks generate && \
 		godep go install ./... && \
 		make clean-generate"
-	@echo "done building..."
+	@echo "done building test image..."
 
 unit-test: build-docker-img
 	@echo "running unit-tests"
-	@$(docker_run) sh -c "make checks generate && \
-		godep go list -tags \"$(all_tags)\" ./... | xargs -n1 godep go test -tags $(unittest_tag) -check.v $(CONTIV_TEST_FLAGS) &&\
+	@$(docker_run) bash -c "make checks generate && \
+		(godep go list -tags '$(unittest_tag)' -f '{{.ImportPath}}:{{.TestGoFiles}}' ./... | \
+		grep -v '\[\]' | \
+		awk -F: '{print \$$1}' | \
+		xargs -n1 -I'{}' godep go test -tags '$(unittest_tag)' '{}' -check.v $(CONTIV_TEST_FLAGS)) && \
 		make clean-generate"
 	@echo "done running unit-tests"
 
 host-system-test: checks
-	@godep go test -v -tags $(systemtest_tag) github.com/contiv/cluster/management/src/systemtests -check.v $(CONTIV_TEST_FLAGS)
+	@godep go list -tags '$(systemtest_tag)'  -f '{{.ImportPath}}:{{.TestGoFiles}}' ./... | \
+		grep -v '\[\]' | \
+		awk -F: '{print $$1}' | \
+		xargs -n1 -I'{}' godep go test -tags '$(systemtest_tag)' '{}' -check.v $(CONTIV_TEST_FLAGS)
 
 system-test:
 	@echo "running system-tests"

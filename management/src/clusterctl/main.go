@@ -11,19 +11,31 @@ import (
 	"github.com/contiv/cluster/management/src/clusterm/manager"
 )
 
-var errNodeNameMissing = func(c string) error { return fmt.Errorf("command %q expects a node name", c) }
+var (
+	errNodeNameMissing = func(c string) error { return fmt.Errorf("command %q expects a node name", c) }
 
-func main() {
-	app := cli.NewApp()
-	app.Name = os.Args[0]
-	app.Usage = "utility to interact with cluster manager"
-	app.Flags = []cli.Flag{
+	clustermFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "url, u",
 			Value: "localhost:9876",
 			Usage: "cluster manager's REST service url",
 		},
 	}
+
+	extraVarsFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "extra-vars, e",
+			Value: "",
+			Usage: "extra vars for ansible configuration. This should be a quoted json string.",
+		},
+	}
+)
+
+func main() {
+	app := cli.NewApp()
+	app.Name = os.Args[0]
+	app.Usage = "utility to interact with cluster manager"
+	app.Flags = clustermFlags
 	app.Commands = []cli.Command{
 		{
 			Name:    "node",
@@ -34,46 +46,28 @@ func main() {
 					Name:    "commission",
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
-					Action:  doAction(newNodePostActioner(nodecommission)),
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:  "extra-vars, e",
-							Value: "",
-							Usage: "extra vars for ansible configuration. This should be a quoted json string.",
-						},
-					},
+					Action:  doAction(newPostActioner(nodecommission)),
+					Flags:   extraVarsFlags,
 				},
 				{
 					Name:    "decommission",
 					Aliases: []string{"d"},
 					Usage:   "decommission a node",
-					Action:  doAction(newNodePostActioner(nodeDecommission)),
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:  "extra-vars, e",
-							Value: "",
-							Usage: "extra vars for ansible configuration. This should be a quoted json string.",
-						},
-					},
+					Action:  doAction(newPostActioner(nodeDecommission)),
+					Flags:   extraVarsFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a node in maintenance",
-					Action:  doAction(newNodePostActioner(nodeMaintenance)),
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:  "extra-vars, e",
-							Value: "",
-							Usage: "extra vars for ansible configuration. This should be a quoted json string.",
-						},
-					},
+					Action:  doAction(newPostActioner(nodeMaintenance)),
+					Flags:   extraVarsFlags,
 				},
 				{
 					Name:    "get",
 					Aliases: []string{"g"},
 					Usage:   "get node's status information",
-					Action:  doAction(newNodeGetActioner(nodeGet)),
+					Action:  doAction(newGetActioner(nodeGet)),
 				},
 			},
 		},
@@ -86,7 +80,27 @@ func main() {
 					Name:    "get",
 					Aliases: []string{"g"},
 					Usage:   "get status information for all nodes",
-					Action:  doAction(newNodeGetActioner(nodesGet)),
+					Action:  doAction(newGetActioner(nodesGet)),
+				},
+			},
+		},
+		{
+			Name:    "global",
+			Aliases: []string{"g"},
+			Usage:   "set/get global info",
+			Subcommands: []cli.Command{
+				{
+					Name:    "get",
+					Aliases: []string{"g"},
+					Usage:   "get global info",
+					Action:  doAction(newGetActioner(globalsGet)),
+				},
+				{
+					Name:    "set",
+					Aliases: []string{"s"},
+					Usage:   "set global info",
+					Flags:   extraVarsFlags,
+					Action:  doAction(newPostActioner(globalsSet)),
 				},
 			},
 		},
@@ -112,25 +126,25 @@ func doAction(a actioner) func(*cli.Context) {
 	}
 }
 
-type nodePostActioner struct {
+type postActioner struct {
 	nodeName  string
 	extraVars string
 	postCb    func(c *manager.Client, nodeName, extraVars string) error
 }
 
-func newNodePostActioner(postCb func(c *manager.Client, nodeName, extraVars string) error) *nodePostActioner {
-	return &nodePostActioner{postCb: postCb}
+func newPostActioner(postCb func(c *manager.Client, nodeName, extraVars string) error) *postActioner {
+	return &postActioner{postCb: postCb}
 }
 
-func (npa *nodePostActioner) procFlags(c *cli.Context) {
+func (npa *postActioner) procFlags(c *cli.Context) {
 	npa.extraVars = c.String("extra-vars")
 }
 
-func (npa *nodePostActioner) procArgs(c *cli.Context) {
+func (npa *postActioner) procArgs(c *cli.Context) {
 	npa.nodeName = c.Args().First()
 }
 
-func (npa *nodePostActioner) action(c *manager.Client) error {
+func (npa *postActioner) action(c *manager.Client) error {
 	return npa.postCb(c, npa.nodeName, npa.extraVars)
 }
 
@@ -155,59 +169,67 @@ func nodeMaintenance(c *manager.Client, nodeName, extraVars string) error {
 	return c.PostNodeInMaintenance(nodeName, extraVars)
 }
 
-type nodeGetActioner struct {
+func globalsSet(c *manager.Client, noop, extraVars string) error {
+	return c.PostGlobals(extraVars)
+}
+
+type getActioner struct {
 	nodeName string
 	getCb    func(c *manager.Client, nodeName string) error
 }
 
-func newNodeGetActioner(getCb func(c *manager.Client, nodeName string) error) *nodeGetActioner {
-	return &nodeGetActioner{getCb: getCb}
+func newGetActioner(getCb func(c *manager.Client, nodeName string) error) *getActioner {
+	return &getActioner{getCb: getCb}
 }
 
-func (nga *nodeGetActioner) procFlags(c *cli.Context) {
+func (nga *getActioner) procFlags(c *cli.Context) {
 	return
 }
 
-func (nga *nodeGetActioner) procArgs(c *cli.Context) {
+func (nga *getActioner) procArgs(c *cli.Context) {
 	nga.nodeName = c.Args().First()
 }
 
-func (nga *nodeGetActioner) action(c *manager.Client) error {
+func (nga *getActioner) action(c *manager.Client) error {
 	return nga.getCb(c, nga.nodeName)
 }
 
 func nodeGet(c *manager.Client, nodeName string) error {
-	var (
-		out []byte
-		err error
-	)
-
 	if nodeName == "" {
 		return errNodeNameMissing("get")
 	}
 
-	if out, err = c.GetNode(nodeName); err != nil {
+	out, err := c.GetNode(nodeName)
+	if err != nil {
 		return err
 	}
 
 	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "\t")
+	json.Indent(&outBuf, out, "", "    ")
 	outBuf.WriteTo(os.Stdout)
 	return nil
 }
 
 func nodesGet(c *manager.Client, noop string) error {
-	var (
-		out []byte
-		err error
-	)
-
-	if out, err = c.GetAllNodes(); err != nil {
+	out, err := c.GetAllNodes()
+	if err != nil {
 		return err
 	}
 
 	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "\t")
+	json.Indent(&outBuf, out, "", "    ")
+	outBuf.WriteTo(os.Stdout)
+	return nil
+}
+
+func globalsGet(c *manager.Client, noop string) error {
+	out, err := c.GetGlobals()
+	if err != nil {
+		return err
+	}
+
+	var outBuf bytes.Buffer
+	json.Indent(&outBuf, out, "", "    ")
 	outBuf.WriteTo(os.Stdout)
 	return nil
 }

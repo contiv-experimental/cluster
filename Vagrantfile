@@ -82,7 +82,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # use a private key from within the repo for demo environment. This is used for
     # pushing configuration
     config.ssh.private_key_path = "./management/src/demo/files/insecure_private_key"
-    (0..num_nodes-1).each do |n|
+    (0..num_nodes-1).reverse_each do |n|
         node_name = node_names[n]
         node_addr = node_ips[n]
         node_vars = {
@@ -186,30 +186,26 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 end
             end
 
-            # Run the provisoner for ucp bootstrap node
+            # Run the provisioners after all machines are up
             if n == 0 then
-                node.vm.provision 'ansible' do |ansible|
+                node.vm.provision 'bootstrap-ansible', type: 'ansible' do |ansible|
                     ansible.groups = bootstrap_node_ansible_groups
                     ansible.playbook = ansible_playbook
                     ansible.extra_vars = ansible_extra_vars
                     ansible.limit = 'all'
                 end
-                # run shell provisioner for first node to correctly mount dev
-                # binaries if needed
-                node.vm.provision "shell" do |s|
-                    s.inline = shell_provision
-                end
-            end
-
-            # Run the provisioner after all machines are up
-            if n == (num_nodes - 1) then
-                node.vm.provision 'ansible' do |ansible|
+                node.vm.provision 'main-ansible', type: 'ansible' do |ansible|
                     ansible.groups = ansible_groups
                     ansible.playbook = ansible_playbook
                     ansible.extra_vars = ansible_extra_vars
                     # Turn off init cluster as this is a member-add scenario
                     ansible.extra_vars["etcd_init_cluster"] = false
                     ansible.limit = 'all'
+                end
+                # run the shell provisioner on the first node, after all the provisioners,
+                # to correctly mount dev binaries if needed
+                node.vm.provision 'devenv-shell', type: "shell" do |s|
+                    s.inline = shell_provision
                 end
             end
         end

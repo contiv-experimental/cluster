@@ -1,10 +1,13 @@
 package configuration
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
 	"github.com/contiv/cluster/management/src/ansible"
+	"github.com/imdario/mergo"
 )
 
 // AnsibleSubsysConfig describes the configuration for ansible based configuration management subsystem
@@ -21,7 +24,8 @@ type AnsibleSubsysConfig struct {
 
 // AnsibleSubsys implements the configuration subsystem based on ansible
 type AnsibleSubsys struct {
-	config *AnsibleSubsysConfig
+	config          *AnsibleSubsysConfig
+	globalExtraVars string
 }
 
 // AnsibleHost describes host related info relevant for ansible inventory
@@ -65,30 +69,67 @@ func (h *AnsibleHost) SetGroup(group string) {
 // NewAnsibleSubsys instantiates and returns AnsibleSubsys
 func NewAnsibleSubsys(config *AnsibleSubsysConfig) *AnsibleSubsys {
 	return &AnsibleSubsys{
-		config: config,
+		config:          config,
+		globalExtraVars: DefaultValidJSON,
 	}
 }
 
+func mergeExtraVars(dst, src string) (string, error) {
+	var (
+		d map[string]interface{}
+		s map[string]interface{}
+	)
+
+	if err := json.Unmarshal([]byte(dst), &d); err != nil {
+		return "", fmt.Errorf("failed to unmarshal dest extra vars %q. Error: %v", dst, err)
+	}
+	if err := json.Unmarshal([]byte(src), &s); err != nil {
+		return "", fmt.Errorf("failed to unmarshal src extra vars %q. Error: %v", src, err)
+	}
+	if err := mergo.MergeWithOverwrite(&d, &s); err != nil {
+		return "", fmt.Errorf("failed to merge extra vars, dst: %q src: %q. Error: %v", dst, src, err)
+	}
+	o, err := json.Marshal(d)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal resulting extra vars %q. Error: %v", o, err)
+	}
+
+	return string(o), nil
+}
+
 func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars string) (io.Reader, chan error) {
+	// make error channel buffered, so it doesn't block
+	errCh := make(chan error, 1)
+
 	iNodes := []ansible.InventoryHost{}
 	for _, n := range nodes {
 		iNodes = append(iNodes, ansible.NewInventoryHost(n.tag, n.addr, n.group, n.vars))
 	}
+
 	// Pick extra variables for ansible, if any.
-	// Precedence (top one taking higher precedence):
+	// Merge the variables with following precedence (top one taking higher precedence):
 	// - variables specified per action (i.e. configure, cleanup, upgrade)
-	// - varaibles as passed in configuration
-	// XXX: would merging the variables be better/desirable instead?
-	vars := `{"env": {}}`
-	if strings.TrimSpace(extraVars) != "" {
-		vars = strings.TrimSpace(extraVars)
-	} else if strings.TrimSpace(a.config.ExtraVariables) != "" {
-		vars = strings.TrimSpace(a.config.ExtraVariables)
+	// - variables specified as globals
+	// - variables specified at configuration time
+	vars := DefaultValidJSON
+	vars, err := mergeExtraVars(vars, a.config.ExtraVariables)
+	if err != nil {
+		errCh <- err
+		return nil, errCh
 	}
+	vars, err = mergeExtraVars(vars, a.globalExtraVars)
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+	vars, err = mergeExtraVars(vars, extraVars)
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+
 	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User, a.config.PrivKeyFile, vars)
 	r, w := io.Pipe()
-	// make error channel buffered, so it doesn't block
-	errCh := make(chan error, 1)
 	go func(outStream io.Writer, errCh chan error) {
 		defer r.Close()
 		if err := runner.Run(outStream, outStream); err != nil {
@@ -117,4 +158,15 @@ func (a *AnsibleSubsys) Cleanup(nodes SubsysHosts, extraVars string) (io.Reader,
 func (a *AnsibleSubsys) Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
 		a.config.UpgradePlaybook}, "/"), extraVars)
+}
+
+// SetGlobals sets the extra vars at a ansible subsys level
+func (a *AnsibleSubsys) SetGlobals(extraVars string) error {
+	a.globalExtraVars = extraVars
+	return nil
+}
+
+// GetGlobals return the value of extra vars at a ansible subsys level
+func (a *AnsibleSubsys) GetGlobals() string {
+	return a.globalExtraVars
 }

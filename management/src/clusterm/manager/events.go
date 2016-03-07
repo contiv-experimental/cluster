@@ -255,6 +255,12 @@ func (e *nodeConfigure) String() string {
 // helper function to log the stream of bytes from a reader while waiting on
 // the error channel. It returns on first error received on the channel
 func logOutputAndReturnStatus(r io.Reader, errCh chan error) error {
+	// this can happen if an error occurred before the ansible could be run,
+	// just return that error
+	if r == nil {
+		return <-errCh
+	}
+
 	s := bufio.NewScanner(r)
 	ticker := time.Tick(50 * time.Millisecond)
 	for {
@@ -431,6 +437,29 @@ func (e *nodeUpgrade) process() error {
 	// set asset state to commissioned
 	if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
 		// XXX. Log this to collins
+		return err
+	}
+	return nil
+}
+
+type setGlobals struct {
+	mgr       *Manager
+	extraVars string
+}
+
+func newSetGlobals(mgr *Manager, extraVars string) *setGlobals {
+	return &setGlobals{
+		mgr:       mgr,
+		extraVars: extraVars,
+	}
+}
+
+func (e *setGlobals) String() string {
+	return fmt.Sprintf("setGlobals")
+}
+
+func (e *setGlobals) process() error {
+	if err := e.mgr.configuration.SetGlobals(e.extraVars); err != nil {
 		return err
 	}
 	return nil

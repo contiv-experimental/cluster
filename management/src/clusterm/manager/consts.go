@@ -13,6 +13,9 @@ const (
 	// to put an asset in maintenance
 	PostNodeMaintenancePrefix = "maintenance/node"
 	postNodeMaintenance       = PostNodeMaintenancePrefix + "/{tag}"
+	// PostGlobals is the prefix for the POST REST endpoint
+	// to set global configuration values
+	PostGlobals = "globals"
 	// GetNodeInfoPrefix is the prefix for the GET REST endpoint
 	// to fetch info for an asset
 	GetNodeInfoPrefix = "info/node"
@@ -20,6 +23,9 @@ const (
 	// GetNodesInfo is the prefix for the GET REST endpoint
 	// to fetch info for all know assets
 	GetNodesInfo = "info/nodes"
+	// GetGlobals is the prefix for the GET REST endpoint
+	// to fetch the global configuration values
+	GetGlobals = "info/globals"
 	// ExtraVarsQuery is the key for the query variable used to specify the ansible extra
 	// variables for configuration actions. The variables shall be specified as a json map.
 	ExtraVarsQuery = "extra_vars"

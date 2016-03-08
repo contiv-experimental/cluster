@@ -191,13 +191,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 node.vm.provision 'bootstrap-ansible', type: 'ansible' do |ansible|
                     ansible.groups = bootstrap_node_ansible_groups
                     ansible.playbook = ansible_playbook
-                    ansible.extra_vars = ansible_extra_vars
+                    ansible.extra_vars = ansible_extra_vars.clone
                     ansible.limit = 'all'
                 end
                 node.vm.provision 'main-ansible', type: 'ansible' do |ansible|
                     ansible.groups = ansible_groups
                     ansible.playbook = ansible_playbook
-                    ansible.extra_vars = ansible_extra_vars
+                    ansible.extra_vars = ansible_extra_vars.clone
                     # Turn off init cluster as this is a member-add scenario
                     ansible.extra_vars["etcd_init_cluster"] = false
                     ansible.limit = 'all'

@@ -160,12 +160,7 @@ func (s *CliTestSuite) TestCommissionNonExistentNode(c *C) {
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptStr := fmt.Sprintf(".*asset.*%s.*doesn't exists.*", nodeName)
-	// XXX: somehow the following checker doesn't match the expression,
-	// so resorting to a regex check here.
-	//s.Assert(c, out, Matches, exptStr, Commentf("output: %s", out))
-	if match, err := regexp.MatchString(exptStr, out); err != nil || !match {
-		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
-	}
+	s.assertMatch(c, exptStr, out)
 }
 
 func (s *CliTestSuite) TestCommissionDisappearedNode(c *C) {
@@ -230,7 +225,7 @@ func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.Test
 
 	// verify that site.yml got executed on the node and created the dummy file
 	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("sudo echo 2 > /proc/sys/vm/drop_caches; stat -t %s", file))
+	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
@@ -249,7 +244,7 @@ func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.Te
 
 	// verify that cleanup.yml got executed on the node and deleted the dummy file
 	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("sudo echo 2 > /proc/sys/vm/drop_caches; stat -t %s", file))
+	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 }
 
@@ -289,12 +284,7 @@ func (s *CliTestSuite) TestDecommissionFailureRemainingWorkerNodes(c *C) {
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptdOut := fmt.Sprintf(".*%s.*is a master node and it can only be decommissioned after all worker nodes have been decommissioned.*", nodeName1)
-	// XXX: somehow the following checker doesn't match the expression,
-	// so resorting to a regex check here.
-	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))
-	if match, err := regexp.MatchString(exptdOut, out); err != nil || !match {
-		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
-	}
+	s.assertMatch(c, exptdOut, out)
 }
 
 func (s *CliTestSuite) TestSetGetGlobalExtraVarsSuccess(c *C) {
@@ -305,13 +295,8 @@ func (s *CliTestSuite) TestSetGetGlobalExtraVarsSuccess(c *C) {
 	cmdStr = fmt.Sprintf(`clusterctl global get`)
 	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	exptdOut := fmt.Sprintf(`.*"foo":.*"bar".*`)
-	// XXX: somehow the following checker doesn't match the expression,
-	// so resorting to a regex check here.
-	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))
-	if match, err := regexp.MatchString(exptdOut, out); err != nil || !match {
-		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
-	}
+	exptdOut := `.*"foo":.*"bar".*`
+	s.assertMatch(c, exptdOut, out)
 }
 
 func (s *CliTestSuite) TestSetGetGlobalExtraVarsFailureInvalidJSON(c *C) {
@@ -319,10 +304,50 @@ func (s *CliTestSuite) TestSetGetGlobalExtraVarsFailureInvalidJSON(c *C) {
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptdOut := `.*Request: globals.*extra_vars.*should be a valid json.*`
-	// XXX: somehow the following checker doesn't match the expression,
-	// so resorting to a regex check here.
-	//s.Assert(c, out, Matches, exptdOut, Commentf("output: %s", out))
-	if match, err := regexp.MatchString(exptdOut, out); err != nil || !match {
-		s.Assert(c, false, Equals, true, Commentf("output: %s", out))
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *CliTestSuite) TestGetNodeInfoFailureNonExistentNode(c *C) {
+	cmdStr := fmt.Sprintf(`clusterctl node get %s`, invalidNodeName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := fmt.Sprintf(`.*node with name.*%s.*doesn't exists.*`, invalidNodeName)
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *CliTestSuite) TestGetNodeInfoSuccess(c *C) {
+	cmdStr := fmt.Sprintf(`clusterctl node get %s`, validNodeNames[0])
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	exptdOut := `.*"monitoring-state":.*`
+	s.assertMultiMatch(c, exptdOut, out, 1)
+	exptdOut = `.*"inventory-state":.*`
+	s.assertMultiMatch(c, exptdOut, out, 1)
+	exptdOut = `.*"configuration-state".*`
+	s.assertMultiMatch(c, exptdOut, out, 1)
+}
+
+func (s *CliTestSuite) TestGetNodesInfoSuccess(c *C) {
+	cmdStr := `clusterctl nodes get`
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	exptdOut := `.*"monitoring-state":.*`
+	s.assertMultiMatch(c, exptdOut, out, 2)
+	exptdOut = `.*"inventory-state":.*`
+	s.assertMultiMatch(c, exptdOut, out, 2)
+	exptdOut = `.*"configuration-state".*`
+	s.assertMultiMatch(c, exptdOut, out, 2)
+}
+
+func (s *CliTestSuite) assertMatch(c *C, exptd, rcvd string) {
+	// XXX: the `Matches` checker doesn't match the expression in a multi-line
+	// output so resorting to a regex check here.
+	if match, err := regexp.MatchString(exptd, rcvd); err != nil || !match {
+		s.Assert(c, false, Equals, true, Commentf("output: %s", rcvd))
 	}
+}
+
+func (s *CliTestSuite) assertMultiMatch(c *C, exptd, rcvd string, eMatchCount int) {
+	r := regexp.MustCompile(fmt.Sprintf("(?m)%s", exptd))
+	s.Assert(c, len(r.FindAllString(rcvd, -1)), Equals, eMatchCount, Commentf("output: %s", rcvd))
 }

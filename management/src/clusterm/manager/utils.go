@@ -32,11 +32,11 @@ func (m *Manager) isMasterNode(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if n.cInfo == nil {
+	if n.Cfg == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
-	log.Debugf("node: %q, group: %q", name, n.cInfo.GetGroup())
-	return n.cInfo.GetGroup() == ansibleMasterGroupName, nil
+	log.Debugf("node: %q, group: %q", name, n.Cfg.GetGroup())
+	return n.Cfg.GetGroup() == ansibleMasterGroupName, nil
 }
 
 func (m *Manager) isWorkerNode(name string) (bool, error) {
@@ -44,11 +44,11 @@ func (m *Manager) isWorkerNode(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if n.cInfo == nil {
+	if n.Cfg == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
-	log.Debugf("node: %q, group: %q", name, n.cInfo.GetGroup())
-	return n.cInfo.GetGroup() == ansibleWorkerGroupName, nil
+	log.Debugf("node: %q, group: %q", name, n.Cfg.GetGroup())
+	return n.Cfg.GetGroup() == ansibleWorkerGroupName, nil
 }
 
 func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
@@ -56,10 +56,10 @@ func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if n.iInfo == nil {
+	if n.Inv == nil {
 		return false, nodeInventoryNotExistsError(name)
 	}
-	status, state := n.iInfo.GetStatus()
+	status, state := n.Inv.GetStatus()
 	log.Debugf("node: %q, status: %q, state: %q", name, status, state)
 	return state == inventory.Discovered && status == inventory.Allocated, nil
 }

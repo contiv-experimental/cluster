@@ -66,6 +66,21 @@ func (h *AnsibleHost) SetGroup(group string) {
 	h.group = group
 }
 
+// MarshalJSON satisfies the json marshaller interface and shall encode asset info in json
+func (h *AnsibleHost) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Tag       string            `json:"inventory-name"`
+		HostGroup string            `json:"host-group"`
+		Addr      string            `json:"ssh-address"`
+		Vars      map[string]string `json:"inventory-vars"`
+	}{
+		Tag:       h.tag,
+		HostGroup: h.group,
+		Addr:      h.addr,
+		Vars:      h.vars,
+	})
+}
+
 // NewAnsibleSubsys instantiates and returns AnsibleSubsys
 func NewAnsibleSubsys(config *AnsibleSubsysConfig) *AnsibleSubsys {
 	return &AnsibleSubsys{

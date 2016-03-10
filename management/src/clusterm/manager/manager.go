@@ -63,9 +63,9 @@ func DefaultConfig() *Config {
 // node is an aggregate structure that contains information about a cluster
 // node as seen by cluster management subsystems.
 type node struct {
-	mInfo monitor.SubsysNode
-	iInfo inventory.SubsysAsset
-	cInfo configuration.SubsysHost
+	Mon monitor.SubsysNode       `json:"monitoring-state"`
+	Inv inventory.SubsysAsset    `json:"inventory-state"`
+	Cfg configuration.SubsysHost `json:"configuration-state"`
 }
 
 // Manager integrates the cluster infra services like node discovery, inventory

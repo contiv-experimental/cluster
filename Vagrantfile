@@ -74,7 +74,7 @@ EOF
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.box = "contiv/centos72"
-    config.vm.box_version = "0.1.1"
+    config.vm.box_version = "0.3.0"
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
     node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" }
     # this is to avoid the issue: https://github.com/mitchellh/vagrant/issues/5186

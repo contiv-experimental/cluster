@@ -41,6 +41,15 @@ ceph_vars = {
     "devices" => [ '/dev/sdb', '/dev/sdc' ],
 }
 
+group_vars_service_master = {
+        "service-master:vars" => {"host_capability" => "compute, network"}
+}
+
+group_vars_service_worker = {
+        "service-worker:vars" => {"host_capability" => "storage"}
+}
+
+
 ansible_groups = { }
 bootstrap_node_ansible_groups = { }
 ansible_playbook = ENV["CONTIV_ANSIBLE_PLAYBOOK"] || "./vendor/ansible/site.yml"
@@ -50,7 +59,7 @@ ansible_extra_vars = {
     "validate_certs" => "no",
     "control_interface" => "eth1",
     "netplugin_if" => "eth2",
-    "docker_version" => "1.10.2",
+    "docker_version" => "1.10.3",
     "scheduler_provider" => "native-swarm",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
@@ -169,6 +178,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                             bootstrap_node_ansible_groups["service-master"] = [ ]
                         end
                         bootstrap_node_ansible_groups["service-master"] << node_name
+                        bootstrap_node_ansible_groups = bootstrap_node_ansible_groups.merge(group_vars_service_master)
                     end
                     # if we are bringing up services as part of the cluster, then start
                     # master services on the first three vms
@@ -176,6 +186,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                         ansible_groups["service-master"] = [ ]
                     end
                     ansible_groups["service-master"] << node_name
+                    ansible_groups = ansible_groups.merge(group_vars_service_master)
                 else
                     # if we are bringing up services as part of the cluster, then start
                     # worker services on rest of the vms
@@ -183,6 +194,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                         ansible_groups["service-worker"] = [ ]
                     end
                     ansible_groups["service-worker"] << node_name
+                    ansible_groups = ansible_groups.merge(group_vars_service_worker)
                 end
             end
 

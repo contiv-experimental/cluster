@@ -37,7 +37,7 @@ checks: deps clean-generate check-format check-code
 generate: deps
 	@echo "auto generating files"
 	@mkdir -p mock
-	@go generate ./...
+	@godep go generate ./...
 	@echo "done auto generating files"
 
 clean-generate:
@@ -45,7 +45,7 @@ clean-generate:
 	@rm -f inventory/*_string.go
 	@rm -f clusterm/*_string.go
 	@rm -f monitor/*_string.go
-	@rm -f inventory/*_mock.go
+	@rm -f mock/*_mock.go
 	@echo "done cleaning auto-generated files"
 
 check-format:

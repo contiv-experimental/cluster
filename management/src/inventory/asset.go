@@ -96,7 +96,7 @@ var lifecycleStates = map[AssetStatus]map[AssetState]bool{
 
 // Asset denotes a host or vm that is managed by the inventory susystem
 type Asset struct {
-	client     CollinsClient
+	client     collins.InventoryClient
 	name       string
 	status     AssetStatus
 	prevStatus AssetStatus
@@ -105,7 +105,7 @@ type Asset struct {
 }
 
 // NewAsset creates a new asset in the inventory in a discovered state and returns it.
-func NewAsset(client CollinsClient, name string) (*Asset, error) {
+func NewAsset(client collins.InventoryClient, name string) (*Asset, error) {
 	a := &Asset{
 		client:     client,
 		name:       name,
@@ -129,7 +129,7 @@ func NewAsset(client CollinsClient, name string) (*Asset, error) {
 }
 
 // NewAssetFromCollins creates an asset from state in collins and returns it.
-func NewAssetFromCollins(client CollinsClient, name string) (*Asset, error) {
+func NewAssetFromCollins(client collins.InventoryClient, name string) (*Asset, error) {
 	a := &Asset{
 		client:     client,
 		name:       name,

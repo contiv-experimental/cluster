@@ -1,8 +1,6 @@
-//go:generate mockgen -source $GOFILE -destination inventory_mock.go -package inventory -imports collins=github.com/contiv/cluster/management/src/collins
-
 package inventory
 
-import "github.com/contiv/cluster/management/src/collins"
+import "encoding/json"
 
 // Subsys provides the following services to the cluster manager:
 // - Interface to perform CRUD operations on the asset inventory.
@@ -35,20 +33,9 @@ type Subsys interface {
 type SubsysAsset interface {
 	//GetStatus return the current status of the asset
 	GetStatus() (AssetStatus, AssetState)
-	// MarshalJSON satisfies the json marshaller interface and shall encode asset info in json
-	MarshalJSON() ([]byte, error)
+	// SubsysAsset shall satisfy the json marshaller interface to encode asset's info in json
+	json.Marshaler
 }
 
 // SubsysAssets denotes a collection of assets in the inventory subsystem
 type SubsysAssets interface{}
-
-// CollinsClient provides the client interface for the inventory subsystem
-// XXX: this is to enable mock based unit-tests.
-type CollinsClient interface {
-	CreateAsset(tag, status string) error
-	GetAsset(tag string) (collins.Asset, error)
-	GetAllAssets() ([]collins.Asset, error)
-	CreateState(name, description, status string) error
-	AddAssetLog(tag, mtype, message string) error
-	SetAssetStatus(tag, status, state, reason string) error
-}

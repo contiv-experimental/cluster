@@ -8,7 +8,7 @@ import (
 
 // CollinsSubsys implements the inventory sub-system for the collins inventory management database
 type CollinsSubsys struct {
-	client CollinsClient
+	client collins.InventoryClient
 	hosts  map[string]*Asset
 }
 

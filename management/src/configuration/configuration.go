@@ -1,6 +1,9 @@
 package configuration
 
-import "io"
+import (
+	"encoding/json"
+	"io"
+)
 
 // Subsys provides the following services to the cluster manager:
 // - Interface to trigger configuration action on one or more nodes, with
@@ -27,6 +30,8 @@ type SubsysHost interface {
 	GetTag() string
 	//GetGroup returns the group/role associated with the host in configuration sub-system
 	GetGroup() string
+	// SubsysHost shall satisfy the json marshaller interface to encode host's info in json
+	json.Marshaler
 }
 
 // SubsysHosts denotes a collection of hosts in configuration subsystem

@@ -48,7 +48,7 @@ func (e *nodeDiscovered) process() error {
 		e.mgr.nodes[name] = &node{
 			// XXX: node's role/group shall come from manager's role assignment logic or
 			// from user configuration
-			cInfo: configuration.NewAnsibleHost(name, e.node.GetMgmtAddress(),
+			Cfg: configuration.NewAnsibleHost(name, e.node.GetMgmtAddress(),
 				ansibleMasterGroupName, map[string]string{
 					ansibleNodeNameHostVar: name,
 					ansibleNodeAddrHostVar: e.node.GetMgmtAddress(),
@@ -60,15 +60,15 @@ func (e *nodeDiscovered) process() error {
 	}
 
 	// update node's monitoring info to the one received in the event
-	enode.mInfo = e.node
-	enode.iInfo = e.mgr.inventory.GetAsset(name)
-	if enode.iInfo == nil {
+	enode.Mon = e.node
+	enode.Inv = e.mgr.inventory.GetAsset(name)
+	if enode.Inv == nil {
 		if err := e.mgr.inventory.AddAsset(name); err != nil {
 			// XXX. Log this to collins
 			log.Errorf("adding asset %q to discovered in inventory failed. Error: %s", name, err)
 			return err
 		}
-		enode.iInfo = e.mgr.inventory.GetAsset(name)
+		enode.Inv = e.mgr.inventory.GetAsset(name)
 	} else if err := e.mgr.inventory.SetAssetDiscovered(name); err != nil {
 		// XXX. Log this to collins
 		log.Errorf("setting asset %q to discovered in inventory failed. Error: %s", name, err)
@@ -103,7 +103,7 @@ func (e *nodeDisappeared) process() error {
 	}
 
 	// update node's monitoring info to the one received in the event.
-	node.mInfo = e.node
+	node.Mon = e.node
 
 	if err := e.mgr.inventory.SetAssetDisappeared(name); err != nil {
 		// XXX. Log this to collins
@@ -285,11 +285,11 @@ func (e *nodeConfigure) process() error {
 		return err
 	}
 
-	if node.cInfo == nil {
+	if node.Cfg == nil {
 		return nodeConfigNotExistsError(e.nodeName)
 	}
 
-	hostInfo := node.cInfo.(*configuration.AnsibleHost)
+	hostInfo := node.Cfg.(*configuration.AnsibleHost)
 	nodeGroup := ansibleMasterGroupName
 	masterAddr := ""
 	masterName := ""
@@ -323,8 +323,8 @@ func (e *nodeConfigure) process() error {
 		}
 
 		// found our node
-		masterAddr = node.mInfo.GetMgmtAddress()
-		masterName = node.cInfo.GetTag()
+		masterAddr = node.Mon.GetMgmtAddress()
+		masterName = node.Cfg.GetTag()
 		nodeGroup = ansibleWorkerGroupName
 		break
 	}
@@ -374,13 +374,13 @@ func (e *nodeCleanup) process() error {
 		return err
 	}
 
-	if node.cInfo == nil {
+	if node.Cfg == nil {
 		return nodeConfigNotExistsError(e.nodeName)
 	}
 
 	outReader, errCh := e.mgr.configuration.Cleanup(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
+			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
 		log.Errorf("cleanup failed. Error: %s", err)
@@ -417,13 +417,13 @@ func (e *nodeUpgrade) process() error {
 		return err
 	}
 
-	if node.cInfo == nil {
+	if node.Cfg == nil {
 		return nodeConfigNotExistsError(e.nodeName)
 	}
 
 	outReader, errCh := e.mgr.configuration.Upgrade(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].cInfo.(*configuration.AnsibleHost),
+			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
 		log.Errorf("upgrade failed. Error: %s", err)

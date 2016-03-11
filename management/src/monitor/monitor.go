@@ -1,5 +1,7 @@
 package monitor
 
+import "encoding/json"
+
 // Event is the state associate a node monitor event
 type Event struct {
 	Type EventType
@@ -31,6 +33,6 @@ type SubsysNode interface {
 	// GetAddress return the management address associated with the host. This address is
 	// used for pushing configuration to provision a host with cluster level services.
 	GetMgmtAddress() string
-	// MarshalJSON satisfies the json marshaller interface and shall encode asset info in json
-	MarshalJSON() ([]byte, error)
+	// SubsysNode shall satisfy the json marshaller interface to encode node's info in json
+	json.Marshaler
 }

@@ -1,3 +1,5 @@
+//go:generate mockgen -destination ../mock/collins_mock.go -package=mock github.com/contiv/cluster/management/src/collins InventoryClient
+
 package collins
 
 import (
@@ -34,6 +36,17 @@ type Asset struct {
 	State  struct {
 		Name string `json:"NAME"`
 	}
+}
+
+// InventoryClient provides the client interface for the collins inventory subsystem
+// XXX: this is to enable mock based unit-tests.
+type InventoryClient interface {
+	CreateAsset(tag, status string) error
+	GetAsset(tag string) (Asset, error)
+	GetAllAssets() ([]Asset, error)
+	CreateState(name, description, status string) error
+	AddAssetLog(tag, mtype, message string) error
+	SetAssetStatus(tag, status, state, reason string) error
 }
 
 // Client denotes state for a collins client

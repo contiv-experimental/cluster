@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/contiv/cluster/management/src/collins"
+	"github.com/contiv/cluster/management/src/mock"
 	"github.com/golang/mock/gomock"
 	. "gopkg.in/check.v1"
 )
@@ -24,7 +25,7 @@ func (s *inventorySuite) TestNewAsset(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -45,7 +46,7 @@ func (s *inventorySuite) TestNewAssetCreateFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -64,7 +65,7 @@ func (s *inventorySuite) TestNewAssetSetStatusFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -84,7 +85,7 @@ func (s *inventorySuite) TestNewAssetFromCollins(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -111,7 +112,7 @@ func (s *inventorySuite) TestNewAssetFromCollinsGetFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -129,7 +130,7 @@ func (s *inventorySuite) TestSetStatus(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	asset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -223,7 +224,7 @@ func (s *inventorySuite) TestSetStatusSetFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := NewMockCollinsClient(ctrl)
+	mClient := mock.NewMockInventoryClient(ctrl)
 	asset := &Asset{
 		client:     mClient,
 		name:       "foo",

@@ -110,7 +110,6 @@ func (m *Manager) globalsSet(tag, extraVars string) error {
 
 func get(getCb func(tag string) ([]byte, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		vars := mux.Vars(r)
 		tag := vars["tag"]
 		var (
@@ -128,19 +127,20 @@ func get(getCb func(tag string) ([]byte, error)) func(http.ResponseWriter, *http
 }
 
 func (m *Manager) oneNode(tag string) ([]byte, error) {
-	if a := m.inventory.GetAsset(tag); a != nil {
-		out, err := json.Marshal(a)
-		if err != nil {
-			return nil, err
-		}
-		return out, nil
+	node, err := m.findNode(tag)
+	if err != nil {
+		return nil, err
 	}
-	return []byte{}, nil
+
+	out, err := json.Marshal(node)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (m *Manager) allNodes(noop string) ([]byte, error) {
-	a := m.inventory.GetAllAssets()
-	out, err := json.Marshal(a)
+	out, err := json.Marshal(m.nodes)
 	if err != nil {
 		return nil, err
 	}

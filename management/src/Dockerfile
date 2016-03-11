@@ -1,5 +1,5 @@
 # This file describes the environment setup to build cluster-manager
-FROM golang:1.5
+FROM golang:1.6
 
 ENV GOPATH=/go
 

@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/contiv/cluster/management/src",
-	"GoVersion": "go1.5.1",
+	"GoVersion": "go1.5",
 	"Packages": [
 		"./..."
 	],

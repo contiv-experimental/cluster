@@ -1,22 +1,21 @@
 package manager
 
 import (
-	"fmt"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/inventory"
+	"github.com/contiv/errored"
 )
 
 func nodeNotExistsError(name string) error {
-	return fmt.Errorf("node with name %q doesn't exists", name)
+	return errored.Errorf("node with name %q doesn't exists", name)
 }
 
 func nodeConfigNotExistsError(name string) error {
-	return fmt.Errorf("the configuration info for node %q doesn't exist", name)
+	return errored.Errorf("the configuration info for node %q doesn't exist", name)
 }
 
 func nodeInventoryNotExistsError(name string) error {
-	return fmt.Errorf("the inventory info for node %q doesn't exist", name)
+	return errored.Errorf("the inventory info for node %q doesn't exist", name)
 }
 
 func (m *Manager) findNode(name string) (*node, error) {

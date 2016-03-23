@@ -1,8 +1,17 @@
 {
 	"ImportPath": "github.com/contiv/cluster/management/src",
-	"GoVersion": "go1.5",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
 	"Packages": [
-		"./..."
+		"github.com/contiv/cluster/management/src/ansible",
+		"github.com/contiv/cluster/management/src/clusterctl",
+		"github.com/contiv/cluster/management/src/clusterm",
+		"github.com/contiv/cluster/management/src/clusterm/manager",
+		"github.com/contiv/cluster/management/src/collins",
+		"github.com/contiv/cluster/management/src/configuration",
+		"github.com/contiv/cluster/management/src/inventory",
+		"github.com/contiv/cluster/management/src/monitor",
+		"github.com/contiv/cluster/management/src/systemtests"
 	],
 	"Deps": [
 		{
@@ -22,6 +31,10 @@
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-143-ga65b733",
 			"Rev": "a65b733b303f0055f8d324d805f393cd3e7a7904"
+		},
+		{
+			"ImportPath": "github.com/contiv/errored",
+			"Rev": "01a98ff0a680ae5702f3e07e03b11cf31ca69108"
 		},
 		{
 			"ImportPath": "github.com/contiv/systemtests-utils",
@@ -122,6 +135,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "7b85b097bf7527677d54d3220065e966a0e3b613"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
 			"Rev": "7b85b097bf7527677d54d3220065e966a0e3b613"
 		},
 		{

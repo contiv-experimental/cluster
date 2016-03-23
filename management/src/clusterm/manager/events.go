@@ -9,12 +9,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/monitor"
+	"github.com/contiv/errored"
 )
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
 // the ansible extra variables configuration
 var errInvalidJSON = func(name string, err error) error {
-	return fmt.Errorf("%q should be a valid json. Error: %s", name, err)
+	return errored.Errorf("%q should be a valid json. Error: %s", name, err)
 }
 
 // event associates an event to corresponding processing logic
@@ -192,7 +193,7 @@ func (e *nodeDecommissioned) process() error {
 			}
 
 			if isWorkerNode {
-				return fmt.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeName)
+				return errored.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeName)
 			}
 		}
 	}

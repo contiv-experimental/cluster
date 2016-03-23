@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/contiv/errored"
 )
 
 var httpErrorResp = func(rsrc, status string, body []byte) error {
-	return fmt.Errorf("Request: %s Response status: %q. Response body: %s", rsrc, status, body)
+	return errored.Errorf("Request: %s Response status: %q. Response body: %s", rsrc, status, body)
 }
 
 // Client provides the methods for issuing post and get requests to cluster manager

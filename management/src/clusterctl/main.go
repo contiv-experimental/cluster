@@ -3,16 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
+	"github.com/contiv/errored"
 )
 
 var (
-	errNodeNameMissing = func(c string) error { return fmt.Errorf("command %q expects a node name", c) }
+	errNodeNameMissing = func(c string) error { return errored.Errorf("command %q expects a node name", c) }
 
 	clustermFlags = []cli.Flag{
 		cli.StringFlag{

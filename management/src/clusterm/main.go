@@ -11,6 +11,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
+	"github.com/contiv/errored"
 	"github.com/imdario/mergo"
 )
 
@@ -59,11 +60,11 @@ func main() {
 func mergeConfig(dst *manager.Config, srcJSON []byte) (*manager.Config, error) {
 	src := &manager.Config{}
 	if err := json.Unmarshal(srcJSON, src); err != nil {
-		return nil, fmt.Errorf("failed to parse configuration. Error: %s", err)
+		return nil, errored.Errorf("failed to parse configuration. Error: %s", err)
 	}
 
 	if err := mergo.MergeWithOverwrite(dst, src); err != nil {
-		return nil, fmt.Errorf("failed to merge configuration. Error: %s", err)
+		return nil, errored.Errorf("failed to merge configuration. Error: %s", err)
 	}
 
 	return dst, nil

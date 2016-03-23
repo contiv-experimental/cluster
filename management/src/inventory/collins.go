@@ -1,9 +1,8 @@
 package inventory
 
 import (
-	"fmt"
-
 	"github.com/contiv/cluster/management/src/collins"
+	"github.com/contiv/errored"
 )
 
 // CollinsSubsys implements the inventory sub-system for the collins inventory management database
@@ -22,7 +21,7 @@ func NewCollinsSubsys(config *collins.Config) (*CollinsSubsys, error) {
 	// create the customs states in collins
 	for state, desc := range description {
 		if err := ci.client.CreateState(state.String(), desc, Any.String()); err != nil {
-			return nil, fmt.Errorf("failed to create state %q in collins. Error: %s", state, err)
+			return nil, errored.Errorf("failed to create state %q in collins. Error: %s", state, err)
 		}
 	}
 
@@ -37,7 +36,7 @@ func NewCollinsSubsys(config *collins.Config) (*CollinsSubsys, error) {
 			err error
 		)
 		if a, err = NewAssetFromCollins(ci.client, ca.Tag); err != nil {
-			return nil, fmt.Errorf("failed to restore host %q from collins. Error: %s", ca.Tag, err)
+			return nil, errored.Errorf("failed to restore host %q from collins. Error: %s", ca.Tag, err)
 		}
 		ci.hosts[ca.Tag] = a
 	}

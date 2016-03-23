@@ -16,6 +16,16 @@ if ENV['CONTIV_SRV_INIT'] then
     service_init = true
 end
 
+box = "contiv/centos72"
+if ENV['CONTIV_BOX'] then
+    box = ENV['CONTIV_BOX']
+end
+
+box_version = "0.3.0"
+if ENV['CONTIV_BOX_VERSION'] then
+    box_version = ENV['CONTIV_BOX_VERSION']
+end
+
 host_env = { }
 if ENV['CONTIV_ENV'] then
     ENV['CONTIV_ENV'].split(" ").each do |env|
@@ -73,8 +83,8 @@ EOF
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-    config.vm.box = "contiv/centos72"
-    config.vm.box_version = "0.3.0"
+    config.vm.box = box
+    config.vm.box_version = box_version
     node_ips = num_nodes.times.collect { |n| base_ip + "#{n+10}" }
     node_names = num_nodes.times.collect { |n| "cluster-node#{n+1}" }
     # this is to avoid the issue: https://github.com/mitchellh/vagrant/issues/5186
@@ -108,22 +118,26 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 v.customize ['modifyvm', :id, '--nictype3', 'virtio']
                 v.customize ['modifyvm', :id, '--nicpromisc2', 'allow-all']
                 v.customize ['modifyvm', :id, '--nicpromisc3', 'allow-all']
-                # create disks for ceph
-                (0..1).each do |d|
-                  disk_path = "disk-#{n}-#{d}"
-                  vdi_disk_path = disk_path + ".vdi"
+                # XXX: creating disk doesn't work in stock centos box, remove this check
+                # once we need ceph working in stock OS demo
+                if box == "contiv/centos72" then
+                    # create disks for ceph
+                    (0..1).each do |d|
+                        disk_path = "disk-#{n}-#{d}"
+                        vdi_disk_path = disk_path + ".vdi"
 
-                  v.customize ['createhd',
-                               '--filename', disk_path,
-                               '--size', '11000']
-                  # Controller names are dependent on the VM being built.
-                  # It is set when the base box is made in our case ubuntu/trusty64.
-                  # Be careful while changing the box.
-                  v.customize ['storageattach', :id,
-                               '--storagectl', 'SATA Controller',
-                               '--port', 3 + d,
-                               '--type', 'hdd',
-                               '--medium', vdi_disk_path]
+                        v.customize ['createhd',
+                                     '--filename', disk_path,
+                                     '--size', '11000']
+                        # Controller names are dependent on the VM being built.
+                        # It is set when the base box is made in our case ubuntu/trusty64.
+                        # Be careful while changing the box.
+                        v.customize ['storageattach', :id,
+                                     '--storagectl', 'SATA Controller',
+                                     '--port', 3 + d,
+                                     '--type', 'hdd',
+                                     '--medium', vdi_disk_path]
+                    end
                 end
             end
 
@@ -154,7 +168,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 ansible_groups["cluster-control"] = [node_name]
             end
 
-            if service_init
+            if service_init then
                 # Share anything in `shared` to '/shared' on the cluster hosts.
                 node.vm.synced_folder "shared", "/shared"
 

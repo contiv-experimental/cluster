@@ -2,8 +2,6 @@
 
 package inventory
 
-import "github.com/contiv/errored"
-
 // AssetStatus enumerates all the possible lifecycle status of asset in collins
 type AssetStatus int
 
@@ -52,9 +50,4 @@ const (
 	Discovered
 	// Disappeared state denotes that host has disappeared from monitoring subsystem.
 	Disappeared
-)
-
-var (
-	errAssetExists    = func(tag string) error { return errored.Errorf("asset %q already exists", tag) }
-	errAssetNotExists = func(tag string) error { return errored.Errorf("asset %q doesn't exists", tag) }
 )

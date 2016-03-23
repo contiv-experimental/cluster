@@ -15,6 +15,11 @@ var description = map[AssetState]string{
 	Disappeared: "Node has disappeared from monitoring subsystem. Check for possible hardware or network issues",
 }
 
+var (
+	errAssetExists    = func(tag string) error { return errored.Errorf("asset %q already exists", tag) }
+	errAssetNotExists = func(tag string) error { return errored.Errorf("asset %q doesn't exists", tag) }
+)
+
 // collinsStatusMap maps the status strings to corresponding enumerated values
 var collinsStatusMap = map[string]AssetStatus{
 	Incomplete.String():     Incomplete,

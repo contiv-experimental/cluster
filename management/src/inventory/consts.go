@@ -2,7 +2,7 @@
 
 package inventory
 
-import "fmt"
+import "github.com/contiv/errored"
 
 // AssetStatus enumerates all the possible lifecycle status of asset in collins
 type AssetStatus int
@@ -55,6 +55,6 @@ const (
 )
 
 var (
-	errAssetExists    = func(tag string) error { return fmt.Errorf("asset %q already exists", tag) }
-	errAssetNotExists = func(tag string) error { return fmt.Errorf("asset %q doesn't exists", tag) }
+	errAssetExists    = func(tag string) error { return errored.Errorf("asset %q already exists", tag) }
+	errAssetNotExists = func(tag string) error { return errored.Errorf("asset %q doesn't exists", tag) }
 )

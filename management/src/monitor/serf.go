@@ -2,10 +2,10 @@ package monitor
 
 import (
 	"encoding/json"
-	"fmt"
 	"os/exec"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/contiv/errored"
 	"github.com/mapuri/serf/client"
 	"github.com/mapuri/serfer"
 )
@@ -73,7 +73,7 @@ func (sm *SerfSubsys) RegisterCb(e EventType, cb EventCb) error {
 		sm.disappearedCb = cb
 		return nil
 	}
-	return fmt.Errorf("Unsupported event type: %d", e)
+	return errored.Errorf("Unsupported event type: %d", e)
 }
 
 // Start implements the start interface of monitoring sub-system

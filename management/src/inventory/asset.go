@@ -2,11 +2,11 @@ package inventory
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/collins"
+	"github.com/contiv/errored"
 )
 
 var description = map[AssetState]string{
@@ -161,11 +161,11 @@ func (a *Asset) SetStatus(status AssetStatus, state AssetState) error {
 	}
 
 	if _, ok := lifecycleStatus[a.status][status]; !ok && a.status != status {
-		return fmt.Errorf("transition from %q to %q is not allowed", a.status, status)
+		return errored.Errorf("transition from %q to %q is not allowed", a.status, status)
 	}
 
 	if _, ok := lifecycleStates[status][state]; !ok {
-		return fmt.Errorf("%q is not a valid state when asset is in %q status", state, status)
+		return errored.Errorf("%q is not a valid state when asset is in %q status", state, status)
 	}
 
 	if err := a.client.SetAssetStatus(a.name, status.String(), state.String(), description[state]); err != nil {

@@ -2,11 +2,11 @@ package configuration
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 
 	"github.com/contiv/cluster/management/src/ansible"
+	"github.com/contiv/errored"
 	"github.com/imdario/mergo"
 )
 
@@ -96,17 +96,17 @@ func mergeExtraVars(dst, src string) (string, error) {
 	)
 
 	if err := json.Unmarshal([]byte(dst), &d); err != nil {
-		return "", fmt.Errorf("failed to unmarshal dest extra vars %q. Error: %v", dst, err)
+		return "", errored.Errorf("failed to unmarshal dest extra vars %q. Error: %v", dst, err)
 	}
 	if err := json.Unmarshal([]byte(src), &s); err != nil {
-		return "", fmt.Errorf("failed to unmarshal src extra vars %q. Error: %v", src, err)
+		return "", errored.Errorf("failed to unmarshal src extra vars %q. Error: %v", src, err)
 	}
 	if err := mergo.MergeWithOverwrite(&d, &s); err != nil {
-		return "", fmt.Errorf("failed to merge extra vars, dst: %q src: %q. Error: %v", dst, src, err)
+		return "", errored.Errorf("failed to merge extra vars, dst: %q src: %q. Error: %v", dst, src, err)
 	}
 	o, err := json.Marshal(d)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal resulting extra vars %q. Error: %v", o, err)
+		return "", errored.Errorf("failed to marshal resulting extra vars %q. Error: %v", o, err)
 	}
 
 	return string(o), nil

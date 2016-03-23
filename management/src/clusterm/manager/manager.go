@@ -13,12 +13,11 @@
 package manager
 
 import (
-	"fmt"
-
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/cluster/management/src/monitor"
+	"github.com/contiv/errored"
 	"github.com/mapuri/serf/client"
 )
 
@@ -83,7 +82,7 @@ type Manager struct {
 // if a failure occurs as part of initialization.
 func NewManager(config *Config) (*Manager, error) {
 	if config == nil {
-		return nil, fmt.Errorf("nil config passed")
+		return nil, errored.Errorf("nil config passed")
 	}
 
 	var err error
@@ -105,11 +104,11 @@ func NewManager(config *Config) (*Manager, error) {
 	}
 
 	if err := m.monitor.RegisterCb(monitor.Discovered, m.enqueueMonitorEvent); err != nil {
-		return nil, fmt.Errorf("failed to register node discovery callback. Error: %s", err)
+		return nil, errored.Errorf("failed to register node discovery callback. Error: %s", err)
 	}
 
 	if err := m.monitor.RegisterCb(monitor.Disappeared, m.enqueueMonitorEvent); err != nil {
-		return nil, fmt.Errorf("failed to register node disappearance callback. Error: %s", err)
+		return nil, errored.Errorf("failed to register node disappearance callback. Error: %s", err)
 	}
 
 	return m, nil

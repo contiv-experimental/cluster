@@ -4,13 +4,13 @@ package collins
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/contiv/errored"
 )
 
 // Config denotes the configuration for collins client
@@ -90,7 +90,7 @@ func (c *Client) CreateAsset(tag, status string) error {
 		if err != nil {
 			body = []byte{}
 		}
-		return fmt.Errorf("status code %d unexpected. Response body: %q",
+		return errored.Errorf("status code %d unexpected. Response body: %q",
 			resp.StatusCode, body)
 	}
 
@@ -117,11 +117,11 @@ func (c *Client) GetAsset(tag string) (Asset, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return Asset{}, fmt.Errorf("failed to read response body. Error: %s", err)
+		return Asset{}, errored.Errorf("failed to read response body. Error: %s", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return Asset{}, fmt.Errorf("status code %d unexpected. Response body: %q",
+		return Asset{}, errored.Errorf("status code %d unexpected. Response body: %q",
 			resp.StatusCode, body)
 	}
 
@@ -132,7 +132,7 @@ func (c *Client) GetAsset(tag string) (Asset, error) {
 		} `json:"data"`
 	}{}
 	if err := json.Unmarshal(body, collinsResp); err != nil {
-		return Asset{}, fmt.Errorf("failed to unmarshal response. Error: %s", err)
+		return Asset{}, errored.Errorf("failed to unmarshal response. Error: %s", err)
 	}
 
 	log.Debugf("collins asset: %+v", collinsResp.Data.Asset)
@@ -155,11 +155,11 @@ func (c *Client) GetAllAssets() ([]Asset, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body. Error: %s", err)
+		return nil, errored.Errorf("failed to read response body. Error: %s", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code %d unexpected. Response body: %q",
+		return nil, errored.Errorf("status code %d unexpected. Response body: %q",
 			resp.StatusCode, body)
 	}
 
@@ -172,7 +172,7 @@ func (c *Client) GetAllAssets() ([]Asset, error) {
 		} `json:"data"`
 	}{}
 	if err := json.Unmarshal(body, collinsResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response. Error: %s", err)
+		return nil, errored.Errorf("failed to unmarshal response. Error: %s", err)
 	}
 
 	assets := []Asset{}
@@ -209,7 +209,7 @@ func (c *Client) CreateState(name, description, status string) error {
 		if err != nil {
 			body = []byte{}
 		}
-		return fmt.Errorf("status code %d unexpected. Response body: %q",
+		return errored.Errorf("status code %d unexpected. Response body: %q",
 			resp.StatusCode, body)
 	}
 
@@ -222,7 +222,7 @@ func (c *Client) CreateState(name, description, status string) error {
 
 // AddAssetLog creates a log entry for an asset
 func (c *Client) AddAssetLog(tag, mtype, message string) error {
-	return fmt.Errorf("not implemented")
+	return errored.Errorf("not implemented")
 }
 
 // SetAssetStatus sets the status of an asset
@@ -249,7 +249,7 @@ func (c *Client) SetAssetStatus(tag, status, state, reason string) error {
 		if err != nil {
 			body = []byte{}
 		}
-		return fmt.Errorf("status code %d unexpected. Response body: %q",
+		return errored.Errorf("status code %d unexpected. Response body: %q",
 			resp.StatusCode, body)
 	}
 

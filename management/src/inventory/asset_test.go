@@ -3,12 +3,12 @@
 package inventory
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/mock"
+	"github.com/contiv/errored"
 	"github.com/golang/mock/gomock"
 	. "gopkg.in/check.v1"
 )
@@ -56,7 +56,7 @@ func (s *inventorySuite) TestNewAssetCreateFailure(c *C) {
 		prevState:  Unknown,
 	}
 	mClient.EXPECT().CreateAsset(eAsset.name,
-		eAsset.status.String()).Return(fmt.Errorf("test error"))
+		eAsset.status.String()).Return(errored.Errorf("test error"))
 	_, err := NewAsset(mClient, eAsset.name)
 	c.Assert(err, NotNil)
 }
@@ -76,7 +76,7 @@ func (s *inventorySuite) TestNewAssetSetStatusFailure(c *C) {
 	}
 	mClient.EXPECT().CreateAsset(eAsset.name, eAsset.status.String())
 	mClient.EXPECT().SetAssetStatus(eAsset.name, eAsset.status.String(),
-		eAsset.state.String(), description[eAsset.state]).Return(fmt.Errorf("test error"))
+		eAsset.state.String(), description[eAsset.state]).Return(errored.Errorf("test error"))
 	_, err := NewAsset(mClient, eAsset.name)
 	c.Assert(err, NotNil)
 }
@@ -121,7 +121,7 @@ func (s *inventorySuite) TestNewAssetFromCollinsGetFailure(c *C) {
 		state:      Disappeared,
 		prevState:  Unknown,
 	}
-	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{}, fmt.Errorf("test failure"))
+	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{}, errored.Errorf("test failure"))
 	_, err := NewAssetFromCollins(mClient, eAsset.name)
 	c.Assert(err, NotNil)
 }
@@ -242,7 +242,7 @@ func (s *inventorySuite) TestSetStatusSetFailure(c *C) {
 		prevState:  Unknown,
 	}
 	mClient.EXPECT().SetAssetStatus(asset.name, Provisioning.String(),
-		Discovered.String(), description[asset.state]).Return(fmt.Errorf("test failure"))
+		Discovered.String(), description[asset.state]).Return(errored.Errorf("test failure"))
 	err := asset.SetStatus(Provisioning, Discovered)
 	c.Assert(err, NotNil)
 	c.Assert(asset, DeepEquals, eAsset)

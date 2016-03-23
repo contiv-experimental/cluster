@@ -41,6 +41,9 @@ deps:
 
 checks: deps clean-generate check-format check-code
 
+godeps-save:
+	$(all_packages) | xargs godep save
+
 generate: deps
 	@echo "auto generating files"
 	@mkdir -p mock

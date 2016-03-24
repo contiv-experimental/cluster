@@ -92,7 +92,7 @@ func (s *CliTestSuite) SetUpSuite(c *C) {
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	//provide test ansible playbooks and restart cluster-mgr
 	src := fmt.Sprintf("%s/../demo/files/cli_test/*", pwd)
-	dst := "/etc/default/"
+	dst := "/etc/default/clusterm/"
 	out, err = s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo cp -rf %s %s", src, dst))
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	out, err = tutils.ServiceRestartAndWaitForUp(s.tbn1, "clusterm", 30)

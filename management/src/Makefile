@@ -9,7 +9,7 @@ docker_buildargs:= \
 	$(if $(HTTPS_PROXY), --build-arg "HTTPS_PROXY=$(HTTPS_PROXY)") \
 	$(if $(http_proxy), --build-arg "http_proxy=$(http_proxy)") \
 	$(if $(https_proxy), --build-arg "https_proxy=$(https_proxy)")
-docker_img:=cluster-dev$(if $(GIT_BRANCH),:$(GIT_BRANCH))
+docker_img:=cluster-dev
 docker_run:=docker run --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
 	-w $(work_dir) "$(docker_img)"
 docker_run_interactive:=docker run -it --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \

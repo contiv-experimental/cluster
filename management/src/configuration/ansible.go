@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 
+	"golang.org/x/net/context"
+
 	"github.com/contiv/cluster/management/src/ansible"
 	"github.com/contiv/errored"
 	"github.com/imdario/mergo"
@@ -112,7 +114,7 @@ func mergeExtraVars(dst, src string) (string, error) {
 	return string(o), nil
 }
 
-func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars string) (io.Reader, chan error) {
+func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars string) (io.Reader, context.CancelFunc, chan error) {
 	// make error channel buffered, so it doesn't block
 	errCh := make(chan error, 1)
 
@@ -130,20 +132,22 @@ func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars 
 	vars, err := mergeExtraVars(vars, a.config.ExtraVariables)
 	if err != nil {
 		errCh <- err
-		return nil, errCh
+		return nil, nil, errCh
 	}
 	vars, err = mergeExtraVars(vars, a.globalExtraVars)
 	if err != nil {
 		errCh <- err
-		return nil, errCh
+		return nil, nil, errCh
 	}
 	vars, err = mergeExtraVars(vars, extraVars)
 	if err != nil {
 		errCh <- err
-		return nil, errCh
+		return nil, nil, errCh
 	}
 
-	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User, a.config.PrivKeyFile, vars)
+	ctxt, cancelFunc := context.WithCancel(context.Background())
+	runner := ansible.NewRunner(ansible.NewInventory(iNodes), playbook, a.config.User,
+		a.config.PrivKeyFile, vars, ctxt)
 	r, w := io.Pipe()
 	go func(outStream io.Writer, errCh chan error) {
 		defer r.Close()
@@ -154,23 +158,23 @@ func (a *AnsibleSubsys) ansibleRunner(nodes []*AnsibleHost, playbook, extraVars 
 		errCh <- nil
 		return
 	}(w, errCh)
-	return r, errCh
+	return r, cancelFunc, errCh
 }
 
 // Configure triggers the ansible playbook for configuration on specified nodes
-func (a *AnsibleSubsys) Configure(nodes SubsysHosts, extraVars string) (io.Reader, chan error) {
+func (a *AnsibleSubsys) Configure(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
 		a.config.ConfigurePlaybook}, "/"), extraVars)
 }
 
 // Cleanup triggers the ansible playbook for cleanup on specified nodes
-func (a *AnsibleSubsys) Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, chan error) {
+func (a *AnsibleSubsys) Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
 		a.config.CleanupPlaybook}, "/"), extraVars)
 }
 
 // Upgrade triggers the ansible playbook for upgrade on specified nodes
-func (a *AnsibleSubsys) Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, chan error) {
+func (a *AnsibleSubsys) Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error) {
 	return a.ansibleRunner(nodes.([]*AnsibleHost), strings.Join([]string{a.config.PlaybookLocation,
 		a.config.UpgradePlaybook}, "/"), extraVars)
 }

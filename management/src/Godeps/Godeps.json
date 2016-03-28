@@ -10,6 +10,7 @@
 		"github.com/contiv/cluster/management/src/collins",
 		"github.com/contiv/cluster/management/src/configuration",
 		"github.com/contiv/cluster/management/src/inventory",
+		"github.com/contiv/cluster/management/src/mock",
 		"github.com/contiv/cluster/management/src/monitor",
 		"github.com/contiv/cluster/management/src/systemtests"
 	],
@@ -35,6 +36,10 @@
 		{
 			"ImportPath": "github.com/contiv/errored",
 			"Rev": "01a98ff0a680ae5702f3e07e03b11cf31ca69108"
+		},
+		{
+			"ImportPath": "github.com/contiv/executor",
+			"Rev": "1c3e497e2b9da2c15caccfb77b52393fe6c101b5"
 		},
 		{
 			"ImportPath": "github.com/contiv/systemtests-utils",
@@ -140,6 +145,10 @@
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
 			"Rev": "7b85b097bf7527677d54d3220065e966a0e3b613"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "76365a41624aa608f888301bf60fabecaf928b5a"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",

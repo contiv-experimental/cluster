@@ -332,7 +332,7 @@ func (e *nodeConfigure) process() error {
 	hostInfo.SetGroup(nodeGroup)
 	hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
 	hostInfo.SetVar(ansibleEtcdMasterNameHostVar, masterName)
-	outReader, errCh := e.mgr.configuration.Configure(
+	outReader, _, errCh := e.mgr.configuration.Configure(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
 		log.Errorf("configuration failed. Error: %s", err)
@@ -379,7 +379,7 @@ func (e *nodeCleanup) process() error {
 		return nodeConfigNotExistsError(e.nodeName)
 	}
 
-	outReader, errCh := e.mgr.configuration.Cleanup(
+	outReader, _, errCh := e.mgr.configuration.Cleanup(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)
@@ -422,7 +422,7 @@ func (e *nodeUpgrade) process() error {
 		return nodeConfigNotExistsError(e.nodeName)
 	}
 
-	outReader, errCh := e.mgr.configuration.Upgrade(
+	outReader, _, errCh := e.mgr.configuration.Upgrade(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
 			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)

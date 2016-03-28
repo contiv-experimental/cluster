@@ -3,6 +3,8 @@ package configuration
 import (
 	"encoding/json"
 	"io"
+
+	"golang.org/x/net/context"
 )
 
 // Subsys provides the following services to the cluster manager:
@@ -11,13 +13,13 @@ import (
 type Subsys interface {
 	// Configure triggers the configuration logic on specified set of nodes.
 	// It return a error channel that the caller can wait on to get completion status.
-	Configure(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
+	Configure(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error)
 	// Cleanup triggers the configuration cleanup on specified set of nodes.
 	// It return a error channel that the caller can wait on to get completion status.
-	Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
+	Cleanup(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error)
 	// Cleanup triggers the configuration upgrade on specified set of nodes.
 	// It return a error channel that the caller can wait on to get completion status.
-	Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, chan error)
+	Upgrade(nodes SubsysHosts, extraVars string) (io.Reader, context.CancelFunc, chan error)
 	// SetGlobals sets the extra vars at a configuration subsys level
 	SetGlobals(extraVars string) error
 	// GetGlobals return the value of extra vars at a configuration subsys level

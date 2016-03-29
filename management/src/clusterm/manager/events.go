@@ -132,6 +132,14 @@ func (e *nodeCommissioned) String() string {
 }
 
 func (e *nodeCommissioned) process() error {
+	isDiscovered, err := e.mgr.isDiscoveredNode(e.nodeName)
+	if err != nil {
+		return err
+	}
+	if !isDiscovered {
+		return errored.Errorf("node %q has disappeared from monitoring subsystem, it can't be commissioned. Please check node's network reachability", e.nodeName)
+	}
+
 	if err := e.mgr.inventory.SetAssetProvisioning(e.nodeName); err != nil {
 		// XXX. Log this to collins
 		return err

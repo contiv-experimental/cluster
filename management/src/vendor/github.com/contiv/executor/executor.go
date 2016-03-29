@@ -46,7 +46,7 @@ import (
 type ExecResult struct {
 	Stdout     string
 	Stderr     string
-	ExitStatus uint32
+	ExitStatus int
 	Runtime    time.Duration
 
 	executor *Executor
@@ -215,11 +215,10 @@ func (e *Executor) Wait(ctx context.Context) (*ExecResult, error) {
 	}
 
 	res := &ExecResult{executor: e}
-	exitErr := err
 
 	if err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
-			res.ExitStatus = uint32(exit.Sys().(syscall.WaitStatus))
+			res.ExitStatus = int(exit.ProcessState.Sys().(syscall.WaitStatus) / 256)
 		}
 	}
 
@@ -230,11 +229,12 @@ func (e *Executor) Wait(ctx context.Context) (*ExecResult, error) {
 
 	res.Runtime = e.TimeRunning()
 
-	return res, exitErr
+	return res, err
 }
 
 // Run calls Start(), then Wait(), and returns an ExecResult and error (if
-// any). If an error is returned, ExecResult will be nil.
+// any). The error may be of many types including *exec.ExitError and
+// context.Canceled, context.DeadlineExceeded.
 func (e *Executor) Run(ctx context.Context) (*ExecResult, error) {
 	if err := e.Start(); err != nil {
 		return nil, err
@@ -242,7 +242,7 @@ func (e *Executor) Run(ctx context.Context) (*ExecResult, error) {
 
 	er, err := e.Wait(ctx)
 	if err != nil {
-		return nil, err
+		return er, err
 	}
 
 	return er, nil

@@ -6,8 +6,8 @@ import (
 	"github.com/contiv/errored"
 )
 
-func nodeNotExistsError(name string) error {
-	return errored.Errorf("node with name %q doesn't exists", name)
+func nodeNotExistsError(nameOrAddr string) error {
+	return errored.Errorf("node with name or address %q doesn't exists", nameOrAddr)
 }
 
 func nodeConfigNotExistsError(name string) error {
@@ -24,6 +24,15 @@ func (m *Manager) findNode(name string) (*node, error) {
 		return nil, nodeNotExistsError(name)
 	}
 	return n, nil
+}
+
+func (m *Manager) findNodeByMgmtAddr(addr string) (*node, error) {
+	for _, node := range m.nodes {
+		if node.Mon.GetMgmtAddress() == addr {
+			return node, nil
+		}
+	}
+	return nil, nodeNotExistsError(addr)
 }
 
 func (m *Manager) isMasterNode(name string) (bool, error) {

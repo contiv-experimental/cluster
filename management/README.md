@@ -4,7 +4,7 @@
 - docker 1.9 or higher
 - vagrant 1.7.3 or higher
 - virtualbox 5.0 or higher
-- ansible 1.9 or higher
+- ansible 2.0 or higher
 
 ### 1. checkout and build the code
 ```
@@ -18,7 +18,7 @@ make build
 and running on the host. To avoid having to use `sudo` for builds you can add the current
 user to `docker` group once by using the following command:
 ```
-sudo adduser `id -un` docker
+sudo usermod -a -G docker `id -un`
 ```
 
 ### 2. launch three vagrant nodes. 

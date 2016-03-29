@@ -45,3 +45,50 @@ There are several variables that are made available to provide a good level of p
   ```
   {"ucp_bootstrap_node_name": "cluster-node1-0"}
   ```
+- **contiv_network_mode** identifies the mode of operation for netplugin. Netplugin supports two modes viz. `aci` and `standalone`. The first is used to bring-up netplugin in a Cisco APIC managed fabric deployment, while the second mode can be used when deploying netplugin with standalone Layer2/Layer3 switches.
+  - **contiv_network_mode** is specified as a JSON string
+  ```
+  {"contiv_network_mode": "aci"}
+  ```
+  **Following are the relevant variables when `contiv_network_mode` is set to `aci`**
+  - **apic_url** specifies the url for APIC. This is a mandatory variable in aci mode.
+    - **apic_url** is specified as a JSON string
+    ```
+    {"apic_url": "https://<apic-server-url>:443"}
+    ```
+  - **apic_username** specifies the username for APIC. This is a mandatory variable in aci mode.
+    - **apic_username** is specified as a JSON string
+    ```
+    {"apic_username": "my-user"}
+    ```
+  - **apic_password** specifies the password for APIC. This is a mandatory variable in aci mode.
+    - **apic_password** is specified as a JSON string
+    ```
+    {"apic_password": "my-password"}
+    ```
+  - **apic_leaf_nodes** specifies full path of the leaf nodes connected managed by APIC. This is a mandatory variable in aci mode.
+    - **apic_leaf_nodes** is specified as a JSON string
+    ```
+    {"apic_leaf_nodes": "topology/pod-1/node-101,topology/pod-1/node-102"}
+    ```
+  - **apic_phys_domain** specifies the name of the physical domain name created in APIC.
+    - **apic_phys_domain** is specified as a JSON string
+    ```
+    {"apic_phys_domain": "allVlans"}
+    ```
+  - **apic_epg_bridge_domain** can be optionally used to provide a pre-created bridge domain. The bridge domain should have  already been created under tenant `common`.
+    - **apic_epg_bridge_domain** is specified as a JSON string
+    ```
+    {"apic_epg_bridge_domain": "my-bd"}
+    ```
+  - **apic_contracts_unrestricted_mode** can be optionally used to allow unrestricted communication between EPGs. 
+    - **apic_contracts_unrestricted_mode** is specified as a JSON string
+    ```
+    {"apic_contracts_unrestricted_mode": "yes"}
+    ```
+  **Following are the relevant variables when `contiv_network_mode` is set to `standalone`**
+  - **fwd_mode** specifies whether netplugin shall bridge or route the packet. Netplugin supports two forwarding modes viz. `bridge` and `routing`.
+    - **fwd_mode** is specified as a JSON string
+    ```
+    {"fwd_mode": "routing"}
+    ```

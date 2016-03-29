@@ -1,6 +1,16 @@
 ---
-
-- hosts: all
+- hosts: service-master
   tasks:
   - name: provision
     shell: touch /tmp/yay
+
+- hosts: service-worker
+  tasks:
+  - name: provision
+    shell: touch /tmp/yay
+
+- hosts: cluster-node
+  sudo: true
+  tasks:
+  - name: start serf
+    service: name=serf state=started

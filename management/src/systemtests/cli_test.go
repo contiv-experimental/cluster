@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	tutils "github.com/contiv/systemtests-utils"
 	"github.com/contiv/vagrantssh"
@@ -26,15 +27,15 @@ type CliTestSuite struct {
 }
 
 var _ = Suite(&CliTestSuite{
-	// add tests to skip due to know issues here. Please add the issue#
-	// being used to track
-	skipTests: map[string]string{
-		"CliTestSuite.TestCommissionDisappearedNode": "https://github.com/contiv/cluster/issues/28",
-	},
+	// add tests to skip due to known issues here.
+	// The key of the map is test name like CliTestSuite.TestCommissionDisappearedNode
+	// The value of the map is the github issue# or url tracking reason for skip
+	skipTests: map[string]string{},
 })
 
 var (
 	validNodeNames   = []string{"cluster-node1-0", "cluster-node2-0"}
+	validNodeAddrs   = []string{}
 	invalidNodeName  = "invalid-test-node"
 	dummyAnsibleFile = "/tmp/yay"
 )
@@ -47,6 +48,30 @@ func (s *CliTestSuite) Assert(c *C, obtained interface{}, checker Checker, args 
 		s.failed = true
 		c.FailNow()
 	}
+}
+
+func (s *CliTestSuite) startSerf(c *C, nut vagrantssh.TestbedNode) {
+	out, err := tutils.ServiceStartAndWaitForUp(nut, "serf", 30)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	c.Logf("serf is running. %s", out)
+}
+
+func (s *CliTestSuite) stopSerf(c *C, nut vagrantssh.TestbedNode) {
+	out, err := tutils.ServiceStop(nut, "serf")
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	c.Logf("serf is stopped. %s", out)
+}
+
+func (s *CliTestSuite) startClusterm(c *C, nut vagrantssh.TestbedNode, timeout int) {
+	out, err := tutils.ServiceStartAndWaitForUp(nut, "clusterm", timeout)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	c.Logf("clusterm is running. %s", out)
+}
+
+func (s *CliTestSuite) restartClusterm(c *C, nut vagrantssh.TestbedNode) {
+	out, err := tutils.ServiceRestartAndWaitForUp(nut, "clusterm", 30)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	c.Logf("clusterm is running. %s", out)
 }
 
 func (s *CliTestSuite) SetUpSuite(c *C) {
@@ -82,21 +107,18 @@ func (s *CliTestSuite) SetUpSuite(c *C) {
 	s.Assert(c, s.tbn1, NotNil)
 	s.tbn2 = s.tb.GetNodes()[1]
 	s.Assert(c, s.tbn2, NotNil)
+	validNodeAddrs = nodeIPs
 	// When a new vagrant setup comes up cluster-manager can take a bit to
-	// come up as it waits on collins container to come up, which depending on
-	// image download speed can take a while, so we wait for cluster-manager
+	// come up as it waits on collins container to come up and start serving it's API.
+	// This can take a while, so we wait for cluster-manager
 	// to start with a long timeout here. This way we have this long wait only once.
-	// XXX: we can alternatively save the collins container in the image and cut
-	// this wait altogether.
-	out, err := tutils.ServiceStartAndWaitForUp(s.tbn1, "clusterm", 1200)
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.startClusterm(c, s.tbn1, 1200)
 	//provide test ansible playbooks and restart cluster-mgr
 	src := fmt.Sprintf("%s/../demo/files/cli_test/*", pwd)
 	dst := "/etc/default/clusterm/"
-	out, err = s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo cp -rf %s %s", src, dst))
+	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo cp -rf %s %s", src, dst))
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	out, err = tutils.ServiceRestartAndWaitForUp(s.tbn1, "clusterm", 30)
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.restartClusterm(c, s.tbn1)
 }
 
 func (s *CliTestSuite) TearDownSuite(c *C) {
@@ -129,14 +151,16 @@ func (s *CliTestSuite) SetUpTest(c *C) {
 	out, err = s.tbn2.RunCommandWithOutput(fmt.Sprintf("rm %s", file))
 	c.Logf("dummy file cleanup. Error: %v, Output: %s", err, out)
 
+	// make sure serf is running
+	s.startSerf(c, s.tbn1)
+	s.startSerf(c, s.tbn2)
+
 	// XXX: we cleanup up assets from collins instead of restarting it to save test time.
 	for _, name := range validNodeNames {
 		s.nukeNodeInCollins(c, name)
 	}
 
-	out, err = tutils.ServiceRestartAndWaitForUp(s.tbn1, "clusterm", 90)
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	c.Logf("clusterm is running. %s", out)
+	s.restartClusterm(c, s.tbn1)
 }
 
 func (s *CliTestSuite) TearDownTest(c *C) {
@@ -159,23 +183,27 @@ func (s *CliTestSuite) TestCommissionNonExistentNode(c *C) {
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
-	exptStr := fmt.Sprintf(".*asset.*%s.*doesn't exists.*", nodeName)
+	exptStr := fmt.Sprintf(".*node.*%s.*doesn't exists.*", nodeName)
 	s.assertMatch(c, exptStr, out)
 }
 
 func (s *CliTestSuite) TestCommissionDisappearedNode(c *C) {
-	nodeName := validNodeNames[0]
-	// stop serf discovery
-	out, err := tutils.ServiceStop(s.tbn1, "serf")
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	defer func() {
-		// start serf discovery
-		out, err := tutils.ServiceStart(s.tbn1, "serf")
-		s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	}()
+	nodeName := validNodeNames[1]
+	// make sure test node is visible in inventory
+	s.getNodeInfoSuccess(c, nodeName)
+
+	// stop serf discovery on test node
+	s.stopSerf(c, s.tbn2)
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn1, nodeName, "failed")
+
+	//try to commission the node
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
-	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
-	s.Assert(c, err, ErrorMatches, "node has disappeared", Commentf("output: %s", out))
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptStr := fmt.Sprintf(".*node.*%s.*has disappeared.*", nodeName)
+	s.assertMatch(c, exptStr, out)
 }
 
 func checkProvisionStatus(tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) (string, error) {
@@ -191,7 +219,7 @@ func checkProvisionStatus(tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus str
 			return out, true
 		}
 		return out, false
-	}, 30, fmt.Sprintf("node is still not in %q status", exptdStatus))
+	}, 1*time.Second, 30*time.Second, fmt.Sprintf("node is still not in %q status", exptdStatus))
 }
 
 func (s *CliTestSuite) TestCommissionProvisionFailure(c *C) {
@@ -287,6 +315,63 @@ func (s *CliTestSuite) TestDecommissionFailureRemainingWorkerNodes(c *C) {
 	s.assertMatch(c, exptdOut, out)
 }
 
+func (s *CliTestSuite) TestDiscoverNodeAlreadyExistError(c *C) {
+	nodeName := validNodeNames[0]
+	nodeAddr := validNodeAddrs[0]
+	cmdStr := fmt.Sprintf("clusterctl discover %s", nodeAddr)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := fmt.Sprintf("a node.*%s.*already exists with the management address.*%s.*", nodeName, nodeAddr)
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *CliTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode, nodeName, state string) {
+	out, err := tutils.WaitForDone(func() (string, bool) {
+		out, err := nut.RunCommandWithOutput(`serf members`)
+		if err != nil {
+			return out, false
+		}
+		stateStr := fmt.Sprintf(`%s.*%s.*`, nodeName, state)
+		if match, err := regexp.MatchString(stateStr, out); err != nil || !match {
+			return out, false
+		}
+		return out, true
+	}, 1*time.Second, time.Duration(10)*time.Second,
+		fmt.Sprintf("%s's serf membership is not in %s state", nodeName, state))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+}
+
+func (s *CliTestSuite) TestDiscoverSuccess(c *C) {
+	nodeName := validNodeNames[1]
+	nodeAddr := validNodeAddrs[1]
+
+	// nuke the node in collins
+	s.nukeNodeInCollins(c, nodeName)
+
+	// stop serf on test node
+	s.stopSerf(c, s.tbn2)
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn1, nodeName, "failed")
+
+	// restart clusterm
+	s.restartClusterm(c, s.tbn1)
+
+	// make sure node is not visible in inventory
+	s.getNodeInfoFailureNonExistentNode(c, nodeName)
+
+	// run discover command
+	cmdStr := fmt.Sprintf("clusterctl discover %s", nodeAddr)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn1, nodeName, "alive")
+
+	// make sure node is now visible in inventory
+	s.getNodeInfoSuccess(c, nodeName)
+}
+
 func (s *CliTestSuite) TestSetGetGlobalExtraVarsSuccess(c *C) {
 	cmdStr := fmt.Sprintf(`clusterctl global set -e '{\\\"foo\\\":\\\"bar\\\"}'`)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
@@ -307,16 +392,20 @@ func (s *CliTestSuite) TestSetGetGlobalExtraVarsFailureInvalidJSON(c *C) {
 	s.assertMatch(c, exptdOut, out)
 }
 
-func (s *CliTestSuite) TestGetNodeInfoFailureNonExistentNode(c *C) {
-	cmdStr := fmt.Sprintf(`clusterctl node get %s`, invalidNodeName)
+func (s *CliTestSuite) getNodeInfoFailureNonExistentNode(c *C, nodeName string) {
+	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
-	exptdOut := fmt.Sprintf(`.*node with name.*%s.*doesn't exists.*`, invalidNodeName)
+	exptdOut := fmt.Sprintf(`.*node with name.*%s.*doesn't exists.*`, nodeName)
 	s.assertMatch(c, exptdOut, out)
 }
 
-func (s *CliTestSuite) TestGetNodeInfoSuccess(c *C) {
-	cmdStr := fmt.Sprintf(`clusterctl node get %s`, validNodeNames[0])
+func (s *CliTestSuite) TestGetNodeInfoFailureNonExistentNode(c *C) {
+	s.getNodeInfoFailureNonExistentNode(c, invalidNodeName)
+}
+
+func (s *CliTestSuite) getNodeInfoSuccess(c *C, nodeName string) {
+	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	exptdOut := `.*"monitoring-state":.*`
@@ -325,6 +414,10 @@ func (s *CliTestSuite) TestGetNodeInfoSuccess(c *C) {
 	s.assertMultiMatch(c, exptdOut, out, 1)
 	exptdOut = `.*"configuration-state".*`
 	s.assertMultiMatch(c, exptdOut, out, 1)
+}
+
+func (s *CliTestSuite) TestGetNodeInfoSuccess(c *C) {
+	s.getNodeInfoSuccess(c, validNodeNames[0])
 }
 
 func (s *CliTestSuite) TestGetNodesInfoSuccess(c *C) {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,6 +14,8 @@ import (
 
 var (
 	errNodeNameMissing = func(c string) error { return errored.Errorf("command %q expects a node name", c) }
+	errNodeAddrMissing = func(c string) error { return errored.Errorf("command %q expects a node IP address", c) }
+	errInvalidIPAddr   = func(a string) error { return errored.Errorf("failed to parse ip address %q", a) }
 
 	clustermFlags = []cli.Flag{
 		cli.StringFlag{
@@ -46,7 +49,7 @@ func main() {
 					Name:    "commission",
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
-					Action:  doAction(newPostActioner(nodecommission)),
+					Action:  doAction(newPostActioner(nodeCommission)),
 					Flags:   extraVarsFlags,
 				},
 				{
@@ -104,6 +107,13 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:    "discover",
+			Aliases: []string{"d"},
+			Usage:   "provision a node for discovery",
+			Action:  doAction(newPostActioner(nodeDiscover)),
+			Flags:   extraVarsFlags,
+		},
 	}
 
 	app.Run(os.Args)
@@ -127,12 +137,12 @@ func doAction(a actioner) func(*cli.Context) {
 }
 
 type postActioner struct {
-	nodeName  string
-	extraVars string
-	postCb    func(c *manager.Client, nodeName, extraVars string) error
+	nodeNameOrAddr string
+	extraVars      string
+	postCb         func(c *manager.Client, nodeNameOrAddr, extraVars string) error
 }
 
-func newPostActioner(postCb func(c *manager.Client, nodeName, extraVars string) error) *postActioner {
+func newPostActioner(postCb func(c *manager.Client, nodeNameOrAddr, extraVars string) error) *postActioner {
 	return &postActioner{postCb: postCb}
 }
 
@@ -141,14 +151,14 @@ func (npa *postActioner) procFlags(c *cli.Context) {
 }
 
 func (npa *postActioner) procArgs(c *cli.Context) {
-	npa.nodeName = c.Args().First()
+	npa.nodeNameOrAddr = c.Args().First()
 }
 
 func (npa *postActioner) action(c *manager.Client) error {
-	return npa.postCb(c, npa.nodeName, npa.extraVars)
+	return npa.postCb(c, npa.nodeNameOrAddr, npa.extraVars)
 }
 
-func nodecommission(c *manager.Client, nodeName, extraVars string) error {
+func nodeCommission(c *manager.Client, nodeName, extraVars string) error {
 	if nodeName == "" {
 		return errNodeNameMissing("commission")
 	}
@@ -164,9 +174,19 @@ func nodeDecommission(c *manager.Client, nodeName, extraVars string) error {
 
 func nodeMaintenance(c *manager.Client, nodeName, extraVars string) error {
 	if nodeName == "" {
-		return errNodeNameMissing("decommission")
+		return errNodeNameMissing("maintenance")
 	}
 	return c.PostNodeInMaintenance(nodeName, extraVars)
+}
+
+func nodeDiscover(c *manager.Client, nodeAddr, extraVars string) error {
+	if nodeAddr == "" {
+		return errNodeAddrMissing("discover")
+	}
+	if ip := net.ParseIP(nodeAddr); ip == nil {
+		return errInvalidIPAddr(nodeAddr)
+	}
+	return c.PostNodeDiscover(nodeAddr, extraVars)
 }
 
 func globalsSet(c *manager.Client, noop, extraVars string) error {

@@ -252,14 +252,36 @@ func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.Test
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 
 	// verify that site.yml got executed on the node and created the dummy file
-	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.waitForStatToSucceed(c, nut, dummyAnsibleFile)
 }
 
 func (s *CliTestSuite) TestCommissionSuccess(c *C) {
 	nodeName := validNodeNames[0]
 	s.commissionNode(c, nodeName, s.tbn1)
+}
+
+func (s *CliTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
+	out, err := tutils.WaitForDone(func() (string, bool) {
+		cmdStr := fmt.Sprintf("stat -t %s", file)
+		out, err := nut.RunCommandWithOutput(cmdStr)
+		if err != nil {
+			return out, false
+		}
+		return out, true
+	}, 1*time.Second, 10*time.Second, fmt.Sprintf("file %q still doesn't seems to exist", file))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+}
+
+func (s *CliTestSuite) waitForStatToFail(c *C, nut vagrantssh.TestbedNode, file string) {
+	out, err := tutils.WaitForDone(func() (string, bool) {
+		cmdStr := fmt.Sprintf("stat -t %s", file)
+		out, err := nut.RunCommandWithOutput(cmdStr)
+		if err == nil {
+			return out, false
+		}
+		return out, true
+	}, 1*time.Second, 10*time.Second, fmt.Sprintf("file %q still seems to exist", file))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
 func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
@@ -271,9 +293,7 @@ func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.Te
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 
 	// verify that cleanup.yml got executed on the node and deleted the dummy file
-	file := dummyAnsibleFile
-	out, err = nut.RunCommandWithOutput(fmt.Sprintf("stat -t %s", file))
-	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	s.waitForStatToFail(c, nut, dummyAnsibleFile)
 }
 
 func (s *CliTestSuite) TestDecommissionSuccess(c *C) {

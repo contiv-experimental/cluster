@@ -103,9 +103,9 @@ func (s *CliTestSuite) SetUpSuite(c *C) {
 	}
 	s.tb = &vagrantssh.Baremetal{}
 	s.Assert(c, s.tb.Setup(hosts), IsNil)
-	s.tbn1 = s.tb.GetNodes()[0]
+	s.tbn1 = s.tb.GetNode("node1")
 	s.Assert(c, s.tbn1, NotNil)
-	s.tbn2 = s.tb.GetNodes()[1]
+	s.tbn2 = s.tb.GetNode("node2")
 	s.Assert(c, s.tbn2, NotNil)
 	validNodeAddrs = nodeIPs
 	// When a new vagrant setup comes up cluster-manager can take a bit to

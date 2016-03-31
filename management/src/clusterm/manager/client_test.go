@@ -131,6 +131,37 @@ func (s *managerSuite) TestPostDecommissionWithVarsSuccess(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *managerSuite) TestPostDiscoverSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDiscoverPrefix, nodeName)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostNodeDiscover(nodeName, "")
+	c.Assert(err, IsNil)
+}
+
+func (s *managerSuite) TestPostDiscoverWithVarsSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s/%s?%s=%s",
+		baseURL, PostNodeDiscoverPrefix, nodeName, ExtraVarsQuery, testExtraVars)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostNodeDiscover(nodeName, testExtraVars)
+	c.Assert(err, IsNil)
+}
+
 func (s *managerSuite) TestPostInMaintenance(c *C) {
 	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, nodeName)
 	expURL, err := url.Parse(expURLStr)

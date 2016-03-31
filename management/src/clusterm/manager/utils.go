@@ -1,13 +1,12 @@
 package manager
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/errored"
 )
 
-func nodeNotExistsError(name string) error {
-	return errored.Errorf("node with name %q doesn't exists", name)
+func nodeNotExistsError(nameOrAddr string) error {
+	return errored.Errorf("node with name or address %q doesn't exists", nameOrAddr)
 }
 
 func nodeConfigNotExistsError(name string) error {
@@ -26,6 +25,15 @@ func (m *Manager) findNode(name string) (*node, error) {
 	return n, nil
 }
 
+func (m *Manager) findNodeByMgmtAddr(addr string) (*node, error) {
+	for _, node := range m.nodes {
+		if node.Mon.GetMgmtAddress() == addr {
+			return node, nil
+		}
+	}
+	return nil, nodeNotExistsError(addr)
+}
+
 func (m *Manager) isMasterNode(name string) (bool, error) {
 	n, err := m.findNode(name)
 	if err != nil {
@@ -34,7 +42,6 @@ func (m *Manager) isMasterNode(name string) (bool, error) {
 	if n.Cfg == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
-	log.Debugf("node: %q, group: %q", name, n.Cfg.GetGroup())
 	return n.Cfg.GetGroup() == ansibleMasterGroupName, nil
 }
 
@@ -46,8 +53,19 @@ func (m *Manager) isWorkerNode(name string) (bool, error) {
 	if n.Cfg == nil {
 		return false, nodeConfigNotExistsError(name)
 	}
-	log.Debugf("node: %q, group: %q", name, n.Cfg.GetGroup())
 	return n.Cfg.GetGroup() == ansibleWorkerGroupName, nil
+}
+
+func (m *Manager) isDiscoveredNode(name string) (bool, error) {
+	n, err := m.findNode(name)
+	if err != nil {
+		return false, err
+	}
+	if n.Inv == nil {
+		return false, nodeInventoryNotExistsError(name)
+	}
+	_, state := n.Inv.GetStatus()
+	return state == inventory.Discovered, nil
 }
 
 func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
@@ -59,6 +77,5 @@ func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 		return false, nodeInventoryNotExistsError(name)
 	}
 	status, state := n.Inv.GetStatus()
-	log.Debugf("node: %q, status: %q, state: %q", name, status, state)
 	return state == inventory.Discovered && status == inventory.Allocated, nil
 }

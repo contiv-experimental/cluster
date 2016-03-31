@@ -132,6 +132,14 @@ func (e *nodeCommissioned) String() string {
 }
 
 func (e *nodeCommissioned) process() error {
+	isDiscovered, err := e.mgr.isDiscoveredNode(e.nodeName)
+	if err != nil {
+		return err
+	}
+	if !isDiscovered {
+		return errored.Errorf("node %q has disappeared from monitoring subsystem, it can't be commissioned. Please check node's network reachability", e.nodeName)
+	}
+
 	if err := e.mgr.inventory.SetAssetProvisioning(e.nodeName); err != nil {
 		// XXX. Log this to collins
 		return err
@@ -438,6 +446,47 @@ func (e *nodeUpgrade) process() error {
 	// set asset state to commissioned
 	if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
 		// XXX. Log this to collins
+		return err
+	}
+	return nil
+}
+
+type nodeDiscover struct {
+	mgr       *Manager
+	nodeAddr  string
+	extraVars string
+}
+
+func newNodeDiscover(mgr *Manager, nodeAddr, extraVars string) *nodeDiscover {
+	return &nodeDiscover{
+		mgr:       mgr,
+		nodeAddr:  nodeAddr,
+		extraVars: extraVars,
+	}
+}
+
+func (e *nodeDiscover) String() string {
+	return fmt.Sprintf("nodeDiscover: %s", e.nodeAddr)
+}
+
+func (e *nodeDiscover) process() error {
+	node, err := e.mgr.findNodeByMgmtAddr(e.nodeAddr)
+	if err == nil {
+		return errored.Errorf("a node %q already exists with the management address %q",
+			node.Inv.GetTag(), e.nodeAddr)
+	}
+
+	// create a temporary ansible host config to provision the host in discover host-group
+	hostCfg := configuration.NewAnsibleHost("node1", e.nodeAddr,
+		ansibleDiscoverGroupName, map[string]string{
+			ansibleNodeNameHostVar: "node1",
+			ansibleNodeAddrHostVar: e.nodeAddr,
+		})
+
+	outReader, _, errCh := e.mgr.configuration.Configure(
+		configuration.SubsysHosts([]*configuration.AnsibleHost{hostCfg}), e.extraVars)
+	if err := logOutputAndReturnStatus(outReader, errCh); err != nil {
+		log.Errorf("discover failed. Error: %s", err)
 		return err
 	}
 	return nil

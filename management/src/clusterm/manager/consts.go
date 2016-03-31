@@ -13,6 +13,10 @@ const (
 	// to put an asset in maintenance
 	PostNodeMaintenancePrefix = "maintenance/node"
 	postNodeMaintenance       = PostNodeMaintenancePrefix + "/{tag}"
+	// PostNodeDiscoverPrefix is the prefix for the POST REST endpoint
+	// to provision a specified node for discovery
+	PostNodeDiscoverPrefix = "discover/node"
+	postNodeDiscover       = PostNodeDiscoverPrefix + "/{addr}"
 	// PostGlobals is the prefix for the POST REST endpoint
 	// to set global configuration values
 	PostGlobals = "globals"
@@ -34,6 +38,7 @@ const (
 const (
 	ansibleMasterGroupName       = "service-master"
 	ansibleWorkerGroupName       = "service-worker"
+	ansibleDiscoverGroupName     = "cluster-node"
 	ansibleNodeNameHostVar       = "node_name"
 	ansibleNodeAddrHostVar       = "node_addr"
 	ansibleEtcdMasterAddrHostVar = "etcd_master_addr"

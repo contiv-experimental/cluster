@@ -93,6 +93,11 @@ func (c *Client) PostNodeInMaintenance(nodeName, extraVars string) error {
 	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), extraVars)
 }
 
+// PostNodeDiscover posts the request to provision a node for discovery
+func (c *Client) PostNodeDiscover(nodeAddr, extraVars string) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDiscoverPrefix, nodeAddr), extraVars)
+}
+
 // PostGlobals posts the request to set global extra vars
 func (c *Client) PostGlobals(extraVars string) error {
 	return c.doPost(fmt.Sprintf("%s", PostGlobals), extraVars)

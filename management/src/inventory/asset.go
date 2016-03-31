@@ -190,6 +190,11 @@ func (a *Asset) GetStatus() (AssetStatus, AssetState) {
 	return a.status, a.state
 }
 
+//GetTag retuns the inventory tag of the asset
+func (a *Asset) GetTag() string {
+	return a.name
+}
+
 // MarshalJSON implements the json marshaller for asset. It is done this way
 // than making the fields public inorder to safeguard against direct state interpolation.
 func (a *Asset) MarshalJSON() ([]byte, error) {

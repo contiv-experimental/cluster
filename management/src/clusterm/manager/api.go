@@ -19,6 +19,7 @@ func (m *Manager) apiLoop(errCh chan error) {
 	s.HandleFunc(fmt.Sprintf("/%s", postNodeCommission), post(m.nodeCommission))
 	s.HandleFunc(fmt.Sprintf("/%s", postNodeDecommission), post(m.nodeDecommission))
 	s.HandleFunc(fmt.Sprintf("/%s", postNodeMaintenance), post(m.nodeMaintenance))
+	s.HandleFunc(fmt.Sprintf("/%s", postNodeDiscover), post(m.nodeDiscover))
 	s.HandleFunc(fmt.Sprintf("/%s", PostGlobals), post(m.globalsSet))
 
 	s = r.Methods("Get").Subrouter()
@@ -38,12 +39,22 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-func post(postCb func(tag string, extraVars string) error) func(http.ResponseWriter, *http.Request) {
+func post(postCb func(tagOrAddr string, sanitizedExtraVars string) error) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		tag := vars["tag"]
+		tagOrAddr := vars["tag"]
+		if tagOrAddr == "" {
+			tagOrAddr = vars["addr"]
+		}
 		extraVars := r.FormValue(ExtraVarsQuery)
-		if err := postCb(tag, extraVars); err != nil {
+		sanitzedExtraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
+		if err != nil {
+			http.Error(w,
+				err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+		if err := postCb(tagOrAddr, sanitzedExtraVars); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -68,32 +79,26 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	return extraVars, nil
 }
 
-func (m *Manager) nodeCommission(tag, extraVars string) error {
-	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
-	if err != nil {
-		return err
-	}
-	me := newWaitableEvent(newNodeCommissioned(m, tag, extraVars))
+func (m *Manager) nodeCommission(tag, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newNodeCommissioned(m, tag, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeDecommission(tag, extraVars string) error {
-	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
-	if err != nil {
-		return err
-	}
-	me := newWaitableEvent(newNodeDecommissioned(m, tag, extraVars))
+func (m *Manager) nodeDecommission(tag, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newNodeDecommissioned(m, tag, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeMaintenance(tag, extraVars string) error {
-	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
-	if err != nil {
-		return err
-	}
-	me := newWaitableEvent(newNodeInMaintenance(m, tag, extraVars))
+func (m *Manager) nodeMaintenance(tag, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newNodeInMaintenance(m, tag, sanitizedExtraVars))
+	m.reqQ <- me
+	return me.waitForCompletion()
+}
+
+func (m *Manager) nodeDiscover(addr, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newNodeDiscover(m, addr, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }

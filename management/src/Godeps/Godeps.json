@@ -39,11 +39,11 @@
 		},
 		{
 			"ImportPath": "github.com/contiv/executor",
-			"Rev": "1c3e497e2b9da2c15caccfb77b52393fe6c101b5"
+			"Rev": "c06bb5cd4fcb9634afa5bb732e213d05b55d1c12"
 		},
 		{
 			"ImportPath": "github.com/contiv/systemtests-utils",
-			"Rev": "c8687a787fd4e395fa2285abb2c03ccef80402c7"
+			"Rev": "c824428c954469af7732b68cb6246cf36a7f5cd3"
 		},
 		{
 			"ImportPath": "github.com/contiv/vagrantssh",

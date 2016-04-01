@@ -12,27 +12,27 @@ have. They shall be tracked through github issues.
 - [ ] cluster manager to allow changing some of the configuration without requiring
       a restart.
 - [ ] auto commission of nodes
-- [ ] cluster manager to accept values for ansible specific group-vars etc as part of
+- [x] cluster manager to accept values for ansible specific group-vars etc as part of
       command line
 - [ ] ability to assign roles/group to commissioned nodes both statically and dynamically
 - [ ] harden the node lifecycle especially to deal with failures
 - [ ] ansible playbooks to provision 
-  - [ ] netmaster/netplugin service
+  - [x] netmaster/netplugin service
     - [ ] host level network configuration like bundling NICs
-    - [ ] ovs
+    - [x] ovs
   - [ ] volmaster/volplugin service
     - [ ] ceph
   - [x] etcd datastore
   - [ ] consul datastore
-  - [ ] VIP service for high availability. haproxy??
+  - [x] VIP service for high availability.
   - [x] docker stack including daemon, swarm
   - [x] orca containers
-  - [ ] cluster manager
-    - [ ] collins
+  - [x] cluster manager
+    - [x] collins
     - [ ] mysql over ceph storage
   - [ ] what else?
 - [ ] ansible playbooks for upgrade, cleanup and verify the above services
-- [ ] add system-tests
+- [x] add system-tests
 - [x] configuration steps for control/first node. The first node is special, so need a
       special way to commission it. For instance, collins is started as a container on it,
       we need to figure a way to keep it running when the control node is commissioned

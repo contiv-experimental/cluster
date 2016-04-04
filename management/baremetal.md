@@ -6,7 +6,7 @@ This document goes through the steps to prepare a baremetal or personal VM setup
 - Unless explicitly mentioned all the steps below are done by logging into the same host. It is referred as *control host* below.
 - Right now we test cluster manager on Centos7.2. More OS variations shall be added in future.
 
-###0. Ensure following pre-requisites are met on the control host
+###0. ensure following pre-requisites are met on the control host
 - ansible 2.0 or higher is installed.
 - git is installed.
 - a management user has been created. Let's call that user **cluster-admin** from now on.
@@ -54,5 +54,5 @@ clusterctl discover <host-ip>
 
 **Note**: Once the above command is run for a host, it shall start showing up in `clusterctl nodes get` output in a few minutes.
 
-###3. Ready to rock and roll!
+###4. ready to rock and roll!
 All set now, you can follow the cluster manager workflows as [described here](./README.md#get-list-of-discovered-nodes).

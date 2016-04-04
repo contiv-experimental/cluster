@@ -4,11 +4,11 @@ This document provides a specification of the core design elements of the contiv
 cluster manager. The design is influenced from the cluster management requirements
 as identified in the [primary README.md](../README.md). A few premises for this design are:
 - Make use of and learn from existing systems wherever applicable. And the
-most prominent evenidence of this can be seen in the fact that the design depends
+most prominent evidence of this can be seen in the fact that the design depends
 heavily on and takes benefit of some of the well known and deployed open source
 systems viz. [Serf](https://www.serfdom.io/), [Collins](http://tumblr.github.io/collins/index.html)
-and [Ansible](http://www.ansible.com/) to accompalish the cluster management requirements.
-- provide an easy to use and programmable interface to the cluster adminstrator, while
+and [Ansible](http://www.ansible.com/) to accomplish the cluster management requirements.
+- provide an easy to use and programmable interface to the cluster administrator, while
   not loosing/hiding the functionality of underlying systems.
 
 **Note:** The node image management requirement is not addressed in the first release
@@ -37,7 +37,7 @@ The document is organized into following sections:
 
 ##Subsystems
 Cluster manager consists of three subsystems viz. inventory, monitoring and configuration.
-These susbsystems correspond to all-of/part-of the function provided by the open source
+These subsystems correspond to all-of/part-of the function provided by the open source
 systems viz. collins, serf and ansible respectively. Defining these subsystem boundaries
 clearly keeps the design modular and provides well defined interface that the core cluster
 manager can use.
@@ -54,12 +54,12 @@ Collins is an open source inventory system that provides a rich set of APIs for
 managing node lifecycle among other things. You can read more about [Collins here](http://tumblr.github.io/collins/index.html)
 
 ####Node Lifecycle
-Collins supports a well defined set of [node lifecycle status'](http://tumblr.github.io/collins/concepts.html#status%20&%20state). 
+Collins supports a well defined set of [node lifecycle status'](http://tumblr.github.io/collins/concepts.html#status%20&%20state).
 
 Following is description of lifecycle transitions as implemented in cluster manager.
 - **First time discovery**: When a node is discovered it is moved to `Unallocated` status with state `Discovered`. There are only two possible states of a node viz. `Discovered` and `Disappeared`. They represent the current status of the node as reported by the monitoring system.
-- **Commission a node**: When a node is commisioned by the user it is first moved to `Provisioning` status. In this status the configuration is pushed to the node using Ansible configuration management subsystem. This is where the services are deployed on the node. Once the provisioning completes the node is moved to `Allocated` status. In event of configuration failure the node is moved back to `Unallocated` status
-- **Decommision a node**: When a node is decommisioned by the user it is first moved to `Cancelled` status. In this status the configuration is cleanup from the node using Ansible configuration management subsystem. This is where the services are stopped on the node. Once the cleanup completes the node is moved to `Decommissioned` status.
+- **Commission a node**: When a node is commissioned by the user it is first moved to `Provisioning` status. In this status the configuration is pushed to the node using Ansible configuration management subsystem. This is where the services are deployed on the node. Once the provisioning completes the node is moved to `Allocated` status. In event of configuration failure the node is moved back to `Unallocated` status
+- **Decommission a node**: When a node is decommissioned by the user it is first moved to `Cancelled` status. In this status the configuration is cleanup from the node using Ansible configuration management subsystem. This is where the services are stopped on the node. Once the cleanup completes the node is moved to `Decommissioned` status.
 - **Upgrade a node**: When a node is upgraded by the user it is first moved to `Maintenance` status. In this status the new configuration is pushed to the node using Ansible configuration management subsystem. This is where the services are upgrade on the node. Once the upgrade completes the node is moved back to `Allocated` status. In event of configuration failure the node is moved to `Unallocated` status.
 
 **Note:** Along with node status transitions the result of configuration push is updated there as well. [**TBD**: the logging of configuration events need to be done.]
@@ -83,10 +83,10 @@ Ansible is a open source system for configuration management. You can read more 
 **Note:** Since there will be more than one service that we will deploy in our cluster, we need a way to organize the playbooks such that they can be tested independently (in respective service workspace) while we are able to invoke them through a single playbook that includes them.
 
 ####Provisioning
-A playbook to provision a service perfoms the various actions needed to configure and run that service. This playbook is run when a node is commisioned.
+A playbook to provision a service performs the various actions needed to configure and run that service. This playbook is run when a node is commissioned.
 
 ####Cleanup
-A playbook to cleanup a service performs the various actions needed to stop and remove that service. This playbook is run when a node is decommisioned.
+A playbook to cleanup a service performs the various actions needed to stop and remove that service. This playbook is run when a node is decommissioned.
 
 ####Upgrade
 A playbook to upgrade a service performs the various actions needed to update the configuration and restart that service. This playbook is run when a node is upgraded.
@@ -95,7 +95,7 @@ A playbook to upgrade a service performs the various actions needed to update th
 A playbook to verify a service performs the various actions needed to verify status of a service. This playbook is run when a node is commissioned or upgraded. [**TBD**: may be this should be part of the above playbooks themselves?]
 
 ##Manager
-Cluster manager drives the node lifecycle by listening to `monitor` subsystem and `user` events. Cluster manager provides REST endpoints for user driven events like commisioning, decommissioning and maintaining/upgrading a node.
+Cluster manager drives the node lifecycle by listening to `monitor` subsystem and `user` events. Cluster manager provides REST endpoints for user driven events like commissioning, decommissioning and maintaining/upgrading a node.
 
 **Note:** As of now cluster manager runs only on one node (i.e. the first node). In a real deployment, running cluster manager will be tied to node life-cycles and it will be a highly available service.
 
@@ -106,9 +106,9 @@ Cluster manager drives the node lifecycle by listening to `monitor` subsystem an
 [**TBD**: add the REST interface spec here]
 
 ###Events and Event Loop
-Cluster manager is an event based system. An event may correspond to a trigger from one of the subsystems like node getting discovered. An event can also be user triggered like commissioning a new node. And processing an event might generate more events like commisioning a node puts it in `Provisioning` status and triggers configuration event which pushes configuration to the node and puts the node in appropriate state based on configuration result.
+Cluster manager is an event based system. An event may correspond to a trigger from one of the subsystems like node getting discovered. An event can also be user triggered like commissioning a new node. And processing an event might generate more events like commissioning a node puts it in `Provisioning` status and triggers configuration event which pushes configuration to the node and puts the node in appropriate state based on configuration result.
 
-Cluster manager runs an event loop that processes one event at a time before moving to next event. The events are processed in the order in which they are enqueued. An event processing may acquire locks on affected nodes inorder to serialize node acesses by different conflicting events.
+Cluster manager runs an event loop that processes one event at a time before moving to next event. The events are processed in the order in which they are enqueued. An event processing may acquire locks on affected nodes inorder to serialize node accesses by different conflicting events.
 
 **TBD**: the locking facility needs to be implemented.
 **TBD**: add details on events and respective processing

@@ -44,7 +44,7 @@ at node's bootup.
 
 ###Bootstrap
 When used in context of node, it refers to the process of installing the node image and
-bringing up the node first time. It is sometime also referred to as node onboarding. 
+bringing up the node first time. It is sometime also referred to as node onboarding.
 
 When used in context of cluster, bootstrap refers to the process of adding first bootstrapped
 node to the cluster.
@@ -61,12 +61,12 @@ Inventory management requires:
 - **Cluster membership management**: It should be possible to automatically discover the nodes
 and track their discovery status.
 - **Node state database**: It should be possible to track the current state of the node in
-the cluster. A few possible states are node has been discoverd but waiting to be
+the cluster. A few possible states are node has been discovered but waiting to be
 commissioned; node has been commissioned; node is being upgraded; and node has
 been decommissioned.
 
 ##Node Image Management
-Node image management requires: 
+Node image management requires:
 - **Image repository**: It should be possible to have the base image available at a central
 repository. The image can then be made available to be booted using a system like pxe.
 - **Image installation**: It should be possible to automate image installation on new nodes
@@ -94,7 +94,7 @@ the nodes.
 upgrades from a central location.
 - **Role/Group based configuration**: It should be possible to selectively start services on nodes
 based on their group or role. It should be possible for the node to be assigned to roles or groups
-statically by the operator or dynamically based on service availabilty policy.
+statically by the operator or dynamically based on service availability policy.
 
 **Note:** To start with dynamic role assignment may not be supported in initial release of
 cluster manager.
@@ -107,7 +107,7 @@ The node bootstrap requires:
 - installing the base image
 - performing first time configurations like disk partitioning
 - allocating an IP for node to become reachable to rest of the cluster management.
-- setting up user and credentials with enough permissions to perfom configuration management.
+- setting up user and credentials with enough permissions to perform configuration management.
 - starting the pre-requisite services like Serf
  
 **Note:** To start simple this feature is **not** provided as part of initial
@@ -118,14 +118,14 @@ as a *bootable iso* file that they will need to integrate with their node onbora
 The cluster bootstrap requires adding the first bootstrapped node to the cluster by starting
 the cluster management service on it with appropriate parameters like:
 - configuration management parameters like user information, configuration repository
-- inventory management paramters like database url
+- inventory management parameters like database url
 
 **Note:** To start simple this feature is provided in form of a bootstrap script that the
-operator will need to run on the first node inorder to bring up the cluster management service. 
+operator will need to run on the first node inorder to bring up the cluster management service.
 
 ##Lifecycle
 Lifecycle management involves integration of various cluster management aspects at node and
-cluster level to a central place for ease of monitoring and administration by the cluster operator. 
+cluster level to a central place for ease of monitoring and administration by the cluster operator.
  
 ###Node
 Node lifecycle management requires handling the following:
@@ -140,14 +140,14 @@ configurable in cluster manager configuration parameter.
 Optionally it should be possible to automatically upgrade nodes when configuration repository
 changes. This shall be configurable in cluster manager configuration parameter.
 - **Decommission**: It should be possible for the operator to remotely decommission a node.
-- **Batch operations**: It should be possble for the operator to commission, upgrade or decommission
+- **Batch operations**: It should be possible for the operator to commission, upgrade or decommission
 all or a batch of nodes.
-- **Reloads**: In event of node reloads (or node reachabilty changes) it should be possible to verify the
+- **Reloads**: In event of node reloads (or node reachability changes) it should be possible to verify the
 node's configuration and automate corrective actions in case of failures.
 
 ###Cluster
 - **Bootstrap**: It should be possible to bootstrap the cluster remotely. *As described above this
 feature is provided in form a bootstrap script that will need to be manually run on the first node
 in initial release of the cluster manager.*
-- **Sustenance and Availabilty**: Cluster manager service shall remain available as long as there
+- **Sustenance and Availability**: Cluster manager service shall remain available as long as there
 is one node up and running in the cluster.

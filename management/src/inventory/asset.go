@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/errored"
 )
 
-var description = map[AssetState]string{
+// StateDescription is description of various assets states
+var StateDescription = map[AssetState]string{
 	Unknown:     "Node is in unknown state. This is the first state before initialization.",
 	Discovered:  "Node is alive and discovered in monitoring subsystem",
 	Disappeared: "Node has disappeared from monitoring subsystem. Check for possible hardware or network issues",
@@ -20,8 +20,8 @@ var (
 	errAssetNotExists = func(tag string) error { return errored.Errorf("asset %q doesn't exists", tag) }
 )
 
-// collinsStatusMap maps the status strings to corresponding enumerated values
-var collinsStatusMap = map[string]AssetStatus{
+// AssetStatusVals maps the status strings to corresponding enumerated values
+var AssetStatusVals = map[string]AssetStatus{
 	Incomplete.String():     Incomplete,
 	New.String():            New,
 	Unallocated.String():    Unallocated,
@@ -33,8 +33,8 @@ var collinsStatusMap = map[string]AssetStatus{
 	Maintenance.String():    Maintenance,
 }
 
-// collinsStateMap maps the state strings to corresponding enumerated values
-var collinsStateMap = map[string]AssetState{
+// AssetStateVals maps the state strings to corresponding enumerated values
+var AssetStateVals = map[string]AssetState{
 	strings.ToUpper(Unknown.String()):     Unknown,
 	strings.ToUpper(Discovered.String()):  Discovered,
 	strings.ToUpper(Disappeared.String()): Disappeared,
@@ -101,7 +101,7 @@ var lifecycleStates = map[AssetStatus]map[AssetState]bool{
 
 // Asset denotes a host or vm that is managed by the inventory susystem
 type Asset struct {
-	client     collins.InventoryClient
+	client     SubsysClient
 	name       string
 	status     AssetStatus
 	prevStatus AssetStatus
@@ -109,8 +109,20 @@ type Asset struct {
 	prevState  AssetState
 }
 
+// NewAssetWithState creates a new asset in the inventory in a discovered state and returns it.
+func NewAssetWithState(client SubsysClient, name string, status AssetStatus, state AssetState) *Asset {
+	return &Asset{
+		client:     client,
+		name:       name,
+		status:     status,
+		prevStatus: Incomplete,
+		state:      state,
+		prevState:  Unknown,
+	}
+}
+
 // NewAsset creates a new asset in the inventory in a discovered state and returns it.
-func NewAsset(client collins.InventoryClient, name string) (*Asset, error) {
+func NewAsset(client SubsysClient, name string) (*Asset, error) {
 	a := &Asset{
 		client:     client,
 		name:       name,
@@ -124,34 +136,10 @@ func NewAsset(client collins.InventoryClient, name string) (*Asset, error) {
 		return nil, err
 	}
 
-	if err := a.client.SetAssetStatus(name, a.status.String(), a.state.String(), description[a.state]); err != nil {
+	if err := a.client.SetAssetStatus(name, a.status.String(), a.state.String(), StateDescription[a.state]); err != nil {
 		//XXX: should we delete the asset here?
 		return nil, err
 	}
-
-	log.Debugf("created asset: %+v", a)
-	return a, nil
-}
-
-// NewAssetFromCollins creates an asset from state in collins and returns it.
-func NewAssetFromCollins(client collins.InventoryClient, name string) (*Asset, error) {
-	a := &Asset{
-		client:     client,
-		name:       name,
-		prevStatus: Incomplete,
-		prevState:  Unknown,
-	}
-
-	var (
-		ca  collins.Asset
-		err error
-	)
-	if ca, err = a.client.GetAsset(name); err != nil {
-		return nil, err
-	}
-
-	a.status = collinsStatusMap[ca.Status]
-	a.state = collinsStateMap[ca.State.Name]
 
 	log.Debugf("created asset: %+v", a)
 	return a, nil
@@ -173,7 +161,7 @@ func (a *Asset) SetStatus(status AssetStatus, state AssetState) error {
 		return errored.Errorf("%q is not a valid state when asset is in %q status", state, status)
 	}
 
-	if err := a.client.SetAssetStatus(a.name, status.String(), state.String(), description[state]); err != nil {
+	if err := a.client.SetAssetStatus(a.name, status.String(), state.String(), StateDescription[state]); err != nil {
 		return err
 	}
 

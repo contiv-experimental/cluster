@@ -63,7 +63,7 @@ func (s *collinsSuite) TestCreateAsset(c *C) {
 		}))
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -75,7 +75,7 @@ func (s *collinsSuite) TestCreateAssetStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -88,7 +88,7 @@ func (s *collinsSuite) TestCreateAssetStatusAlreadyExists(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(alreadyExistsReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -135,7 +135,7 @@ func (s *collinsSuite) TestGetAsset(c *C) {
 		}))
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -148,7 +148,7 @@ func (s *collinsSuite) TestGetAssetStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -161,7 +161,7 @@ func (s *collinsSuite) TestGetAssetInvalidResponse(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(okReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -221,12 +221,14 @@ func (s *collinsSuite) TestGetAllAssets(c *C) {
 		}))
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
-	rcvdAssets, err := client.GetAllAssets()
+	rcvdAssets_, err := client.GetAllAssets()
 	c.Assert(err, IsNil)
+	rcvdAssets, ok := rcvdAssets_.([]Asset)
+	c.Assert(ok, Equals, true)
 	c.Assert(len(rcvdAssets), Equals, 1)
 	c.Assert(rcvdAssets[0], DeepEquals, asset)
 }
@@ -235,7 +237,7 @@ func (s *collinsSuite) TestGetAllAssetsStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -248,7 +250,7 @@ func (s *collinsSuite) TestGetAllAssetsInvalidResponse(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(okReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -276,7 +278,7 @@ func (s *collinsSuite) TestCreateState(c *C) {
 		}))
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -288,7 +290,7 @@ func (s *collinsSuite) TestCreateStateStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -301,7 +303,7 @@ func (s *collinsSuite) TestCreateStateStatusAlreadyExists(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(alreadyExistsReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -329,7 +331,7 @@ func (s *collinsSuite) TestSetAssetStatus(c *C) {
 		}))
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 
@@ -341,7 +343,7 @@ func (s *collinsSuite) TestSetAssetStatusStatusFailure(c *C) {
 	srvr, httpC := getHTTPTestClientAndServer(failureReturner)
 	defer srvr.Close()
 	client := &Client{
-		config: defaultConfig(),
+		config: DefaultConfig(),
 		client: httpC,
 	}
 

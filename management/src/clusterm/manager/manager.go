@@ -16,6 +16,7 @@ import (
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/inventory"
+	cs "github.com/contiv/cluster/management/src/inventory/collins"
 	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
 	"github.com/mapuri/serf/client"
@@ -33,18 +34,14 @@ type Config struct {
 	Manager clustermConfig                    `json:"manager"`
 }
 
-// DefaultConfig returns the defautl configuration values for the cluster manager
+// DefaultConfig returns the default configuration values for the cluster manager
 // and it's sub-systems
 func DefaultConfig() *Config {
 	return &Config{
 		Serf: client.Config{
 			Addr: "127.0.0.1:7373",
 		},
-		Collins: collins.Config{
-			URL:      "http://localhost:9000",
-			User:     "blake",
-			Password: "admin:first",
-		},
+		Collins: collins.DefaultConfig(),
 		Ansible: configuration.AnsibleSubsysConfig{
 			ConfigurePlaybook: "site.yml",
 			CleanupPlaybook:   "cleanup.yml",
@@ -99,7 +96,7 @@ func NewManager(config *Config) (*Manager, error) {
 		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
 	}
-	if m.inventory, err = inventory.NewCollinsSubsys(&config.Collins); err != nil {
+	if m.inventory, err = cs.NewCollinsSubsys(config.Collins); err != nil {
 		return nil, err
 	}
 

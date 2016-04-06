@@ -8,28 +8,27 @@ import (
 
 // NewCollinsSubsys initializes and return an instance of collins based inventory Subsys
 func NewCollinsSubsys(config collins.Config) (*inventory.GeneralSubsys, error) {
-	cc := collins.NewClientFromConfig(config)
-	sc := inventory.SubsysClient(cc)
-	ci := inventory.NewGeneralSubsys(cc)
+	client := collins.NewClientFromConfig(config)
+	subsys := inventory.NewGeneralSubsys(client)
 
 	// create the customs states in collins
 	for state, desc := range inventory.StateDescription {
-		if err := cc.CreateState(state.String(), desc, inventory.Any.String()); err != nil {
+		if err := client.CreateState(state.String(), desc, inventory.Any.String()); err != nil {
 			return nil, errored.Errorf("failed to create state %q in collins. Error: %s", state, err)
 		}
 	}
 
 	// restore any previously added hosts
-	cas, err := cc.GetAllAssets()
+	assets, err := client.GetAllAssets()
 	if err != nil {
 		return nil, err
 	}
-	cas1 := cas.([]collins.Asset)
-	for _, ca := range cas1 {
-		a := inventory.NewAssetWithState(sc, ca.Tag, inventory.AssetStatusVals[ca.Status],
-			inventory.AssetStateVals[ca.State.Name])
-		ci.RestoreAsset(ca.Tag, a)
+	assets1 := assets.([]collins.Asset)
+	for _, asset := range assets1 {
+		a := inventory.NewAssetWithState(client, asset.Tag, inventory.AssetStatusVals[asset.Status],
+			inventory.AssetStateVals[asset.State.Name])
+		subsys.RestoreAsset(asset.Tag, a)
 	}
 
-	return ci, nil
+	return subsys, nil
 }

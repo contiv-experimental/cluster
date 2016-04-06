@@ -98,7 +98,8 @@ system-test:
 	@echo "running system-tests"
 	CONTIV_NODES=2 time vagrant up; \
 	time vagrant ssh cluster-node1 -c \
-	"export CONTIV_SOE=${CONTIV_SOE}; \
+	"set -e; \
+	 export CONTIV_SOE=${CONTIV_SOE}; \
 	 export GOPATH=/opt/gopath/; \
 	 export PATH=\$$PATH:\$$GOPATH/bin; \
 	 export CONTIV_NODE_IPS='192.168.2.10,192.168.2.11'; \

@@ -190,7 +190,7 @@ func (a *Asset) GetStatus() (AssetStatus, AssetState) {
 	return a.status, a.state
 }
 
-//GetTag retuns the inventory tag of the asset
+//GetTag returns the inventory tag of the asset
 func (a *Asset) GetTag() string {
 	return a.name
 }

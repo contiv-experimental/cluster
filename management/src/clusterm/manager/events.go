@@ -518,7 +518,7 @@ func (e *setGlobals) process() error {
 // waitableEvent provides a way to wait for event's processing to complete
 // and return the event's processing status.
 // This can be useful for generating responses to a UI event.
-// Note that an event processing may itself generate more events and it is upto
+// Note that an event processing may itself generate more events and it is up to
 // the processing logic of the event to handle waits internally.
 type waitableEvent struct {
 	inEvent  event

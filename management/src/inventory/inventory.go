@@ -33,7 +33,7 @@ type Subsys interface {
 type SubsysAsset interface {
 	//GetStatus returns the current status of the asset
 	GetStatus() (AssetStatus, AssetState)
-	//GetTag retuns the inventory tag of the asset
+	//GetTag returns the inventory tag of the asset
 	GetTag() string
 	// SubsysAsset shall satisfy the json marshaller interface to encode asset's info in json
 	json.Marshaler

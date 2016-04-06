@@ -11,7 +11,7 @@ import (
 	"github.com/contiv/executor"
 )
 
-// Runner facillitaes running a playbook on specifed inventory
+// Runner facilitates running a playbook on specified inventory
 type Runner struct {
 	inventory   Inventory
 	playbook    string

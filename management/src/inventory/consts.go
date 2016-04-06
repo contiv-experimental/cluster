@@ -16,7 +16,7 @@ const (
 	// In contiv cluster this status is set when the host is discovered for the first time.
 	Unallocated
 	// Provisioning status in collins implies that host has started provisioning process but has not yet
-	// completed it. In contiv cluster this status is set when a host is signalled to be commisioned by the
+	// completed it. In contiv cluster this status is set when a host is signalled to be commissioned by the
 	// admin or automatically. The configuration for infrastructure is pushed at this status.
 	Provisioning
 	// Provisioned status in collins implies that Host has finished provisioning and is awaiting final
@@ -26,7 +26,7 @@ const (
 	// state. In contiv cluster this status is set when the host configuration was successful.
 	Allocated
 	// Cancelled status in collins implies that asset is no longer needed and is awaiting decommissioning.
-	// In contiv cluster this status is set when a host is signalled to be decommisioned by the
+	// In contiv cluster this status is set when a host is signalled to be decommissioned by the
 	// admin or automatically. The configuration for infrastructure is cleaned up at this status.
 	Cancelled
 	// Decommissioned status in collins implies that sset has completed the outtake process and can no

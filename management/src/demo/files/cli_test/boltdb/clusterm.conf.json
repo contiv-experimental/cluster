@@ -1,0 +1,5 @@
+{
+    "ansible": {
+        "playbook-location":  "/vagrant/management/src/demo/files"
+    }
+}

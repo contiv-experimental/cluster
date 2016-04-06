@@ -78,7 +78,9 @@ func (s *CliTestSuite) SetUpSuite(c *C) {
 	// to start with a long timeout here. This way we have this long wait only once.
 	s.restartClusterm(c, s.tbn1, 1200)
 	//provide test ansible playbooks and restart cluster-mgr
-	src := fmt.Sprintf("%s/../demo/files/cli_test/*", pwd)
+	testDataDir := os.Getenv("TESTDATA_DIR")
+	s.Assert(c, testDataDir, Not(Equals), "", Commentf("test data directory can't be empty"))
+	src := fmt.Sprintf("%s/../%s/*", pwd, testDataDir)
 	dst := "/etc/default/clusterm/"
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo cp -rf %s %s", src, dst))
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
@@ -111,11 +113,8 @@ func (s *CliTestSuite) SetUpTest(c *C) {
 	s.startSerf(c, s.tbn1)
 	s.startSerf(c, s.tbn2)
 
-	// XXX: we cleanup up assets from collins instead of restarting it to save test time.
-	for _, name := range validNodeNames {
-		s.nukeNodeInCollins(c, name)
-	}
-
+	//cleanup inventory and restart clusterm
+	s.nukeNodesInInventory(c)
 	s.restartClusterm(c, s.tbn1, 30)
 }
 
@@ -241,16 +240,14 @@ func (s *CliTestSuite) TestDiscoverSuccess(c *C) {
 	nodeName := validNodeNames[1]
 	nodeAddr := validNodeAddrs[1]
 
-	// nuke the node in collins
-	s.nukeNodeInCollins(c, nodeName)
-
 	// stop serf on test node
 	s.stopSerf(c, s.tbn2)
 
 	// wait for serf membership to update
 	s.waitForSerfMembership(c, s.tbn1, nodeName, "failed")
 
-	// restart clusterm
+	//cleanup inventory and restart clusterm
+	s.nukeNodesInInventory(c)
 	s.restartClusterm(c, s.tbn1, 30)
 
 	// make sure node is not visible in inventory

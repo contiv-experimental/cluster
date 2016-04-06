@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/contiv/cluster/management/src/boltdb"
 	tutils "github.com/contiv/systemtests-utils"
 	"github.com/contiv/vagrantssh"
 	. "gopkg.in/check.v1"
@@ -57,9 +58,23 @@ func (s *CliTestSuite) restartClusterm(c *C, nut vagrantssh.TestbedNode, timeout
 func (s *CliTestSuite) nukeNodeInCollins(c *C, nodeName string) {
 	// Ignore errors here as asset might not exist.
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d status="Decommissioned" -d reason="test" -X POST http://localhost:9000/api/asset/%s`, nodeName))
-	c.Logf("asset decommission result: %v. Output: %s", err, out)
+	c.Logf("collins asset decommission result: %v. Output: %s", err, out)
 	out, err = s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d reason=test -X DELETE http://localhost:9000/api/asset/%s`, nodeName))
-	c.Logf("asset deletion result: %v. Output: %s", err, out)
+	c.Logf("collins asset deletion result: %v. Output: %s", err, out)
+}
+
+func (s *CliTestSuite) nukeNodesInBoltdb(c *C) {
+	dbfile := boltdb.DefaultConfig().DBFile
+	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo rm -f %s", dbfile))
+	c.Logf("boltdb asset deletion result: %v. Output: %s", err, out)
+}
+
+func (s *CliTestSuite) nukeNodesInInventory(c *C) {
+	// XXX: we cleanup up assets from collins instead of restarting it to save test time.
+	for _, name := range validNodeNames {
+		s.nukeNodeInCollins(c, name)
+	}
+	s.nukeNodesInBoltdb(c)
 }
 
 func checkProvisionStatus(tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) (string, error) {

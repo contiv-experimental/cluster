@@ -91,8 +91,14 @@ unit-test: build-docker-img
 	@echo "done running unit-tests"
 
 host-system-test: checks
+	@echo Running tests with collins inventory
 	@$(systemtest_packages) | \
-		xargs -n1 -I'{}' go test -tags '$(systemtest_tag)' '{}' -check.v $(CONTIV_TEST_FLAGS)
+		TESTDATA_DIR="demo/files/cli_test/collins/" xargs -n1 -I'{}' \
+		go test -tags '$(systemtest_tag)' '{}' -check.v $(CONTIV_TEST_FLAGS)
+	@echo Running tests with BoltDB inventory
+	@$(systemtest_packages) | \
+		TESTDATA_DIR="demo/files/cli_test/boltdb/" xargs -n1 -I'{}' \
+		go test -tags '$(systemtest_tag)' '{}' -check.v $(CONTIV_TEST_FLAGS)
 
 system-test:
 	@echo "running system-tests"

@@ -1,3 +1,3 @@
-//dummy file for go list to detect systemtest packge
+//dummy file for go list to detect systemtest package
 
 package systemtests

@@ -77,9 +77,9 @@ func (s *CliTestSuite) nukeNodesInInventory(c *C) {
 	s.nukeNodesInBoltdb(c)
 }
 
-func checkProvisionStatus(tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) (string, error) {
+func (s *CliTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) {
 	exptdStr := fmt.Sprintf(`.*"status".*"%s".*`, exptdStatus)
-	return tutils.WaitForDone(func() (string, bool) {
+	out, err := tutils.WaitForDone(func() (string, bool) {
 		cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
 		out, err := tbn1.RunCommandWithOutput(cmdStr)
 		if err != nil {
@@ -91,6 +91,7 @@ func checkProvisionStatus(tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus str
 		}
 		return out, false
 	}, 1*time.Second, 30*time.Second, fmt.Sprintf("node is still not in %q status", exptdStatus))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
 func (s *CliTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
@@ -138,8 +139,7 @@ func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.Test
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	out, err = checkProvisionStatus(s.tbn1, nodeName, "Allocated")
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.checkProvisionStatus(c, s.tbn1, nodeName, "Allocated")
 
 	// verify that site.yml got executed on the node and created the dummy file
 	s.waitForStatToSucceed(c, nut, dummyAnsibleFile)
@@ -150,8 +150,7 @@ func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.Te
 	cmdStr := fmt.Sprintf("clusterctl node decommission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	out, err = checkProvisionStatus(s.tbn1, nodeName, "Decommissioned")
-	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.checkProvisionStatus(c, s.tbn1, nodeName, "Decommissioned")
 
 	// verify that cleanup.yml got executed on the node and deleted the dummy file
 	s.waitForStatToFail(c, nut, dummyAnsibleFile)

@@ -4,12 +4,15 @@
 	"GodepVersion": "v60",
 	"Packages": [
 		"github.com/contiv/cluster/management/src/ansible",
+		"github.com/contiv/cluster/management/src/boltdb/inventory",
 		"github.com/contiv/cluster/management/src/clusterctl",
 		"github.com/contiv/cluster/management/src/clusterm",
 		"github.com/contiv/cluster/management/src/clusterm/manager",
 		"github.com/contiv/cluster/management/src/collins",
 		"github.com/contiv/cluster/management/src/configuration",
 		"github.com/contiv/cluster/management/src/inventory",
+		"github.com/contiv/cluster/management/src/inventory/boltdb",
+		"github.com/contiv/cluster/management/src/inventory/collins",
 		"github.com/contiv/cluster/management/src/mock",
 		"github.com/contiv/cluster/management/src/monitor",
 		"github.com/contiv/cluster/management/src/systemtests"
@@ -27,6 +30,11 @@
 		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
+		},
+		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.0-129-g51f99c8",
+			"Rev": "51f99c862475898df9773747d3accd05a7ca33c1"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
@@ -149,6 +157,10 @@
 		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "76365a41624aa608f888301bf60fabecaf928b5a"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",

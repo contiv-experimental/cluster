@@ -1,4 +1,4 @@
-[![Build Status](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/badge/icon)](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/)
+[![Build Status](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/badge/icon)](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/) [![Go Report Card](https://goreportcard.com/badge/github.com/contiv/cluster/management/src)](https://goreportcard.com/report/github.com/contiv/cluster/management/src)
 
 ##Overview
 Contiv provides an integrated stack of components to launch containerized applications in

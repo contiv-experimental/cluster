@@ -13,9 +13,12 @@
 package manager
 
 import (
+	"github.com/contiv/cluster/management/src/boltdb"
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/inventory"
+	boltdbinv "github.com/contiv/cluster/management/src/inventory/boltdb"
+	collinsinv "github.com/contiv/cluster/management/src/inventory/collins"
 	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
 	"github.com/mapuri/serf/client"
@@ -25,25 +28,29 @@ type clustermConfig struct {
 	Addr string `json:"addr"`
 }
 
-// Config is the configuration to cluster manager daemon
-type Config struct {
-	Serf    client.Config                     `json:"serf"`
-	Collins collins.Config                    `json:"collins"`
-	Ansible configuration.AnsibleSubsysConfig `json:"ansible"`
-	Manager clustermConfig                    `json:"manager"`
+type inventorySubsysConfig struct {
+	Collins *collins.Config `json:"collins,omit-empty"`
+	BoltDB  *boltdb.Config  `json:"boltdb,omit-empty"`
 }
 
-// DefaultConfig returns the defautl configuration values for the cluster manager
+// Config is the configuration to cluster manager daemon
+type Config struct {
+	Serf      client.Config                     `json:"serf"`
+	Inventory inventorySubsysConfig             `json:"inventory"`
+	Ansible   configuration.AnsibleSubsysConfig `json:"ansible"`
+	Manager   clustermConfig                    `json:"manager"`
+}
+
+// DefaultConfig returns the default configuration values for the cluster manager
 // and it's sub-systems
 func DefaultConfig() *Config {
 	return &Config{
 		Serf: client.Config{
 			Addr: "127.0.0.1:7373",
 		},
-		Collins: collins.Config{
-			URL:      "http://localhost:9000",
-			User:     "blake",
-			Password: "admin:first",
+		Inventory: inventorySubsysConfig{
+			BoltDB:  nil,
+			Collins: nil,
 		},
 		Ansible: configuration.AnsibleSubsysConfig{
 			ConfigurePlaybook: "site.yml",
@@ -99,8 +106,20 @@ func NewManager(config *Config) (*Manager, error) {
 		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
 	}
-	if m.inventory, err = inventory.NewCollinsSubsys(&config.Collins); err != nil {
-		return nil, err
+	// We give priority to boltdb inventory if both are set in config
+	if config.Inventory.BoltDB != nil {
+		if m.inventory, err = boltdbinv.NewBoltdbSubsys(*config.Inventory.BoltDB); err != nil {
+			return nil, err
+		}
+	} else if config.Inventory.Collins != nil {
+		if m.inventory, err = collinsinv.NewCollinsSubsys(*config.Inventory.Collins); err != nil {
+			return nil, err
+		}
+	} else {
+		// if no inventory config was provided then we default to boltDb
+		if m.inventory, err = boltdbinv.NewBoltdbSubsys(boltdb.DefaultConfig()); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := m.monitor.RegisterCb(monitor.Discovered, m.enqueueMonitorEvent); err != nil {

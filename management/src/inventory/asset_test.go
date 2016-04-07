@@ -3,10 +3,8 @@
 package inventory
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/mock"
 	"github.com/contiv/errored"
 	"github.com/golang/mock/gomock"
@@ -25,7 +23,7 @@ func (s *inventorySuite) TestNewAsset(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := mock.NewMockInventoryClient(ctrl)
+	mClient := mock.NewMockSubsysClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -36,7 +34,7 @@ func (s *inventorySuite) TestNewAsset(c *C) {
 	}
 	mClient.EXPECT().CreateAsset(eAsset.name, eAsset.status.String())
 	mClient.EXPECT().SetAssetStatus(eAsset.name, eAsset.status.String(),
-		eAsset.state.String(), description[eAsset.state])
+		eAsset.state.String(), StateDescription[eAsset.state])
 	rAsset, err := NewAsset(mClient, eAsset.name)
 	c.Assert(err, IsNil)
 	c.Assert(rAsset, DeepEquals, eAsset)
@@ -46,7 +44,7 @@ func (s *inventorySuite) TestNewAssetCreateFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := mock.NewMockInventoryClient(ctrl)
+	mClient := mock.NewMockSubsysClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -65,7 +63,7 @@ func (s *inventorySuite) TestNewAssetSetStatusFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := mock.NewMockInventoryClient(ctrl)
+	mClient := mock.NewMockSubsysClient(ctrl)
 	eAsset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -76,53 +74,8 @@ func (s *inventorySuite) TestNewAssetSetStatusFailure(c *C) {
 	}
 	mClient.EXPECT().CreateAsset(eAsset.name, eAsset.status.String())
 	mClient.EXPECT().SetAssetStatus(eAsset.name, eAsset.status.String(),
-		eAsset.state.String(), description[eAsset.state]).Return(errored.Errorf("test error"))
+		eAsset.state.String(), StateDescription[eAsset.state]).Return(errored.Errorf("test error"))
 	_, err := NewAsset(mClient, eAsset.name)
-	c.Assert(err, NotNil)
-}
-
-func (s *inventorySuite) TestNewAssetFromCollins(c *C) {
-	ctrl := gomock.NewController(c)
-	defer ctrl.Finish()
-
-	mClient := mock.NewMockInventoryClient(ctrl)
-	eAsset := &Asset{
-		client:     mClient,
-		name:       "foo",
-		status:     Provisioned,
-		prevStatus: Incomplete,
-		state:      Disappeared,
-		prevState:  Unknown,
-	}
-	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{
-		Tag:    eAsset.name,
-		Status: eAsset.status.String(),
-		State: struct {
-			Name string `json:"NAME"`
-		}{
-			Name: strings.ToUpper(eAsset.state.String()),
-		},
-	}, nil)
-	rAsset, err := NewAssetFromCollins(mClient, eAsset.name)
-	c.Assert(err, IsNil)
-	c.Assert(rAsset, DeepEquals, eAsset)
-}
-
-func (s *inventorySuite) TestNewAssetFromCollinsGetFailure(c *C) {
-	ctrl := gomock.NewController(c)
-	defer ctrl.Finish()
-
-	mClient := mock.NewMockInventoryClient(ctrl)
-	eAsset := &Asset{
-		client:     mClient,
-		name:       "foo",
-		status:     Provisioned,
-		prevStatus: Incomplete,
-		state:      Disappeared,
-		prevState:  Unknown,
-	}
-	mClient.EXPECT().GetAsset(eAsset.name).Return(collins.Asset{}, errored.Errorf("test failure"))
-	_, err := NewAssetFromCollins(mClient, eAsset.name)
 	c.Assert(err, NotNil)
 }
 
@@ -130,7 +83,7 @@ func (s *inventorySuite) TestSetStatus(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := mock.NewMockInventoryClient(ctrl)
+	mClient := mock.NewMockSubsysClient(ctrl)
 	asset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -148,7 +101,7 @@ func (s *inventorySuite) TestSetStatus(c *C) {
 		prevState:  Discovered,
 	}
 	mClient.EXPECT().SetAssetStatus(asset.name, eAsset.status.String(),
-		eAsset.state.String(), description[eAsset.state])
+		eAsset.state.String(), StateDescription[eAsset.state])
 	err := asset.SetStatus(eAsset.status, eAsset.state)
 	c.Assert(err, IsNil)
 	c.Assert(asset, DeepEquals, eAsset)
@@ -224,7 +177,7 @@ func (s *inventorySuite) TestSetStatusSetFailure(c *C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
 
-	mClient := mock.NewMockInventoryClient(ctrl)
+	mClient := mock.NewMockSubsysClient(ctrl)
 	asset := &Asset{
 		client:     mClient,
 		name:       "foo",
@@ -242,7 +195,7 @@ func (s *inventorySuite) TestSetStatusSetFailure(c *C) {
 		prevState:  Unknown,
 	}
 	mClient.EXPECT().SetAssetStatus(asset.name, Provisioning.String(),
-		Discovered.String(), description[asset.state]).Return(errored.Errorf("test failure"))
+		Discovered.String(), StateDescription[asset.state]).Return(errored.Errorf("test failure"))
 	err := asset.SetStatus(Provisioning, Discovered)
 	c.Assert(err, NotNil)
 	c.Assert(asset, DeepEquals, eAsset)

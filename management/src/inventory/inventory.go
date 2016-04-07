@@ -1,3 +1,5 @@
+//go:generate mockgen -destination ../mock/inventory_client_mock.go -package=mock github.com/contiv/cluster/management/src/inventory SubsysClient
+
 package inventory
 
 import "encoding/json"
@@ -29,13 +31,22 @@ type Subsys interface {
 	GetAllAssets() SubsysAssets
 }
 
+// SubsysClient provides the client interface for the inventory subsystem
+type SubsysClient interface {
+	GetAllAssets() (interface{}, error)
+	CreateAsset(tag, status string) error
+	CreateState(name, description, status string) error
+	AddAssetLog(tag, mtype, message string) error
+	SetAssetStatus(tag, status, state, reason string) error
+}
+
 // SubsysAsset denotes a single asset in inventory subsystem
 type SubsysAsset interface {
 	//GetStatus returns the current status of the asset
 	GetStatus() (AssetStatus, AssetState)
 	//GetTag returns the inventory tag of the asset
 	GetTag() string
-	// SubsysAsset shall satisfy the json marshaller interface to encode asset's info in json
+	//SubsysAsset shall satisfy the json marshaller interface to encode asset's info in json
 	json.Marshaler
 }
 

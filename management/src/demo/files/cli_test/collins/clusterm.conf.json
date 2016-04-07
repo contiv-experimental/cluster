@@ -1,0 +1,12 @@
+{
+    "ansible": {
+        "playbook-location":  "/vagrant/management/src/demo/files"
+    },
+    "inventory": {
+        "collins": {
+            "url": "http://localhost:9000",
+            "user": "blake",
+            "password": "admin:first"
+        }
+    }
+}

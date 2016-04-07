@@ -1,5 +1,3 @@
-//go:generate mockgen -destination ../mock/collins_mock.go -package=mock github.com/contiv/cluster/management/src/collins InventoryClient
-
 package collins
 
 import (
@@ -20,8 +18,9 @@ type Config struct {
 	Password string `json:"password"`
 }
 
-func defaultConfig() *Config {
-	return &Config{
+// DefaultConfig returns the default configuration values for the collins client
+func DefaultConfig() Config {
+	return Config{
 		URL:      "http://localhost:9000",
 		User:     "blake",
 		Password: "admin:first",
@@ -38,25 +37,14 @@ type Asset struct {
 	}
 }
 
-// InventoryClient provides the client interface for the collins inventory subsystem
-// XXX: this is to enable mock based unit-tests.
-type InventoryClient interface {
-	CreateAsset(tag, status string) error
-	GetAsset(tag string) (Asset, error)
-	GetAllAssets() ([]Asset, error)
-	CreateState(name, description, status string) error
-	AddAssetLog(tag, mtype, message string) error
-	SetAssetStatus(tag, status, state, reason string) error
-}
-
 // Client denotes state for a collins client
 type Client struct {
 	client *http.Client
-	config *Config
+	config Config
 }
 
 // NewClientFromConfig initializes and return collins client using specified configuration
-func NewClientFromConfig(config *Config) *Client {
+func NewClientFromConfig(config Config) *Client {
 	return &Client{
 		config: config,
 		client: &http.Client{},
@@ -65,7 +53,7 @@ func NewClientFromConfig(config *Config) *Client {
 
 // NewClient initializes and return collins client using default configuration
 func NewClient() *Client {
-	return NewClientFromConfig(defaultConfig())
+	return NewClientFromConfig(DefaultConfig())
 }
 
 // CreateAsset creates an asset with specified tag, status and state
@@ -140,7 +128,7 @@ func (c *Client) GetAsset(tag string) (Asset, error) {
 }
 
 // GetAllAssets queries and returns a all the assets
-func (c *Client) GetAllAssets() ([]Asset, error) {
+func (c *Client) GetAllAssets() (interface{}, error) {
 	reqURL := c.config.URL + "/api/assets"
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {

@@ -1,10 +1,16 @@
 ##Ansible variables used during provisioning
 
-This file lists the ansible variables that can be passed at the time of commissioning a node or at a global level as described in [README.md](./README.md#commision-a-node). The variables specified at global level are merged with variables specified at time of commissioning a node with latter taking precedence over the former in case of a overlap/conflict.
+This file lists the ansible variables that can be passed at the time of commissioning a node or at a global level as described in [README.md](./README.md#commision-a-node). The ansible variables can also be passed at the time of setting up a node for discovery as described in [baremetal.md](./baremetal.md#3-provision-rest-of-the-nodes-for-discovery-from-the-control-host). The variables specified at global level are merged with variables specified for a node level operation, with latter taking precedence over the former in case of a overlap/conflict.
 
-Setting the variable at a global level that has same value across all nodes in a cluster, can substantially reduce the amount of variables that need to specified at every node commision and is a recommended way to set the variables when possible.
+Setting the variable at a global level that has same value across all nodes in a cluster, can substantially reduce the amount of variables that need to specified at every node level operation and is a recommended way to set the variables when possible.
 
-The rest of this document is split into two sections viz. *Mandatory variables* and *Commonly used variables*. *Mandatory variables* lists the variables that must be set before a node can be configured. *Commonly used variables* lists the variables that we would use to affect the default ansible behavior like deploying a specific scheduler stack or a specific networking stack.
+The rest of this document is split into two sections viz. [*Mandatory variables*]() and [*Commonly used variables*](). *Mandatory variables* lists the variables that must be set before a node can be configured. *Commonly used variables* lists the variables that we would use to affect the default ansible behavior like deploying a specific scheduler stack or a specific networking mode.
+
+*Commonly used variables* are further organized into following service specific sub-sections:
+- [Serf based Discovery](#serf-based-discovery)
+- [Schedular stack](#schedular-stack)
+- [Contiv Networking](#contiv-networking)
+- [Contiv Storage](#contiv-storage)
 
 There are several variables that are made available to provide a good level of programmability in the ansible plays and the reader is encouraged to look at the plays in [vendor/ansible](../vendor/ansible)
 
@@ -35,6 +41,15 @@ There are several variables that are made available to provide a good level of p
   ```
 
 ###Optional/Commonly used variables
+
+####Serf based Discovery
+- **serf_cluster_name** identifies the name of the cluster that serf uses to discover other peer nodes. You may use this if there are multiple clusters in the same subnet of `control_interface` and you would like serf to only discover the nodes in a specific cluster.
+  - **serf_cluster_name** is specified as a JSON string
+  ```
+  {"serf_cluster_name": "cluster-prod-eng"}
+  ```
+
+####Schedular stack
 - **scheduler_provider** identifies the scheduler stack to use. We support two stacks viz. `native-swarm` and `ucp-swarm`. The first brings-up a swarm cluster using the stock swarm image from dockerhub. The seconds brings-up a ucp cluster which bundles swarm in it.
   - **scheduler_provider** is specified as a JSON string
   ```
@@ -45,11 +60,14 @@ There are several variables that are made available to provide a good level of p
   ```
   {"ucp_bootstrap_node_name": "cluster-node1-0"}
   ```
+
+####Contiv Networking
 - **contiv_network_mode** identifies the mode of operation for netplugin. Netplugin supports two modes viz. `aci` and `standalone`. The first is used to bring-up netplugin in a Cisco APIC managed fabric deployment, while the second mode can be used when deploying netplugin with standalone Layer2/Layer3 switches.
   - **contiv_network_mode** is specified as a JSON string
   ```
   {"contiv_network_mode": "aci"}
   ```
+  
   **Following are the relevant variables when `contiv_network_mode` is set to `aci`**
   - **apic_url** specifies the url for APIC. This is a mandatory variable in aci mode.
     - **apic_url** is specified as a JSON string
@@ -86,9 +104,13 @@ There are several variables that are made available to provide a good level of p
     ```
     {"apic_contracts_unrestricted_mode": "yes"}
     ```
+  
   **Following are the relevant variables when `contiv_network_mode` is set to `standalone`**
   - **fwd_mode** specifies whether netplugin shall bridge or route the packet. Netplugin supports two forwarding modes viz. `bridge` and `routing`.
     - **fwd_mode** is specified as a JSON string
     ```
     {"fwd_mode": "routing"}
     ```
+
+####Contiv Storage
+**TBD**

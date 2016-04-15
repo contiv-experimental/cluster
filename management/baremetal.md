@@ -26,8 +26,11 @@ echo [cluster-control] > /tmp/hosts
 echo node1 ansible_host=127.0.0.1 >> /tmp/hosts
 
 # Install cluster manager
-ansible-playbook --key-file=~/.ssh/id_rsa -i /tmp/hosts ./site.yml
+ansible-playbook --key-file=~/.ssh/id_rsa -i /tmp/hosts -e '{"env": {}}' ./site.yml
 ```
+
+**Note**:
+- `env` is a mandatory variable. It is used to specify the environment for running ansible tasks like http-proxy. If there is no special environment to be setup then it needs to be set to an empty dictionary as shown in the example above.
 
 ###2. setup cluster manager configuration on the control host
 Edit the cluster manager configuration file that is created at `/etc/default/clusterm/clusterm.conf` to setup the user and playbook-location information. A sample is shown below. `playbook-location` needs to be set as the path of ansible directory we cloned in previous step. `user` needs to be set as name of `cluster-admin` user and `priv_key_file` is the location of the `id_rsa` file of `cluster-admin` user.
@@ -52,7 +55,9 @@ Cluster manager uses serf as discovery service for node-health monitoring and ea
 clusterctl discover <host-ip>
 ```
 
-**Note**: Once the above command is run for a host, it shall start showing up in `clusterctl nodes get` output in a few minutes.
+**Note**:
+- Once the above command is run for a host, it shall start showing up in `clusterctl nodes get` output in a few minutes.
+- the `clusterctl discover` command expects `env` and `control_interface` ansible variables to be specified. This can be achieved by using the `--extra-vars` flag or setting the variables at global level using `clusterctl global set` command. For more information on other available variables, also checkout [discovery section of ansible vars](ansible_vars.md#serf-based-discovery)
 
 ###4. ready to rock and roll!
 All set now, you can follow the cluster manager workflows as [described here](./README.md#get-list-of-discovered-nodes).

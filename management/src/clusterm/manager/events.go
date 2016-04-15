@@ -45,7 +45,7 @@ func (e *nodeDiscovered) process() error {
 	name := e.node.GetLabel() + "-" + e.node.GetSerial()
 
 	enode, err := e.mgr.findNode(name)
-	if err.Error() == nodeNotExistsError(name).Error() {
+	if err != nil && err.Error() == nodeNotExistsError(name).Error() {
 		e.mgr.nodes[name] = &node{
 			// XXX: node's role/group shall come from manager's role assignment logic or
 			// from user configuration

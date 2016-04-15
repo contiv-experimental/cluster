@@ -8,9 +8,11 @@
     name: "{{ item }}"
     state: latest
   with_items:
+    - ntp
     - unzip
     - bzip2
     - curl
     - python-software-properties
     - librbd-dev
     - bash-completion
+    - python-selinux

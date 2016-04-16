@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"encoding/json"
+
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/errored"
 )
@@ -78,4 +80,32 @@ func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 	}
 	status, state := n.Inv.GetStatus()
 	return state == inventory.Discovered && status == inventory.Allocated, nil
+}
+
+func (m *Manager) isValidGroup(groupName string) bool {
+	if groupName == ansibleWorkerGroupName || groupName == ansibleMasterGroupName {
+		return true
+	}
+	return false
+}
+
+func (m *Manager) fetchUserSpecifiedContivRole(extraVars string) (string, error) {
+	var d map[string]interface{}
+	var groupName string
+	var val interface{}
+	var ok bool
+
+	if err := json.Unmarshal([]byte(extraVars), &d); err != nil {
+		return "", errored.Errorf("failed to unmarshal extra vars %q. Error: %v", extraVars, err)
+	}
+
+	if val, ok = d["contiv_role"]; !ok {
+		return "", errored.Errorf("contiv_role is not specified in extraVars")
+	}
+	groupName = val.(string)
+
+	if !m.isValidGroup(groupName) {
+		return "", errored.Errorf("provided contiv_role is not valid %s", groupName)
+	}
+	return groupName, nil
 }

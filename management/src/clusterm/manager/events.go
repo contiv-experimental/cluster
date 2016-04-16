@@ -335,6 +335,10 @@ func (e *nodeConfigure) process() error {
 		masterAddr = node.Mon.GetMgmtAddress()
 		masterName = node.Cfg.GetTag()
 		nodeGroup = ansibleWorkerGroupName
+
+		if groupName, err := e.mgr.fetchUserSpecifiedContivRole(e.extraVars); err == nil {
+			nodeGroup = groupName
+		}
 		break
 	}
 	hostInfo.SetGroup(nodeGroup)

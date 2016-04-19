@@ -1,3 +1,5 @@
+//go:generate stringer -type=JobStatus $GOFILE
+
 package manager
 
 const (
@@ -43,4 +45,18 @@ const (
 	ansibleNodeAddrHostVar       = "node_addr"
 	ansibleEtcdMasterAddrHostVar = "etcd_master_addr"
 	ansibleEtcdMasterNameHostVar = "etcd_master_name"
+)
+
+// JobStatus corresponds to possible status values of a job
+type JobStatus int
+
+const (
+	// Queued is the initial status of a job when it is created
+	Queued JobStatus = iota
+	// Running is the status of a running job
+	Running
+	// Complete is the status of the job that ends with success
+	Complete
+	// Errored is the status of the job that ends with error including user triggered cancellation
+	Errored
 )

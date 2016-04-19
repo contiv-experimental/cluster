@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/errored"
 )
 
@@ -28,6 +29,10 @@ func (e *nodeDecommissioned) String() string {
 }
 
 func (e *nodeDecommissioned) process() error {
+	if e.mgr.activeJob != nil {
+		return errActiveJob(e.mgr.activeJob.String())
+	}
+
 	isMasterNode, err := e.mgr.isMasterNode(e.nodeName)
 	if err != nil {
 		return err
@@ -66,10 +71,48 @@ func (e *nodeDecommissioned) process() error {
 	}
 
 	if err := e.mgr.inventory.SetAssetCancelled(e.nodeName); err != nil {
-		// XXX. Log this to collins
+		// XXX. Log this to inventory
 		return err
 	}
-	// trigger node clenup event
-	e.mgr.reqQ <- newNodeCleanup(e.mgr, e.nodeName, e.extraVars)
+	// trigger node clenup
+	e.mgr.activeJob = NewJob(
+		e.cleanupRunner,
+		func(status JobStatus, errRet error) {
+			if status == Errored {
+				log.Errorf("cleanup job failed. Error: %v", errRet)
+			}
+
+			// set asset state to decommissioned
+			if err := e.mgr.inventory.SetAssetDecommissioned(e.nodeName); err != nil {
+				// XXX. Log this to inventory
+				log.Errorf("failed to update state in inventory, Error: %v", err)
+			}
+		})
+	go e.mgr.activeJob.Run()
+
+	return nil
+}
+
+// cleanupRunner is the job runner that runs cleanup playbooks on one or more nodes
+func (e *nodeDecommissioned) cleanupRunner(cancelCh CancelChannel) error {
+	// reset active job status once done
+	defer func() { e.mgr.activeJob = nil }()
+
+	node, err := e.mgr.findNode(e.nodeName)
+	if err != nil {
+		return err
+	}
+
+	if node.Cfg == nil {
+		return nodeConfigNotExistsError(e.nodeName)
+	}
+
+	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(
+		configuration.SubsysHosts([]*configuration.AnsibleHost{
+			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
+		}), e.extraVars)
+	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
+		return err
+	}
 	return nil
 }

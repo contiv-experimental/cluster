@@ -53,7 +53,7 @@ generate: deps
 clean-generate:
 	@echo "cleaning auto-generated files"
 	@rm -f inventory/*_string.go
-	@rm -f clusterm/*_string.go
+	@rm -f clusterm/manager/*_string.go
 	@rm -f monitor/*_string.go
 	@rm -f mock/*_mock.go
 	@echo "done cleaning auto-generated files"

@@ -9,8 +9,15 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
+	"github.com/contiv/errored"
 	"github.com/gorilla/mux"
 )
+
+// errInvalidJSON is the error returned when an invalid json value is specified for
+// the ansible extra variables configuration
+var errInvalidJSON = func(name string, err error) error {
+	return errored.Errorf("%q should be a valid json. Error: %s", name, err)
+}
 
 func (m *Manager) apiLoop(errCh chan error) {
 	r := mux.NewRouter()

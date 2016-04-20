@@ -53,7 +53,7 @@ And info for a single node can be fetched by using `clusterctl node get <node-na
 clusterctl node commission <node-name>
 ```
 
-Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` groups in [ansible/site.yml](../vendor/configuration/ansible/site.yml) to find out more about the serivces that configured. To quickly check if commisioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
+Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` groups in [ansible/site.yml](../vendor/ansible/site.yml) to find out more about the serivces that configured. To quickly check if commisioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
 
 **Note**:
 - certain ansible variables  need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.

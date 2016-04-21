@@ -51,10 +51,14 @@ func (s *CliTestSuite) TestCommissionProvisionFailure(c *C) {
 	}()
 
 	nodeName := validNodeNames[0]
+	// create the temporary file, which shall be deleted as part of cleanup on provision failure
+	s.touchFileAndWaitForStatToSucceed(c, s.tbn1, dummyAnsibleFile)
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	s.checkProvisionStatus(c, s.tbn1, nodeName, "Unallocated")
+	//make sure the temporary file got deleted
+	s.waitForStatToFail(c, s.tbn1, dummyAnsibleFile)
 }
 
 func (s *CliTestSuite) TestCommissionSuccess(c *C) {

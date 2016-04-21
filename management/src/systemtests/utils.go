@@ -94,6 +94,13 @@ func (s *CliTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, n
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
+func (s *CliTestSuite) touchFileAndWaitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
+	cmdStr := fmt.Sprintf("touch %s", file)
+	out, err := nut.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.waitForStatToSucceed(c, nut, file)
+}
+
 func (s *CliTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
 	out, err := tutils.WaitForDone(func() (string, bool) {
 		cmdStr := fmt.Sprintf("stat -t %s", file)

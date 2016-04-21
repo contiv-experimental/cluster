@@ -6,25 +6,25 @@ import (
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
-// nodeDisappeared processes the disappeared event from monitoring subsytem
-type nodeDisappeared struct {
+// disappearedEvent processes the disappeared event from monitoring subsytem
+type disappearedEvent struct {
 	mgr  *Manager
 	node monitor.SubsysNode
 }
 
-// newNodeDisappeared creates and returns nodeDisappeared event
-func newNodeDisappeared(mgr *Manager, node monitor.SubsysNode) *nodeDisappeared {
-	return &nodeDisappeared{
+// newDisappearedEvent creates and returns disappearedEvent event
+func newDisappearedEvent(mgr *Manager, node monitor.SubsysNode) *disappearedEvent {
+	return &disappearedEvent{
 		mgr:  mgr,
 		node: node,
 	}
 }
 
-func (e *nodeDisappeared) String() string {
-	return fmt.Sprintf("nodeDisappeared: %+v", e.node)
+func (e *disappearedEvent) String() string {
+	return fmt.Sprintf("disappearedEvent: %+v", e.node)
 }
 
-func (e *nodeDisappeared) process() error {
+func (e *disappearedEvent) process() error {
 	//XXX: need to form the name that adheres to collins tag requirements
 	name := e.node.GetLabel() + "-" + e.node.GetSerial()
 

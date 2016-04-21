@@ -8,32 +8,32 @@ import (
 	"github.com/contiv/errored"
 )
 
-// nodeDecommissioned triggers the decommission workflow
-type nodeDecommissioned struct {
+// decommissionEvent triggers the decommission workflow
+type decommissionEvent struct {
 	mgr       *Manager
-	nodeName  string
+	nodeNames []string
 	extraVars string
 }
 
-// newNodeDecommissioned creates and returns nodeDecommissioned event
-func newNodeDecommissioned(mgr *Manager, nodeName, extraVars string) *nodeDecommissioned {
-	return &nodeDecommissioned{
+// newDecommissionEvent creates and returns decommissionEvent
+func newDecommissionEvent(mgr *Manager, nodeNames []string, extraVars string) *decommissionEvent {
+	return &decommissionEvent{
 		mgr:       mgr,
-		nodeName:  nodeName,
+		nodeNames: nodeNames,
 		extraVars: extraVars,
 	}
 }
 
-func (e *nodeDecommissioned) String() string {
-	return fmt.Sprintf("nodeDecommissioned: %s", e.nodeName)
+func (e *decommissionEvent) String() string {
+	return fmt.Sprintf("decommissionEvent: %v", e.nodeNames)
 }
 
-func (e *nodeDecommissioned) process() error {
+func (e *decommissionEvent) process() error {
 	if e.mgr.activeJob != nil {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	isMasterNode, err := e.mgr.isMasterNode(e.nodeName)
+	isMasterNode, err := e.mgr.isMasterNode(e.nodeNames[0])
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (e *nodeDecommissioned) process() error {
 	// XXX: revisit this check once we are able to support multiple master nodes.
 	if isMasterNode {
 		for name := range e.mgr.nodes {
-			if name == e.nodeName {
+			if name == e.nodeNames[0] {
 				// skip this node
 				continue
 			}
@@ -65,12 +65,12 @@ func (e *nodeDecommissioned) process() error {
 			}
 
 			if isWorkerNode {
-				return errored.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeName)
+				return errored.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeNames[0])
 			}
 		}
 	}
 
-	if err := e.mgr.inventory.SetAssetCancelled(e.nodeName); err != nil {
+	if err := e.mgr.inventory.SetAssetCancelled(e.nodeNames[0]); err != nil {
 		// XXX. Log this to inventory
 		return err
 	}
@@ -83,7 +83,7 @@ func (e *nodeDecommissioned) process() error {
 			}
 
 			// set asset state to decommissioned
-			if err := e.mgr.inventory.SetAssetDecommissioned(e.nodeName); err != nil {
+			if err := e.mgr.inventory.SetAssetDecommissioned(e.nodeNames[0]); err != nil {
 				// XXX. Log this to inventory
 				log.Errorf("failed to update state in inventory, Error: %v", err)
 			}
@@ -94,22 +94,22 @@ func (e *nodeDecommissioned) process() error {
 }
 
 // cleanupRunner is the job runner that runs cleanup playbooks on one or more nodes
-func (e *nodeDecommissioned) cleanupRunner(cancelCh CancelChannel) error {
+func (e *decommissionEvent) cleanupRunner(cancelCh CancelChannel) error {
 	// reset active job status once done
 	defer func() { e.mgr.activeJob = nil }()
 
-	node, err := e.mgr.findNode(e.nodeName)
+	node, err := e.mgr.findNode(e.nodeNames[0])
 	if err != nil {
 		return err
 	}
 
 	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeName)
+		return nodeConfigNotExistsError(e.nodeNames[0])
 	}
 
 	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
+			e.mgr.nodes[e.nodeNames[0]].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		return err

@@ -7,32 +7,32 @@ import (
 	"github.com/contiv/cluster/management/src/configuration"
 )
 
-// nodeInMaintenance triggers the upgrade workflow
-type nodeInMaintenance struct {
+// maintenanceEvent triggers the upgrade workflow
+type maintenanceEvent struct {
 	mgr       *Manager
-	nodeName  string
+	nodeNames []string
 	extraVars string
 }
 
-// newNodeInMaintenance creates and returns nodeInMaintenance event
-func newNodeInMaintenance(mgr *Manager, nodeName, extraVars string) *nodeInMaintenance {
-	return &nodeInMaintenance{
+// newMaintenanceEvent creates and returns maintenanceEvent
+func newMaintenanceEvent(mgr *Manager, nodeNames []string, extraVars string) *maintenanceEvent {
+	return &maintenanceEvent{
 		mgr:       mgr,
-		nodeName:  nodeName,
+		nodeNames: nodeNames,
 		extraVars: extraVars,
 	}
 }
 
-func (e *nodeInMaintenance) String() string {
-	return fmt.Sprintf("nodeInMaintenance: %s", e.nodeName)
+func (e *maintenanceEvent) String() string {
+	return fmt.Sprintf("maintenanceEvent: %v", e.nodeNames)
 }
 
-func (e *nodeInMaintenance) process() error {
+func (e *maintenanceEvent) process() error {
 	if e.mgr.activeJob != nil {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	if err := e.mgr.inventory.SetAssetInMaintenance(e.nodeName); err != nil {
+	if err := e.mgr.inventory.SetAssetInMaintenance(e.nodeNames[0]); err != nil {
 		// XXX. Log this to inventory
 		return err
 	}
@@ -44,14 +44,14 @@ func (e *nodeInMaintenance) process() error {
 			if status == Errored {
 				log.Errorf("configuration job failed. Error: %v", errRet)
 				// set asset state back to unallocated
-				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err != nil {
+				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeNames[0]); err != nil {
 					// XXX. Log this to inventory
 					log.Errorf("failed to update state in inventory, Error: %v", err)
 				}
 				return
 			}
 			// set asset state to commissioned
-			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
+			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeNames[0]); err != nil {
 				// XXX. Log this to inventory
 				log.Errorf("failed to update state in inventory, Error: %v", err)
 			}
@@ -61,22 +61,22 @@ func (e *nodeInMaintenance) process() error {
 }
 
 // upgradeRunner is the job runner that runs upgrade plabook on one or more nodes
-func (e *nodeInMaintenance) upgradeRunner(cancelCh CancelChannel) error {
+func (e *maintenanceEvent) upgradeRunner(cancelCh CancelChannel) error {
 	// reset active job status once done
 	defer func() { e.mgr.activeJob = nil }()
 
-	node, err := e.mgr.findNode(e.nodeName)
+	node, err := e.mgr.findNode(e.nodeNames[0])
 	if err != nil {
 		return err
 	}
 
 	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeName)
+		return nodeConfigNotExistsError(e.nodeNames[0])
 	}
 
 	outReader, cancelFunc, errCh := e.mgr.configuration.Upgrade(
 		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeName].Cfg.(*configuration.AnsibleHost),
+			e.mgr.nodes[e.nodeNames[0]].Cfg.(*configuration.AnsibleHost),
 		}), e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		log.Errorf("upgrade failed. Error: %s", err)

@@ -12,40 +12,40 @@ func errActiveJob(desc string) error {
 	return errored.Errorf("there is already an active job, please try in sometime. Job: %s", desc)
 }
 
-// nodeCommissioned triggers the commission workflow
-type nodeCommissioned struct {
+// commissionEvent triggers the commission workflow
+type commissionEvent struct {
 	mgr       *Manager
-	nodeName  string
+	nodeNames []string
 	extraVars string
 }
 
-// newNodeCommissioned creates and returns nodeCommissioned event
-func newNodeCommissioned(mgr *Manager, nodeName, extraVars string) *nodeCommissioned {
-	return &nodeCommissioned{
+// newCommissionEvent creates and returns commissionEvent
+func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars string) *commissionEvent {
+	return &commissionEvent{
 		mgr:       mgr,
-		nodeName:  nodeName,
+		nodeNames: nodeNames,
 		extraVars: extraVars,
 	}
 }
 
-func (e *nodeCommissioned) String() string {
-	return fmt.Sprintf("nodeCommissioned: %s", e.nodeName)
+func (e *commissionEvent) String() string {
+	return fmt.Sprintf("commissionEvent: %v", e.nodeNames)
 }
 
-func (e *nodeCommissioned) process() error {
+func (e *commissionEvent) process() error {
 	if e.mgr.activeJob != nil {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	isDiscovered, err := e.mgr.isDiscoveredNode(e.nodeName)
+	isDiscovered, err := e.mgr.isDiscoveredNode(e.nodeNames[0])
 	if err != nil {
 		return err
 	}
 	if !isDiscovered {
-		return errored.Errorf("node %q has disappeared from monitoring subsystem, it can't be commissioned. Please check node's network reachability", e.nodeName)
+		return errored.Errorf("node %q has disappeared from monitoring subsystem, it can't be commissioned. Please check node's network reachability", e.nodeNames[0])
 	}
 
-	if err := e.mgr.inventory.SetAssetProvisioning(e.nodeName); err != nil {
+	if err := e.mgr.inventory.SetAssetProvisioning(e.nodeNames[0]); err != nil {
 		// XXX. Log this to collins
 		return err
 	}
@@ -57,14 +57,14 @@ func (e *nodeCommissioned) process() error {
 			if status == Errored {
 				log.Errorf("configuration job failed. Error: %v", errRet)
 				// set asset state back to unallocated
-				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeName); err != nil {
+				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeNames[0]); err != nil {
 					// XXX. Log this to inventory
 					log.Errorf("failed to update state in inventory, Error: %v", err)
 				}
 				return
 			}
 			// set asset state to commissioned
-			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeName); err != nil {
+			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeNames[0]); err != nil {
 				// XXX. Log this to inventory
 				log.Errorf("failed to update state in inventory, Error: %v", err)
 			}
@@ -76,17 +76,17 @@ func (e *nodeCommissioned) process() error {
 
 // configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
 // It runs cleanup playbook on failure
-func (e *nodeCommissioned) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
+func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
 	// reset active job status once done
 	defer func() { e.mgr.activeJob = nil }()
 
-	node, err := e.mgr.findNode(e.nodeName)
+	node, err := e.mgr.findNode(e.nodeNames[0])
 	if err != nil {
 		return err
 	}
 
 	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeName)
+		return nodeConfigNotExistsError(e.nodeNames[0])
 	}
 
 	hostInfo := node.Cfg.(*configuration.AnsibleHost)
@@ -99,7 +99,7 @@ func (e *nodeCommissioned) configureOrCleanupOnErrorRunner(cancelCh CancelChanne
 	// service.
 	// XXX: revisit this when the above changes
 	for name, node := range e.mgr.nodes {
-		if name == e.nodeName {
+		if name == e.nodeNames[0] {
 			// skip this node
 			continue
 		}

@@ -2,7 +2,7 @@ package manager
 
 import (
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -13,6 +13,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// APIRequest is the general request body expected by clusterm from it's client
+type APIRequest struct {
+	Nodes []string `json:"nodes,omit-empty"`
+	Addrs []string `json:"addrs,omit-empty"`
+}
+
 // errInvalidJSON is the error returned when an invalid json value is specified for
 // the ansible extra variables configuration
 var errInvalidJSON = func(name string, err error) error {
@@ -20,19 +26,40 @@ var errInvalidJSON = func(name string, err error) error {
 }
 
 func (m *Manager) apiLoop(errCh chan error) {
+	//set following headers for requests expecting a body
+	jsonContentHdrs := []string{"Content-Type", "application/json"}
+	//set following headers for requests that don't expect a body like get node info.
+	emptyHdrs := []string{}
+	reqs := map[string][]struct {
+		url  string
+		hdrs []string
+		hdlr http.HandlerFunc
+	}{
+		"GET": {
+			{"/" + getNodeInfo, emptyHdrs, get(m.oneNode)},
+			{"/" + GetNodesInfo, emptyHdrs, get(m.allNodes)},
+			{"/" + GetGlobals, emptyHdrs, get(m.globalsGet)},
+		},
+		"POST": {
+			{"/" + postNodeCommission, emptyHdrs, post(m.nodesCommission)},
+			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},
+			{"/" + postNodeDecommission, emptyHdrs, post(m.nodesDecommission)},
+			{"/" + PostNodesDecommission, jsonContentHdrs, post(m.nodesDecommission)},
+			{"/" + postNodeMaintenance, emptyHdrs, post(m.nodesMaintenance)},
+			{"/" + PostNodesMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
+			{"/" + postNodeDiscover, emptyHdrs, post(m.nodesDiscover)},
+			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
+			{"/" + PostGlobals, emptyHdrs, post(m.globalsSet)},
+		},
+	}
+
 	r := mux.NewRouter()
+	for method, items := range reqs {
+		for _, item := range items {
+			r.Headers(item.hdrs...).Path(item.url).Methods(method).HandlerFunc(item.hdlr)
+		}
+	}
 
-	s := r.Headers("Content-Type", "application/json").Methods("Post").Subrouter()
-	s.HandleFunc(fmt.Sprintf("/%s", postNodeCommission), post(m.nodeCommission))
-	s.HandleFunc(fmt.Sprintf("/%s", postNodeDecommission), post(m.nodeDecommission))
-	s.HandleFunc(fmt.Sprintf("/%s", postNodeMaintenance), post(m.nodeMaintenance))
-	s.HandleFunc(fmt.Sprintf("/%s", postNodeDiscover), post(m.nodeDiscover))
-	s.HandleFunc(fmt.Sprintf("/%s", PostGlobals), post(m.globalsSet))
-
-	s = r.Methods("Get").Subrouter()
-	s.HandleFunc(fmt.Sprintf("/%s", getNodeInfo), get(m.oneNode))
-	s.HandleFunc(fmt.Sprintf("/%s", GetNodesInfo), get(m.allNodes))
-	s.HandleFunc(fmt.Sprintf("/%s", GetGlobals), get(m.globalsGet))
 	l, err := net.Listen("tcp", m.addr)
 	if err != nil {
 		log.Errorf("Error setting up listener. Error: %s", err)
@@ -46,13 +73,40 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-func post(postCb func(tagOrAddr string, sanitizedExtraVars string) error) func(http.ResponseWriter, *http.Request) {
+type postCallback func(tagsOrAddrs []string, sanitizedExtraVars string) error
+
+func post(postCb postCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		tagOrAddr := vars["tag"]
-		if tagOrAddr == "" {
-			tagOrAddr = vars["addr"]
+		tagsOrAddrs := []string{}
+
+		// process data from request body, if any
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+		if len(body) > 0 {
+			req := APIRequest{}
+			if err := json.Unmarshal(body, &req); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			// append both names and addresses if client specified both, invalid input will be
+			// handled as part of handler callback
+			tagsOrAddrs = append(tagsOrAddrs, req.Nodes...)
+			tagsOrAddrs = append(tagsOrAddrs, req.Addrs...)
+		}
+
+		// process data from url, if any
+		vars := mux.Vars(r)
+		if vars["tag"] != "" {
+			tagsOrAddrs = append(tagsOrAddrs, vars["tag"])
+		}
+		if vars["addr"] != "" {
+			tagsOrAddrs = append(tagsOrAddrs, vars["addr"])
+		}
+
+		// process query variables
 		extraVars := r.FormValue(ExtraVarsQuery)
 		sanitzedExtraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
 		if err != nil {
@@ -61,7 +115,9 @@ func post(postCb func(tagOrAddr string, sanitizedExtraVars string) error) func(h
 				http.StatusInternalServerError)
 			return
 		}
-		if err := postCb(tagOrAddr, sanitzedExtraVars); err != nil {
+
+		// call the handler
+		if err := postCb(tagsOrAddrs, sanitzedExtraVars); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -86,49 +142,48 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	return extraVars, nil
 }
 
-func (m *Manager) nodeCommission(tag, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newNodeCommissioned(m, tag, sanitizedExtraVars))
+func (m *Manager) nodesCommission(tags []string, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newCommissionEvent(m, tags, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeDecommission(tag, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newNodeDecommissioned(m, tag, sanitizedExtraVars))
+func (m *Manager) nodesDecommission(tags []string, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newDecommissionEvent(m, tags, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeMaintenance(tag, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newNodeInMaintenance(m, tag, sanitizedExtraVars))
+func (m *Manager) nodesMaintenance(tags []string, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newMaintenanceEvent(m, tags, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodeDiscover(addr, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newNodeDiscover(m, addr, sanitizedExtraVars))
+func (m *Manager) nodesDiscover(addrs []string, sanitizedExtraVars string) error {
+	me := newWaitableEvent(newDiscoverEvent(m, addrs, sanitizedExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) globalsSet(tag, extraVars string) error {
+func (m *Manager) globalsSet(noop []string, extraVars string) error {
 	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
 	if err != nil {
 		return err
 	}
-	me := newWaitableEvent(newSetGlobals(m, extraVars))
+	me := newWaitableEvent(newSetGlobalsEvent(m, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func get(getCb func(tag string) ([]byte, error)) func(http.ResponseWriter, *http.Request) {
+type getCallback func(tag string) ([]byte, error)
+
+func get(getCb getCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		tag := vars["tag"]
-		var (
-			out []byte
-			err error
-		)
-		if out, err = getCb(tag); err != nil {
+		out, err := getCb(tag)
+		if err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)

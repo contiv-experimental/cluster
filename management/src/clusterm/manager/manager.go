@@ -61,7 +61,7 @@ func DefaultConfig() *Config {
 			PrivKeyFile:       "/vagrant/management/src/demo/files/insecure_private_key",
 		},
 		Manager: clustermConfig{
-			Addr: "localhost:9876",
+			Addr: "0.0.0.0:9876",
 		},
 	}
 }

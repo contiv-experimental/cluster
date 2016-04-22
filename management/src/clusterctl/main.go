@@ -20,7 +20,7 @@ var (
 	clustermFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "url, u",
-			Value: "localhost:9876",
+			Value: manager.DefaultConfig().Manager.Addr,
 			Usage: "cluster manager's REST service url",
 		},
 	}

@@ -1,5 +1,5 @@
 # This file describes the environment setup to build cluster-manager
-FROM golang:1.6
+FROM golang:1.6.2
 
 ENV GOPATH=/go
 
@@ -21,4 +21,4 @@ RUN go get github.com/golang/mock/mockgen
 ARG work_dir
 ENV GOBIN=${work_dir}/bin
 
-CMD bash
+CMD /bin/bash

@@ -73,7 +73,7 @@ build-docker-img:
 	docker build -t "$(docker_img)" $(docker_buildargs) .
 
 build-docker-shell: build-docker-img
-	@$(docker_run_interactive) bash
+	@$(docker_run_interactive)
 
 build: build-docker-img
 	@echo "building test image..."

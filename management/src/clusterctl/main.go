@@ -13,10 +13,6 @@ import (
 )
 
 var (
-	errNodeNameMissing = func(c string) error { return errored.Errorf("command %q expects a node name", c) }
-	errNodeAddrMissing = func(c string) error { return errored.Errorf("command %q expects a node IP address", c) }
-	errInvalidIPAddr   = func(a string) error { return errored.Errorf("failed to parse ip address %q", a) }
-
 	clustermFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "url, u",
@@ -49,21 +45,21 @@ func main() {
 					Name:    "commission",
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
-					Action:  doAction(newPostActioner(nodeCommission)),
+					Action:  doAction(newPostActioner(validateOneNodeName, nodeCommission)),
 					Flags:   extraVarsFlags,
 				},
 				{
 					Name:    "decommission",
 					Aliases: []string{"d"},
 					Usage:   "decommission a node",
-					Action:  doAction(newPostActioner(nodeDecommission)),
+					Action:  doAction(newPostActioner(validateOneNodeName, nodeDecommission)),
 					Flags:   extraVarsFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a node in maintenance",
-					Action:  doAction(newPostActioner(nodeMaintenance)),
+					Action:  doAction(newPostActioner(validateOneNodeName, nodeMaintenance)),
 					Flags:   extraVarsFlags,
 				},
 				{
@@ -79,6 +75,27 @@ func main() {
 			Aliases: []string{"a"},
 			Usage:   "all nodes related operation",
 			Subcommands: []cli.Command{
+				{
+					Name:    "commission",
+					Aliases: []string{"c"},
+					Usage:   "commission a set of nodes",
+					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesCommission)),
+					Flags:   extraVarsFlags,
+				},
+				{
+					Name:    "decommission",
+					Aliases: []string{"d"},
+					Usage:   "decommission a set of nodes",
+					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesDecommission)),
+					Flags:   extraVarsFlags,
+				},
+				{
+					Name:    "maintenance",
+					Aliases: []string{"m"},
+					Usage:   "put a set of nodes in maintenance",
+					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesMaintenance)),
+					Flags:   extraVarsFlags,
+				},
 				{
 					Name:    "get",
 					Aliases: []string{"g"},
@@ -103,20 +120,28 @@ func main() {
 					Aliases: []string{"s"},
 					Usage:   "set global info",
 					Flags:   extraVarsFlags,
-					Action:  doAction(newPostActioner(globalsSet)),
+					Action:  doAction(newPostActioner(validateZeroArgs, globalsSet)),
 				},
 			},
 		},
 		{
 			Name:    "discover",
 			Aliases: []string{"d"},
-			Usage:   "provision a node for discovery",
-			Action:  doAction(newPostActioner(nodeDiscover)),
+			Usage:   "provision one or more nodes for discovery",
+			Action:  doAction(newPostActioner(validateMultiNodeAddrs, nodesDiscover)),
 			Flags:   extraVarsFlags,
 		},
 	}
 
 	app.Run(os.Args)
+}
+
+func errUnexpectedArgCount(exptd string, rcvd int) error {
+	return errored.Errorf("command expects %s arg(s) but received %d", exptd, rcvd)
+}
+
+func errInvalidIPAddr(a string) error {
+	return errored.Errorf("failed to parse ip address %q", a)
 }
 
 type actioner interface {
@@ -136,14 +161,21 @@ func doAction(a actioner) func(*cli.Context) {
 	}
 }
 
+type postCallback func(c *manager.Client, args []string, extraVars string) error
+type validateCallback func(args []string) error
+
 type postActioner struct {
-	nodeNameOrAddr string
-	extraVars      string
-	postCb         func(c *manager.Client, nodeNameOrAddr, extraVars string) error
+	args       []string
+	extraVars  string
+	validateCb validateCallback
+	postCb     postCallback
 }
 
-func newPostActioner(postCb func(c *manager.Client, nodeNameOrAddr, extraVars string) error) *postActioner {
-	return &postActioner{postCb: postCb}
+func newPostActioner(validateCb validateCallback, postCb postCallback) *postActioner {
+	return &postActioner{
+		validateCb: validateCb,
+		postCb:     postCb,
+	}
 }
 
 func (npa *postActioner) procFlags(c *cli.Context) {
@@ -151,45 +183,81 @@ func (npa *postActioner) procFlags(c *cli.Context) {
 }
 
 func (npa *postActioner) procArgs(c *cli.Context) {
-	npa.nodeNameOrAddr = c.Args().First()
+	npa.args = c.Args()
 }
 
 func (npa *postActioner) action(c *manager.Client) error {
-	return npa.postCb(c, npa.nodeNameOrAddr, npa.extraVars)
+	if err := npa.validateCb(npa.args); err != nil {
+		return err
+	}
+	return npa.postCb(c, npa.args, npa.extraVars)
 }
 
-func nodeCommission(c *manager.Client, nodeName, extraVars string) error {
-	if nodeName == "" {
-		return errNodeNameMissing("commission")
+func validateOneNodeName(args []string) error {
+	if len(args) != 1 {
+		return errUnexpectedArgCount("1", len(args))
 	}
+	return nil
+}
+
+func nodeCommission(c *manager.Client, args []string, extraVars string) error {
+	nodeName := args[0]
 	return c.PostNodeCommission(nodeName, extraVars)
 }
 
-func nodeDecommission(c *manager.Client, nodeName, extraVars string) error {
-	if nodeName == "" {
-		return errNodeNameMissing("decommission")
-	}
+func nodeDecommission(c *manager.Client, args []string, extraVars string) error {
+	nodeName := args[0]
 	return c.PostNodeDecommission(nodeName, extraVars)
 }
 
-func nodeMaintenance(c *manager.Client, nodeName, extraVars string) error {
-	if nodeName == "" {
-		return errNodeNameMissing("maintenance")
-	}
+func nodeMaintenance(c *manager.Client, args []string, extraVars string) error {
+	nodeName := args[0]
 	return c.PostNodeInMaintenance(nodeName, extraVars)
 }
 
-func nodeDiscover(c *manager.Client, nodeAddr, extraVars string) error {
-	if nodeAddr == "" {
-		return errNodeAddrMissing("discover")
+func validateMultiNodeNames(args []string) error {
+	if len(args) < 1 {
+		return errUnexpectedArgCount(">=1", len(args))
 	}
-	if ip := net.ParseIP(nodeAddr); ip == nil {
-		return errInvalidIPAddr(nodeAddr)
-	}
-	return c.PostNodeDiscover(nodeAddr, extraVars)
+	return nil
 }
 
-func globalsSet(c *manager.Client, noop, extraVars string) error {
+func nodesCommission(c *manager.Client, args []string, extraVars string) error {
+	return c.PostNodesCommission(args, extraVars)
+}
+
+func nodesDecommission(c *manager.Client, args []string, extraVars string) error {
+	return c.PostNodesDecommission(args, extraVars)
+}
+
+func nodesMaintenance(c *manager.Client, args []string, extraVars string) error {
+	return c.PostNodesInMaintenance(args, extraVars)
+}
+
+func validateMultiNodeAddrs(args []string) error {
+	if len(args) < 1 {
+		return errUnexpectedArgCount(">=1", len(args))
+	}
+	for _, addr := range args {
+		if ip := net.ParseIP(addr); ip == nil {
+			return errInvalidIPAddr(addr)
+		}
+	}
+	return nil
+}
+
+func nodesDiscover(c *manager.Client, args []string, extraVars string) error {
+	return c.PostNodesDiscover(args, extraVars)
+}
+
+func validateZeroArgs(args []string) error {
+	if len(args) != 0 {
+		return errUnexpectedArgCount("0", len(args))
+	}
+	return nil
+}
+
+func globalsSet(c *manager.Client, noop []string, extraVars string) error {
 	return c.PostGlobals(extraVars)
 }
 
@@ -216,7 +284,7 @@ func (nga *getActioner) action(c *manager.Client) error {
 
 func nodeGet(c *manager.Client, nodeName string) error {
 	if nodeName == "" {
-		return errNodeNameMissing("get")
+		return errUnexpectedArgCount("1", 0)
 	}
 
 	out, err := c.GetNode(nodeName)

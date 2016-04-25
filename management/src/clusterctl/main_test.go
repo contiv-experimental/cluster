@@ -5,7 +5,6 @@ package main
 import (
 	"testing"
 
-	"github.com/contiv/cluster/management/src/clusterm/manager"
 	. "gopkg.in/check.v1"
 )
 
@@ -19,39 +18,34 @@ var _ = Suite(&mainSuite{})
 
 func (s *mainSuite) TestCommandArgValidationError(c *C) {
 	tests := map[string]struct {
-		f        func(*manager.Client, string, string) error
+		f        validateCallback
 		args     []string
 		exptdErr error
 	}{
-		"commission": {
-			f:        nodeCommission,
+		"one-node-name": {
+			f:        validateOneNodeName,
 			args:     []string{"", ""},
-			exptdErr: errNodeNameMissing("commission"),
+			exptdErr: errUnexpectedArgCount("1", len([]string{"", ""})),
 		},
-		"decommission": {
-			f:        nodeDecommission,
-			args:     []string{"", ""},
-			exptdErr: errNodeNameMissing("decommission"),
+		"multi-node-name": {
+			f:        validateMultiNodeNames,
+			args:     []string{},
+			exptdErr: errUnexpectedArgCount(">=1", len([]string{})),
 		},
-		"maintenance": {
-			f:        nodeMaintenance,
-			args:     []string{"", ""},
-			exptdErr: errNodeNameMissing("maintenance"),
+		"multi-node-addrs": {
+			f:        validateMultiNodeAddrs,
+			args:     []string{},
+			exptdErr: errUnexpectedArgCount(">=1", len([]string{})),
 		},
-		"discover": {
-			f:        nodeDiscover,
-			args:     []string{"", ""},
-			exptdErr: errNodeAddrMissing("discover"),
-		},
-		"discover_invalid_ip": {
-			f:        nodeDiscover,
+		"invalid-addr": {
+			f:        validateMultiNodeAddrs,
 			args:     []string{"1.2.3.4.5", ""},
 			exptdErr: errInvalidIPAddr("1.2.3.4.5"),
 		},
 	}
 
 	for key, test := range tests {
-		err := test.f(nil, test.args[0], test.args[1])
+		err := test.f(test.args)
 		c.Assert(err.Error(), Equals, test.exptdErr.Error(), Commentf("test key: %s", key))
 	}
 }

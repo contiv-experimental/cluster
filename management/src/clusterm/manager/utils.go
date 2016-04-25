@@ -1,6 +1,7 @@
 package manager
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/errored"
 )
@@ -68,6 +69,25 @@ func (m *Manager) isDiscoveredNode(name string) (bool, error) {
 	return state == inventory.Discovered, nil
 }
 
+// areDiscovered checks if all nodes are in discovered state.
+// Returns nil error if all nodes are discovered, else returns appropriate error
+func (m *Manager) areDiscoveredNodes(names []string) error {
+	disappearedNodes := []string{}
+	for _, name := range names {
+		discovered, err := m.isDiscoveredNode(name)
+		if err != nil {
+			return err
+		}
+		if !discovered {
+			disappearedNodes = append(disappearedNodes, name)
+		}
+	}
+	if len(disappearedNodes) > 0 {
+		return errored.Errorf("one or more nodes are not in discovered state, please check their network reachability. Non-discovered nodes: %v", disappearedNodes)
+	}
+	return nil
+}
+
 func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 	n, err := m.findNode(name)
 	if err != nil {
@@ -78,4 +98,28 @@ func (m *Manager) isDiscoveredAndAllocatedNode(name string) (bool, error) {
 	}
 	status, state := n.Inv.GetStatus()
 	return state == inventory.Discovered && status == inventory.Allocated, nil
+}
+
+type setInvStateCallback func(name string) error
+
+// tries to set the newStatus as state of all assets, it continues on failures
+func (m *Manager) setAssetsStatusBestEffort(names []string, newStatusCb setInvStateCallback) {
+	for _, name := range names {
+		if err := newStatusCb(name); err != nil {
+			log.Errorf("failed to update %s's state in inventory, Error: %v", name, err)
+			continue
+		}
+	}
+}
+
+// try to atomically set the newStatus as state of all assets or revert ot revertStatus in case of failure
+func (m *Manager) setAssetsStatusAtomic(names []string, newStatusCb setInvStateCallback, revertStatusCb setInvStateCallback) error {
+	for i, name := range names {
+		if err := newStatusCb(name); err != nil {
+			// try to revert back to original state in case of failure
+			m.setAssetsStatusBestEffort(names[0:i+1], revertStatusCb)
+			return errored.Errorf("failed to update %s's state in inventory, Error: %v", name, err)
+		}
+	}
+	return nil
 }

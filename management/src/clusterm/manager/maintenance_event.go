@@ -12,6 +12,9 @@ type maintenanceEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
+
+	_hosts  configuration.SubsysHosts
+	_enodes map[string]*node
 }
 
 // newMaintenanceEvent creates and returns maintenanceEvent
@@ -32,8 +35,20 @@ func (e *maintenanceEvent) process() error {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	if err := e.mgr.inventory.SetAssetInMaintenance(e.nodeNames[0]); err != nil {
-		// XXX. Log this to inventory
+	// validate event data
+	var err error
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+		return err
+	}
+
+	// prepare inventory
+	if err := e.pepareInventory(); err != nil {
+		return err
+	}
+
+	//set assets as in-maintenance
+	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetInMaintenance,
+		e.mgr.inventory.SetAssetCommissioned); err != nil {
 		return err
 	}
 
@@ -43,20 +58,25 @@ func (e *maintenanceEvent) process() error {
 		func(status JobStatus, errRet error) {
 			if status == Errored {
 				log.Errorf("configuration job failed. Error: %v", errRet)
-				// set asset state back to unallocated
-				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeNames[0]); err != nil {
-					// XXX. Log this to inventory
-					log.Errorf("failed to update state in inventory, Error: %v", err)
-				}
+				// set assets as unallocated
+				e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetUnallocated)
 				return
 			}
-			// set asset state to commissioned
-			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeNames[0]); err != nil {
-				// XXX. Log this to inventory
-				log.Errorf("failed to update state in inventory, Error: %v", err)
-			}
+			// set assets as commissioned
+			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetCommissioned)
 		})
 	go e.mgr.activeJob.Run()
+	return nil
+}
+
+// pepareInventory prepares the inventory
+func (e *maintenanceEvent) pepareInventory() error {
+	hosts := []*configuration.AnsibleHost{}
+	for _, node := range e._enodes {
+		hosts = append(hosts, node.Cfg.(*configuration.AnsibleHost))
+	}
+	e._hosts = hosts
+
 	return nil
 }
 
@@ -65,19 +85,7 @@ func (e *maintenanceEvent) upgradeRunner(cancelCh CancelChannel) error {
 	// reset active job status once done
 	defer func() { e.mgr.activeJob = nil }()
 
-	node, err := e.mgr.findNode(e.nodeNames[0])
-	if err != nil {
-		return err
-	}
-
-	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeNames[0])
-	}
-
-	outReader, cancelFunc, errCh := e.mgr.configuration.Upgrade(
-		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeNames[0]].Cfg.(*configuration.AnsibleHost),
-		}), e.extraVars)
+	outReader, cancelFunc, errCh := e.mgr.configuration.Upgrade(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		log.Errorf("upgrade failed. Error: %s", err)
 		return err

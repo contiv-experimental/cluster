@@ -8,7 +8,7 @@ import (
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
-// discoveredEvent processes the discovered event from monitoring subsytem
+// discoveredEvent processes the discovered event from monitoring subsystem
 type discoveredEvent struct {
 	mgr  *Manager
 	node monitor.SubsysNode

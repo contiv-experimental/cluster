@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,8 +12,8 @@ import (
 	"github.com/contiv/errored"
 )
 
-var httpErrorResp = func(rsrc, status string, body []byte) error {
-	return errored.Errorf("Request: %s Response status: %q. Response body: %s", rsrc, status, body)
+var httpErrorResp = func(rsrc string, req *APIRequest, status string, body []byte) error {
+	return errored.Errorf("Request URL: %s Request Body: %+v Response status: %q. Response body: %s", rsrc, req, status, body)
 }
 
 // Client provides the methods for issuing post and get requests to cluster manager
@@ -34,13 +36,29 @@ func (c *Client) formURL(rsrc, extraVars string) string {
 	return fmt.Sprintf("http://%s/%s?%s", c.url, rsrc, v.Encode())
 }
 
-func (c *Client) doPost(rsrc, extraVars string) error {
-	var (
-		err  error
-		resp *http.Response
-	)
+func (c *Client) doPost(rsrc, extraVars string, req *APIRequest) error {
 
-	if resp, err = c.httpC.Post(c.formURL(rsrc, extraVars), "application/json", nil); err != nil {
+	var reqJSON *bytes.Buffer
+	if req != nil {
+		reqJSON = new(bytes.Buffer)
+		if err := json.NewEncoder(reqJSON).Encode(req); err != nil {
+			return err
+		}
+	}
+
+	// XXX: http.NewRequest (that http.Post()) calls panics when a reqJSON
+	// variable is nil, hence doing this explicit check here.
+	// golang issue: https://github.com/golang/go/issues/15455
+	var (
+		resp *http.Response
+		err  error
+	)
+	if reqJSON == nil {
+		resp, err = c.httpC.Post(c.formURL(rsrc, extraVars), "application/json", nil)
+	} else {
+		resp, err = c.httpC.Post(c.formURL(rsrc, extraVars), "application/json", reqJSON)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -49,7 +67,7 @@ func (c *Client) doPost(rsrc, extraVars string) error {
 		if err != nil {
 			body = []byte{}
 		}
-		return httpErrorResp(rsrc, resp.Status, body)
+		return httpErrorResp(rsrc, req, resp.Status, body)
 	}
 
 	return nil
@@ -57,22 +75,18 @@ func (c *Client) doPost(rsrc, extraVars string) error {
 
 // XXX: we should have a well defined structure for the info that is resturned
 func (c *Client) doGet(rsrc string) ([]byte, error) {
-	var (
-		body []byte
-		err  error
-		resp *http.Response
-	)
-
-	if resp, err = c.httpC.Get(c.formURL(rsrc, "")); err != nil {
+	resp, err := c.httpC.Get(c.formURL(rsrc, ""))
+	if err != nil {
 		return nil, err
 	}
 
-	if body, err = ioutil.ReadAll(resp.Body); err != nil {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, httpErrorResp(rsrc, resp.Status, body)
+		return nil, httpErrorResp(rsrc, nil, resp.Status, body)
 	}
 
 	return body, nil
@@ -80,27 +94,54 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 
 // PostNodeCommission posts the request to commission a node
 func (c *Client) PostNodeCommission(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), extraVars)
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), extraVars, nil)
+}
+
+// PostNodesCommission posts the request to commission a set of nodes
+func (c *Client) PostNodesCommission(nodeNames []string, extraVars string) error {
+	req := &APIRequest{
+		Nodes: nodeNames,
+	}
+	return c.doPost(PostNodesCommission, extraVars, req)
 }
 
 // PostNodeDecommission posts the request to decommission a node
 func (c *Client) PostNodeDecommission(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), extraVars)
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), extraVars, nil)
+}
+
+// PostNodesDecommission posts the request to decommission a set of nodes
+func (c *Client) PostNodesDecommission(nodeNames []string, extraVars string) error {
+	req := &APIRequest{
+		Nodes: nodeNames,
+	}
+	return c.doPost(PostNodesDecommission, extraVars, req)
 }
 
 // PostNodeInMaintenance posts the request to put a node in-maintenance
 func (c *Client) PostNodeInMaintenance(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), extraVars)
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), extraVars, nil)
 }
 
-// PostNodeDiscover posts the request to provision a node for discovery
-func (c *Client) PostNodeDiscover(nodeAddr, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDiscoverPrefix, nodeAddr), extraVars)
+// PostNodesInMaintenance posts the request to put a set of nodes in-maintenance
+func (c *Client) PostNodesInMaintenance(nodeNames []string, extraVars string) error {
+	req := &APIRequest{
+		Nodes: nodeNames,
+	}
+	return c.doPost(PostNodesMaintenance, extraVars, req)
+}
+
+// PostNodesDiscover posts the request to provision a set of nodes for discovery
+func (c *Client) PostNodesDiscover(nodeAddrs []string, extraVars string) error {
+	req := &APIRequest{
+		Addrs: nodeAddrs,
+	}
+	return c.doPost(PostNodesDiscover, extraVars, req)
 }
 
 // PostGlobals posts the request to set global extra vars
 func (c *Client) PostGlobals(extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s", PostGlobals), extraVars)
+	return c.doPost(PostGlobals, extraVars, nil)
 }
 
 // GetNode requests info of a specified node

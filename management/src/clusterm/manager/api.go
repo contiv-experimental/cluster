@@ -15,8 +15,8 @@ import (
 
 // APIRequest is the general request body expected by clusterm from it's client
 type APIRequest struct {
-	Nodes []string `json:"nodes,omit-empty"`
-	Addrs []string `json:"addrs,omit-empty"`
+	Nodes []string `json:"nodes,omitempty"`
+	Addrs []string `json:"addrs,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -47,7 +47,6 @@ func (m *Manager) apiLoop(errCh chan error) {
 			{"/" + PostNodesDecommission, jsonContentHdrs, post(m.nodesDecommission)},
 			{"/" + postNodeMaintenance, emptyHdrs, post(m.nodesMaintenance)},
 			{"/" + PostNodesMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
-			{"/" + postNodeDiscover, emptyHdrs, post(m.nodesDiscover)},
 			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
 			{"/" + PostGlobals, emptyHdrs, post(m.globalsSet)},
 		},

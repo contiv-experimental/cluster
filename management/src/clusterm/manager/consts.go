@@ -30,11 +30,6 @@ const (
 	// to put one or more assets in maintenance
 	PostNodesMaintenance = "maintenance/nodes"
 
-	// PostNodeDiscoverPrefix is the prefix for the POST REST endpoint
-	// to provision a specified node for discovery
-	PostNodeDiscoverPrefix = "discover/node"
-	postNodeDiscover       = PostNodeDiscoverPrefix + "/{addr}"
-
 	// PostNodesDiscover is the prefix for the POST REST endpoint
 	// to provision one or more specified nodes for discovery
 	PostNodesDiscover = "discover/nodes"

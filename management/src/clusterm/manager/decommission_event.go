@@ -13,6 +13,9 @@ type decommissionEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
+
+	_hosts  configuration.SubsysHosts
+	_enodes map[string]*node
 }
 
 // newDecommissionEvent creates and returns decommissionEvent
@@ -33,48 +36,24 @@ func (e *decommissionEvent) process() error {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	isMasterNode, err := e.mgr.isMasterNode(e.nodeNames[0])
-	if err != nil {
+	// validate event data
+	var err error
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
 		return err
 	}
 
-	// before setting the node cancelled and triggering the cleanup make sure
-	// that the master node is decommissioned only if there are no more worker nodes.
-	// XXX: revisit this check once we are able to support multiple master nodes.
-	if isMasterNode {
-		for name := range e.mgr.nodes {
-			if name == e.nodeNames[0] {
-				// skip this node
-				continue
-			}
-
-			isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
-			if err != nil || !isDiscoveredAndAllocated {
-				if err != nil {
-					log.Debugf("a node check failed for %q. Error: %s", name, err)
-				}
-				// skip hosts that are not yet provisioned or not in discovered state
-				continue
-			}
-
-			isWorkerNode, err := e.mgr.isWorkerNode(name)
-			if err != nil {
-				// skip this node
-				log.Debugf("a node check failed for %q. Error: %s", name, err)
-				continue
-			}
-
-			if isWorkerNode {
-				return errored.Errorf("%q is a master node and it can only be decommissioned after all worker nodes have been decommissioned", e.nodeNames[0])
-			}
-		}
-	}
-
-	if err := e.mgr.inventory.SetAssetCancelled(e.nodeNames[0]); err != nil {
-		// XXX. Log this to inventory
+	// prepare inventory
+	if err := e.prepareInventory(); err != nil {
 		return err
 	}
-	// trigger node clenup
+
+	// set assets as cancelled
+	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetCancelled,
+		e.mgr.inventory.SetAssetCommissioned); err != nil {
+		return err
+	}
+
+	// trigger node cleanup
 	e.mgr.activeJob = NewJob(
 		e.cleanupRunner,
 		func(status JobStatus, errRet error) {
@@ -82,13 +61,57 @@ func (e *decommissionEvent) process() error {
 				log.Errorf("cleanup job failed. Error: %v", errRet)
 			}
 
-			// set asset state to decommissioned
-			if err := e.mgr.inventory.SetAssetDecommissioned(e.nodeNames[0]); err != nil {
-				// XXX. Log this to inventory
-				log.Errorf("failed to update state in inventory, Error: %v", err)
-			}
+			// set assets as decommissioned
+			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetDecommissioned)
 		})
 	go e.mgr.activeJob.Run()
+
+	return nil
+}
+
+// prepareInventory validates that after the cleanup on the nodes in the event,
+// one of following is still true:
+// - all nodes have been cleaned up; OR
+// - there is atleast one master node left
+func (e *decommissionEvent) prepareInventory() error {
+	mastersLeft := 0
+	workersLeft := 0
+	for name := range e.mgr.nodes {
+		if _, ok := e._enodes[name]; ok {
+			// skip the node in the event
+			continue
+		}
+		isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
+		if err != nil || !isDiscoveredAndAllocated {
+			if err != nil {
+				log.Debugf("a node check failed for %q. Error: %s", name, err)
+			}
+			// skip hosts that are not yet provisioned or not in discovered state
+			continue
+		}
+		isWorkerNode, err := e.mgr.isWorkerNode(name)
+		if err != nil {
+			// skip this node
+			log.Debugf("a node check failed for %q. Error: %s", name, err)
+			continue
+		}
+		if isWorkerNode {
+			workersLeft++
+		} else {
+			mastersLeft++
+		}
+	}
+
+	if workersLeft > 0 && mastersLeft <= 0 {
+		return errored.Errorf("decommissioning the specified node(s) will leave only worker nodes in the cluster, make sure all worker nodes are decommissioned before last master node.")
+	}
+
+	// prepare the inventory
+	hosts := []*configuration.AnsibleHost{}
+	for _, node := range e._enodes {
+		hosts = append(hosts, node.Cfg.(*configuration.AnsibleHost))
+	}
+	e._hosts = hosts
 
 	return nil
 }
@@ -98,19 +121,7 @@ func (e *decommissionEvent) cleanupRunner(cancelCh CancelChannel) error {
 	// reset active job status once done
 	defer func() { e.mgr.activeJob = nil }()
 
-	node, err := e.mgr.findNode(e.nodeNames[0])
-	if err != nil {
-		return err
-	}
-
-	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeNames[0])
-	}
-
-	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(
-		configuration.SubsysHosts([]*configuration.AnsibleHost{
-			e.mgr.nodes[e.nodeNames[0]].Cfg.(*configuration.AnsibleHost),
-		}), e.extraVars)
+	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		return err
 	}

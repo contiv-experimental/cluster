@@ -17,6 +17,9 @@ type commissionEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
+
+	_hosts  configuration.SubsysHosts
+	_enodes map[string]*node
 }
 
 // newCommissionEvent creates and returns commissionEvent
@@ -37,16 +40,20 @@ func (e *commissionEvent) process() error {
 		return errActiveJob(e.mgr.activeJob.String())
 	}
 
-	isDiscovered, err := e.mgr.isDiscoveredNode(e.nodeNames[0])
-	if err != nil {
+	// validate event data
+	var err error
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
 		return err
 	}
-	if !isDiscovered {
-		return errored.Errorf("node %q has disappeared from monitoring subsystem, it can't be commissioned. Please check node's network reachability", e.nodeNames[0])
+
+	// prepare inventory
+	if err := e.prepareInventory(); err != nil {
+		return err
 	}
 
-	if err := e.mgr.inventory.SetAssetProvisioning(e.nodeNames[0]); err != nil {
-		// XXX. Log this to collins
+	// set assets as provisioning
+	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetProvisioning,
+		e.mgr.inventory.SetAssetUnallocated); err != nil {
 		return err
 	}
 
@@ -56,51 +63,31 @@ func (e *commissionEvent) process() error {
 		func(status JobStatus, errRet error) {
 			if status == Errored {
 				log.Errorf("configuration job failed. Error: %v", errRet)
-				// set asset state back to unallocated
-				if err := e.mgr.inventory.SetAssetUnallocated(e.nodeNames[0]); err != nil {
-					// XXX. Log this to inventory
-					log.Errorf("failed to update state in inventory, Error: %v", err)
-				}
+				// set assets as unallocated
+				e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetUnallocated)
 				return
 			}
-			// set asset state to commissioned
-			if err := e.mgr.inventory.SetAssetCommissioned(e.nodeNames[0]); err != nil {
-				// XXX. Log this to inventory
-				log.Errorf("failed to update state in inventory, Error: %v", err)
-			}
+			// set assets as commissioned
+			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetCommissioned)
 		})
 	go e.mgr.activeJob.Run()
 
 	return nil
 }
 
-// configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
-// It runs cleanup playbook on failure
-func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
-	// reset active job status once done
-	defer func() { e.mgr.activeJob = nil }()
-
-	node, err := e.mgr.findNode(e.nodeNames[0])
-	if err != nil {
-		return err
-	}
-
-	if node.Cfg == nil {
-		return nodeConfigNotExistsError(e.nodeNames[0])
-	}
-
-	hostInfo := node.Cfg.(*configuration.AnsibleHost)
+// prepareInventory takes care of assigning nodes to respective host-groups as part of
+// the commission workflow. It assigns nodes by following rules:
+// - if there are no commissioned nodes in discovered state, then add the current set to master group
+// - else add the nodes to worker group. And update the online master address to one
+// of the existing master nodes.
+// XXX: revisit once node role PR is committed: https://github.com/contiv/cluster/pull/87
+func (e *commissionEvent) prepareInventory() error {
 	nodeGroup := ansibleMasterGroupName
 	masterAddr := ""
 	masterName := ""
-	// update the online master address if this is second node that is being commissioned.
-	// Also set the group for second or later nodes to be worker, as right now services like
-	// swarm and netmaster can only have one master node and also we don't yet have a vip
-	// service.
-	// XXX: revisit this when the above changes
 	for name, node := range e.mgr.nodes {
-		if name == e.nodeNames[0] {
-			// skip this node
+		if _, ok := e._enodes[name]; ok {
+			// skip nodes in the event
 			continue
 		}
 
@@ -122,25 +109,40 @@ func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel
 			continue
 		}
 
-		// found our node
+		// found a master node
 		masterAddr = node.Mon.GetMgmtAddress()
 		masterName = node.Cfg.GetTag()
 		nodeGroup = ansibleWorkerGroupName
 		break
 	}
-	hostInfo.SetGroup(nodeGroup)
-	hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
-	hostInfo.SetVar(ansibleEtcdMasterNameHostVar, masterName)
 
-	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(
-		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
+	// prepare inventory
+	hosts := []*configuration.AnsibleHost{}
+	for _, node := range e._enodes {
+		hostInfo := node.Cfg.(*configuration.AnsibleHost)
+		hostInfo.SetGroup(nodeGroup)
+		hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
+		hostInfo.SetVar(ansibleEtcdMasterNameHostVar, masterName)
+		hosts = append(hosts, hostInfo)
+	}
+	e._hosts = hosts
+
+	return nil
+}
+
+// configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
+// It runs cleanup playbook on failure
+func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
+	// reset active job status once done
+	defer func() { e.mgr.activeJob = nil }()
+
+	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
 	cfgErr := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc)
 	if cfgErr == nil {
 		return nil
 	}
-	log.Errorf("configuration failed. Error: %s", cfgErr)
-	outReader, cancelFunc, errCh = e.mgr.configuration.Cleanup(
-		configuration.SubsysHosts([]*configuration.AnsibleHost{hostInfo}), e.extraVars)
+	log.Errorf("configuration failed, starting cleanup. Error: %s", cfgErr)
+	outReader, cancelFunc, errCh = e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		log.Errorf("cleanup failed. Error: %s", err)
 	}

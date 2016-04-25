@@ -3,7 +3,10 @@
 package manager
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,26 +24,38 @@ type managerSuite struct {
 var (
 	_             = Suite(&managerSuite{})
 	baseURL       = "baseUrl.foo:1234"
-	nodeName      = "testNode"
+	testNodeName  = "testNode"
 	testGetData   = []byte("testdata123")
 	testExtraVars = "extraVars"
+	testReqBody   = APIRequest{
+		Nodes: []string{testNodeName},
+	}
+	testReqDiscoverBody = APIRequest{
+		Addrs: []string{testNodeName},
+	}
 
-	failureReturner = func(c *C, expURL *url.URL) http.HandlerFunc {
+	failureReturner = func(c *C, expURL *url.URL, expBody []byte) http.HandlerFunc {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				c.Assert(r.URL.Scheme, Equals, expURL.Scheme)
 				c.Assert(r.URL.Host, Equals, expURL.Host)
 				c.Assert(r.URL.Query(), DeepEquals, expURL.Query())
+				body, err := ioutil.ReadAll(r.Body)
+				c.Assert(err, IsNil)
+				c.Assert(body, DeepEquals, expBody)
 				http.Error(w, "test failure", http.StatusInternalServerError)
 			})
 	}
 
-	okReturner = func(c *C, expURL *url.URL) http.HandlerFunc {
+	okReturner = func(c *C, expURL *url.URL, expBody []byte) http.HandlerFunc {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				c.Assert(r.URL.Scheme, Equals, expURL.Scheme)
 				c.Assert(r.URL.Host, Equals, expURL.Host)
 				c.Assert(r.URL.Query(), DeepEquals, expURL.Query())
+				body, err := ioutil.ReadAll(r.Body)
+				c.Assert(err, IsNil)
+				c.Assert(body, DeepEquals, expBody)
 				w.WriteHeader(http.StatusOK)
 			})
 	}
@@ -69,128 +84,161 @@ func getHTTPTestClientAndServer(c *C, handler http.HandlerFunc) (*httptest.Serve
 	return srvr, httpC
 }
 
-func (s *managerSuite) TestPostCommissionSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, nodeName)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
+func (s *managerSuite) TestPostSuccess(c *C) {
 	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
+		url: baseURL,
 	}
 
-	err = clstrC.PostNodeCommission(nodeName, "")
-	c.Assert(err, IsNil)
+	tests := map[string]struct {
+		expURLStr string
+		nodeName  string
+		extraVars string
+		exptdBody []byte
+		cb        func(name, extraVars string) error
+	}{
+		"commission": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
+			nodeName:  testNodeName,
+			extraVars: "",
+			exptdBody: []byte{},
+			cb:        clstrC.PostNodeCommission,
+		},
+		"commission-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
+				baseURL, PostNodeCommissionPrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			nodeName:  testNodeName,
+			extraVars: testExtraVars,
+			exptdBody: []byte{},
+			cb:        clstrC.PostNodeCommission,
+		},
+		"decommission": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, testNodeName),
+			nodeName:  testNodeName,
+			extraVars: "",
+			cb:        clstrC.PostNodeDecommission,
+		},
+		"decommission-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
+				baseURL, PostNodeDecommissionPrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			nodeName:  testNodeName,
+			extraVars: testExtraVars,
+			exptdBody: []byte{},
+			cb:        clstrC.PostNodeDecommission,
+		},
+		"maintenance": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName),
+			nodeName:  testNodeName,
+			extraVars: "",
+			cb:        clstrC.PostNodeDecommission,
+		},
+		"maintenance-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
+				baseURL, PostNodeMaintenancePrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			nodeName:  testNodeName,
+			extraVars: testExtraVars,
+			exptdBody: []byte{},
+			cb:        clstrC.PostNodeDecommission,
+		},
+	}
+	for testname, test := range tests {
+		expURL, err := url.Parse(test.expURLStr)
+		c.Assert(err, IsNil, Commentf("test: %s", testname))
+
+		httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, []byte{}))
+		defer httpS.Close()
+		clstrC.httpC = httpC
+		c.Assert(test.cb(test.nodeName, test.extraVars), IsNil, Commentf("test: %s", testname))
+	}
 }
 
-func (s *managerSuite) TestPostCommissionWithVarsSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s?%s=%s",
-		baseURL, PostNodeCommissionPrefix, nodeName, ExtraVarsQuery, testExtraVars)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
+func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
+		url: baseURL,
 	}
 
-	err = clstrC.PostNodeCommission(nodeName, testExtraVars)
-	c.Assert(err, IsNil)
-}
+	var reqBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqBody).Encode(testReqBody), IsNil)
 
-func (s *managerSuite) TestPostDecommissionSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, nodeName)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
+	var reqDiscoverBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqDiscoverBody).Encode(testReqDiscoverBody), IsNil)
+
+	tests := map[string]struct {
+		expURLStr string
+		nodeNames []string
+		extraVars string
+		exptdBody []byte
+		cb        func(names []string, extraVars string) error
+	}{
+		"commission": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesCommission),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesCommission,
+		},
+		"commission-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
+				baseURL, PostNodesCommission, ExtraVarsQuery, testExtraVars),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesCommission,
+		},
+		"decommission": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesDecommission),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesDecommission,
+		},
+		"decommission-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
+				baseURL, PostNodesDecommission, ExtraVarsQuery, testExtraVars),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesDecommission,
+		},
+		"maintenance": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesDecommission,
+		},
+		"maintenance-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
+				baseURL, PostNodesMaintenance, ExtraVarsQuery, testExtraVars),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesDecommission,
+		},
+		"discover": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesDiscover),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			exptdBody: reqDiscoverBody.Bytes(),
+			cb:        clstrC.PostNodesDiscover,
+		},
+		"discover-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
+				baseURL, PostNodesDiscover, ExtraVarsQuery, testExtraVars),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			exptdBody: reqDiscoverBody.Bytes(),
+			cb:        clstrC.PostNodesDiscover,
+		},
 	}
+	for testname, test := range tests {
+		expURL, err := url.Parse(test.expURLStr)
+		c.Assert(err, IsNil, Commentf("test: %s", testname))
 
-	err = clstrC.PostNodeDecommission(nodeName, "")
-	c.Assert(err, IsNil)
-}
-
-func (s *managerSuite) TestPostDecommissionWithVarsSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s?%s=%s",
-		baseURL, PostNodeDecommissionPrefix, nodeName, ExtraVarsQuery, testExtraVars)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
+		httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, test.exptdBody))
+		defer httpS.Close()
+		clstrC.httpC = httpC
+		c.Assert(test.cb(test.nodeNames, test.extraVars), IsNil, Commentf("test: %s", testname))
 	}
-
-	err = clstrC.PostNodeDecommission(nodeName, testExtraVars)
-	c.Assert(err, IsNil)
-}
-
-func (s *managerSuite) TestPostDiscoverSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDiscoverPrefix, nodeName)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
-	}
-
-	err = clstrC.PostNodeDiscover(nodeName, "")
-	c.Assert(err, IsNil)
-}
-
-func (s *managerSuite) TestPostDiscoverWithVarsSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s?%s=%s",
-		baseURL, PostNodeDiscoverPrefix, nodeName, ExtraVarsQuery, testExtraVars)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
-	}
-
-	err = clstrC.PostNodeDiscover(nodeName, testExtraVars)
-	c.Assert(err, IsNil)
-}
-
-func (s *managerSuite) TestPostInMaintenance(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, nodeName)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
-	}
-
-	err = clstrC.PostNodeInMaintenance(nodeName, "")
-	c.Assert(err, IsNil)
-}
-
-func (s *managerSuite) TestPostInMaintenanceWithVarsSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s?%s=%s",
-		baseURL, PostNodeMaintenancePrefix, nodeName, ExtraVarsQuery, testExtraVars)
-	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
-	}
-
-	err = clstrC.PostNodeInMaintenance(nodeName, testExtraVars)
-	c.Assert(err, IsNil)
 }
 
 func (s *managerSuite) TestPostGlobalsWithVarsSuccess(c *C) {
@@ -198,7 +246,7 @@ func (s *managerSuite) TestPostGlobalsWithVarsSuccess(c *C) {
 		baseURL, PostGlobals, ExtraVarsQuery, testExtraVars)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, []byte{}))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
@@ -213,7 +261,7 @@ func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
 	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostGlobals)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL))
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, []byte{}))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
@@ -225,22 +273,35 @@ func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
 }
 
 func (s *managerSuite) TestPostError(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, nodeName)
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL))
+	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, []byte{}))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
 		httpC: httpC,
 	}
+	err = clstrC.PostNodeInMaintenance(testNodeName, "")
+	c.Assert(err, ErrorMatches, ".*test failure\n")
 
-	err = clstrC.PostNodeInMaintenance(nodeName, "")
+	expURLStr = fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance)
+	expURL, err = url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	var reqBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqBody).Encode(testReqBody), IsNil)
+	httpS, httpC = getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqBody.Bytes()))
+	defer httpS.Close()
+	clstrC = Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+	err = clstrC.PostNodesInMaintenance([]string{testNodeName}, "")
 	c.Assert(err, ErrorMatches, ".*test failure\n")
 }
 
 func (s *managerSuite) TestGetNodeSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetNodeInfoPrefix, nodeName)
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetNodeInfoPrefix, testNodeName)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
 	httpS, httpC := getHTTPTestClientAndServer(c, okGetReturner(c, expURL))
@@ -250,7 +311,7 @@ func (s *managerSuite) TestGetNodeSuccess(c *C) {
 		httpC: httpC,
 	}
 
-	resp, err := clstrC.GetNode(nodeName)
+	resp, err := clstrC.GetNode(testNodeName)
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }
@@ -266,7 +327,7 @@ func (s *managerSuite) TestGetNodesSuccess(c *C) {
 		httpC: httpC,
 	}
 
-	resp, err := clstrC.GetNode(nodeName)
+	resp, err := clstrC.GetNode(testNodeName)
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }
@@ -288,16 +349,16 @@ func (s *managerSuite) TestGetGlobalsSuccess(c *C) {
 }
 
 func (s *managerSuite) TestGetError(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetNodeInfoPrefix, nodeName)
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetNodeInfoPrefix, testNodeName)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL))
+	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, []byte{}))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
 		httpC: httpC,
 	}
 
-	_, err = clstrC.GetNode(nodeName)
+	_, err = clstrC.GetNode(testNodeName)
 	c.Assert(err, ErrorMatches, ".*test failure\n")
 }

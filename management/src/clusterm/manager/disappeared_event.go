@@ -6,7 +6,7 @@ import (
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
-// disappearedEvent processes the disappeared event from monitoring subsytem
+// disappearedEvent processes the disappeared event from monitoring subsystem
 type disappearedEvent struct {
 	mgr  *Manager
 	node monitor.SubsysNode

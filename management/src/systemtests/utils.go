@@ -17,14 +17,14 @@ import (
 // XXX: go-check doesn't pass the test's state to the test set/teardown functions.
 // So we have no way to know if a test failed and take some approrpate action.
 // This hack let's me do that for now.
-func (s *CliTestSuite) Assert(c *C, obtained interface{}, checker Checker, args ...interface{}) {
+func (s *SystemTestSuite) Assert(c *C, obtained interface{}, checker Checker, args ...interface{}) {
 	if c.Check(obtained, checker, args...) == false {
 		s.failed = true
 		c.FailNow()
 	}
 }
 
-func (s *CliTestSuite) assertMatch(c *C, exptd, rcvd string) {
+func (s *SystemTestSuite) assertMatch(c *C, exptd, rcvd string) {
 	// XXX: the `Matches` checker doesn't match the expression in a multi-line
 	// output so resorting to a regex check here.
 	if match, err := regexp.MatchString(exptd, rcvd); err != nil || !match {
@@ -32,30 +32,30 @@ func (s *CliTestSuite) assertMatch(c *C, exptd, rcvd string) {
 	}
 }
 
-func (s *CliTestSuite) assertMultiMatch(c *C, exptd, rcvd string, eMatchCount int) {
+func (s *SystemTestSuite) assertMultiMatch(c *C, exptd, rcvd string, eMatchCount int) {
 	r := regexp.MustCompile(fmt.Sprintf("(?m)%s", exptd))
 	s.Assert(c, len(r.FindAllString(rcvd, -1)), Equals, eMatchCount, Commentf("output: %s", rcvd))
 }
 
-func (s *CliTestSuite) startSerf(c *C, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) startSerf(c *C, nut vagrantssh.TestbedNode) {
 	out, err := tutils.ServiceStartAndWaitForUp(nut, "serf", 30)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	c.Logf("serf is running. %s", out)
 }
 
-func (s *CliTestSuite) stopSerf(c *C, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) stopSerf(c *C, nut vagrantssh.TestbedNode) {
 	out, err := tutils.ServiceStop(nut, "serf")
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	c.Logf("serf is stopped. %s", out)
 }
 
-func (s *CliTestSuite) restartClusterm(c *C, nut vagrantssh.TestbedNode, timeout int) {
+func (s *SystemTestSuite) restartClusterm(c *C, nut vagrantssh.TestbedNode, timeout int) {
 	out, err := tutils.ServiceRestartAndWaitForUp(nut, "clusterm", timeout)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	c.Logf("clusterm is running. %s", out)
 }
 
-func (s *CliTestSuite) nukeNodeInCollins(c *C, nodeName string) {
+func (s *SystemTestSuite) nukeNodeInCollins(c *C, nodeName string) {
 	// Ignore errors here as asset might not exist.
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d status="Decommissioned" -d reason="test" -X POST http://localhost:9000/api/asset/%s`, nodeName))
 	c.Logf("collins asset decommission result: %v. Output: %s", err, out)
@@ -63,13 +63,13 @@ func (s *CliTestSuite) nukeNodeInCollins(c *C, nodeName string) {
 	c.Logf("collins asset deletion result: %v. Output: %s", err, out)
 }
 
-func (s *CliTestSuite) nukeNodesInBoltdb(c *C) {
+func (s *SystemTestSuite) nukeNodesInBoltdb(c *C) {
 	dbfile := boltdb.DefaultConfig().DBFile
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo rm -f %s", dbfile))
 	c.Logf("boltdb asset deletion result: %v. Output: %s", err, out)
 }
 
-func (s *CliTestSuite) nukeNodesInInventory(c *C) {
+func (s *SystemTestSuite) nukeNodesInInventory(c *C) {
 	// XXX: we cleanup up assets from collins instead of restarting it to save test time.
 	for _, name := range validNodeNames {
 		s.nukeNodeInCollins(c, name)
@@ -77,7 +77,7 @@ func (s *CliTestSuite) nukeNodesInInventory(c *C) {
 	s.nukeNodesInBoltdb(c)
 }
 
-func (s *CliTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) {
+func (s *SystemTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) {
 	exptdStr := fmt.Sprintf(`.*"status".*"%s".*`, exptdStatus)
 	out, err := tutils.WaitForDone(func() (string, bool) {
 		cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
@@ -94,14 +94,25 @@ func (s *CliTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, n
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *CliTestSuite) touchFileAndWaitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
+func (s *SystemTestSuite) checkHostGroup(c *C, nodeName, exptdGroup string) {
+	exptdStr := fmt.Sprintf(`.*"host-group".*"%s".*`, exptdGroup)
+	cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	//replace newline with empty string for regex to match properly
+	match, err := regexp.MatchString(exptdStr, strings.Replace(out, "\n", "", -1))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.Assert(c, match, Equals, true, Commentf("output: %s", out))
+}
+
+func (s *SystemTestSuite) touchFileAndWaitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
 	cmdStr := fmt.Sprintf("touch %s", file)
 	out, err := nut.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	s.waitForStatToSucceed(c, nut, file)
 }
 
-func (s *CliTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
+func (s *SystemTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, file string) {
 	out, err := tutils.WaitForDone(func() (string, bool) {
 		cmdStr := fmt.Sprintf("stat -t %s", file)
 		out, err := nut.RunCommandWithOutput(cmdStr)
@@ -113,7 +124,7 @@ func (s *CliTestSuite) waitForStatToSucceed(c *C, nut vagrantssh.TestbedNode, fi
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *CliTestSuite) waitForStatToFail(c *C, nut vagrantssh.TestbedNode, file string) {
+func (s *SystemTestSuite) waitForStatToFail(c *C, nut vagrantssh.TestbedNode, file string) {
 	out, err := tutils.WaitForDone(func() (string, bool) {
 		cmdStr := fmt.Sprintf("stat -t %s", file)
 		out, err := nut.RunCommandWithOutput(cmdStr)
@@ -125,7 +136,7 @@ func (s *CliTestSuite) waitForStatToFail(c *C, nut vagrantssh.TestbedNode, file 
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *CliTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode, nodeName, state string) {
+func (s *SystemTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode, nodeName, state string) {
 	out, err := tutils.WaitForDone(func() (string, bool) {
 		out, err := nut.RunCommandWithOutput(`serf members`)
 		if err != nil {
@@ -141,7 +152,7 @@ func (s *CliTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode, n
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
 	// provision the node
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
@@ -152,7 +163,18 @@ func (s *CliTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.Test
 	s.waitForStatToSucceed(c, nut, dummyAnsibleFile)
 }
 
-func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) commissionNodes(c *C, nodeNames []string) {
+	// provision the nodes
+	nodesStr := strings.Join(nodeNames, " ")
+	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodesStr)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	for _, name := range nodeNames {
+		s.checkProvisionStatus(c, s.tbn1, name, "Allocated")
+	}
+}
+
+func (s *SystemTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
 	// decommission the node
 	cmdStr := fmt.Sprintf("clusterctl node decommission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
@@ -163,7 +185,18 @@ func (s *CliTestSuite) decommissionNode(c *C, nodeName string, nut vagrantssh.Te
 	s.waitForStatToFail(c, nut, dummyAnsibleFile)
 }
 
-func (s *CliTestSuite) getNodeInfoFailureNonExistentNode(c *C, nodeName string) {
+func (s *SystemTestSuite) decommissionNodes(c *C, nodeNames []string) {
+	// decommission the nodes
+	nodesStr := strings.Join(nodeNames, " ")
+	cmdStr := fmt.Sprintf("clusterctl nodes decommission %s", nodesStr)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	for _, name := range nodeNames {
+		s.checkProvisionStatus(c, s.tbn1, name, "Decommissioned")
+	}
+}
+
+func (s *SystemTestSuite) getNodeInfoFailureNonExistentNode(c *C, nodeName string) {
 	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
@@ -171,7 +204,7 @@ func (s *CliTestSuite) getNodeInfoFailureNonExistentNode(c *C, nodeName string) 
 	s.assertMatch(c, exptdOut, out)
 }
 
-func (s *CliTestSuite) getNodeInfoSuccess(c *C, nodeName string) {
+func (s *SystemTestSuite) getNodeInfoSuccess(c *C, nodeName string) {
 	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))

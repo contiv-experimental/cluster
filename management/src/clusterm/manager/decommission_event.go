@@ -32,29 +32,10 @@ func (e *decommissionEvent) String() string {
 }
 
 func (e *decommissionEvent) process() error {
-	if e.mgr.activeJob != nil {
-		return errActiveJob(e.mgr.activeJob.String())
-	}
-
-	// validate event data
+	// err shouldn't be redefined below
 	var err error
-	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
-		return err
-	}
 
-	// prepare inventory
-	if err := e.prepareInventory(); err != nil {
-		return err
-	}
-
-	// set assets as cancelled
-	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetCancelled,
-		e.mgr.inventory.SetAssetCommissioned); err != nil {
-		return err
-	}
-
-	// trigger node cleanup
-	e.mgr.activeJob = NewJob(
+	err = e.mgr.checkAndSetActiveJob(
 		e.cleanupRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
@@ -64,7 +45,33 @@ func (e *decommissionEvent) process() error {
 			// set assets as decommissioned
 			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetDecommissioned)
 		})
-	go e.mgr.activeJob.Run()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			e.mgr.resetActiveJob()
+		}
+	}()
+
+	// validate event data
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+		return err
+	}
+
+	// prepare inventory
+	if err = e.prepareInventory(); err != nil {
+		return err
+	}
+
+	// set assets as cancelled
+	if err = e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetCancelled,
+		e.mgr.inventory.SetAssetCommissioned); err != nil {
+		return err
+	}
+
+	// trigger node cleanup
+	go e.mgr.runActiveJob()
 
 	return nil
 }
@@ -118,9 +125,6 @@ func (e *decommissionEvent) prepareInventory() error {
 
 // cleanupRunner is the job runner that runs cleanup playbooks on one or more nodes
 func (e *decommissionEvent) cleanupRunner(cancelCh CancelChannel) error {
-	// reset active job status once done
-	defer func() { e.mgr.activeJob = nil }()
-
 	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		return err

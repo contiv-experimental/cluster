@@ -31,29 +31,10 @@ func (e *maintenanceEvent) String() string {
 }
 
 func (e *maintenanceEvent) process() error {
-	if e.mgr.activeJob != nil {
-		return errActiveJob(e.mgr.activeJob.String())
-	}
-
-	// validate event data
+	// err shouldn't be redefined below
 	var err error
-	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
-		return err
-	}
 
-	// prepare inventory
-	if err := e.pepareInventory(); err != nil {
-		return err
-	}
-
-	//set assets as in-maintenance
-	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetInMaintenance,
-		e.mgr.inventory.SetAssetCommissioned); err != nil {
-		return err
-	}
-
-	// trigger node upgrade event
-	e.mgr.activeJob = NewJob(
+	err = e.mgr.checkAndSetActiveJob(
 		e.upgradeRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
@@ -65,7 +46,34 @@ func (e *maintenanceEvent) process() error {
 			// set assets as commissioned
 			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetCommissioned)
 		})
-	go e.mgr.activeJob.Run()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			e.mgr.resetActiveJob()
+		}
+	}()
+
+	// validate event data
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+		return err
+	}
+
+	// prepare inventory
+	if err = e.pepareInventory(); err != nil {
+		return err
+	}
+
+	//set assets as in-maintenance
+	if err = e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetInMaintenance,
+		e.mgr.inventory.SetAssetCommissioned); err != nil {
+		return err
+	}
+
+	// trigger node upgrade event
+	go e.mgr.runActiveJob()
+
 	return nil
 }
 
@@ -82,9 +90,6 @@ func (e *maintenanceEvent) pepareInventory() error {
 
 // upgradeRunner is the job runner that runs upgrade plabook on one or more nodes
 func (e *maintenanceEvent) upgradeRunner(cancelCh CancelChannel) error {
-	// reset active job status once done
-	defer func() { e.mgr.activeJob = nil }()
-
 	outReader, cancelFunc, errCh := e.mgr.configuration.Upgrade(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		log.Errorf("upgrade failed. Error: %s", err)

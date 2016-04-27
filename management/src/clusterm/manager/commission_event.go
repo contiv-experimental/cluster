@@ -36,29 +36,10 @@ func (e *commissionEvent) String() string {
 }
 
 func (e *commissionEvent) process() error {
-	if e.mgr.activeJob != nil {
-		return errActiveJob(e.mgr.activeJob.String())
-	}
-
-	// validate event data
+	// err shouldn't be redefined below
 	var err error
-	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
-		return err
-	}
 
-	// prepare inventory
-	if err := e.prepareInventory(); err != nil {
-		return err
-	}
-
-	// set assets as provisioning
-	if err := e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetProvisioning,
-		e.mgr.inventory.SetAssetUnallocated); err != nil {
-		return err
-	}
-
-	// trigger node configuration
-	e.mgr.activeJob = NewJob(
+	err = e.mgr.checkAndSetActiveJob(
 		e.configureOrCleanupOnErrorRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
@@ -70,7 +51,33 @@ func (e *commissionEvent) process() error {
 			// set assets as commissioned
 			e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetCommissioned)
 		})
-	go e.mgr.activeJob.Run()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			e.mgr.resetActiveJob()
+		}
+	}()
+
+	// validate event data
+	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+		return err
+	}
+
+	// prepare inventory
+	if err = e.prepareInventory(); err != nil {
+		return err
+	}
+
+	// set assets as provisioning
+	if err = e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetProvisioning,
+		e.mgr.inventory.SetAssetUnallocated); err != nil {
+		return err
+	}
+
+	// trigger node configuration
+	go e.mgr.runActiveJob()
 
 	return nil
 }
@@ -133,9 +140,6 @@ func (e *commissionEvent) prepareInventory() error {
 // configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
 // It runs cleanup playbook on failure
 func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
-	// reset active job status once done
-	defer func() { e.mgr.activeJob = nil }()
-
 	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
 	cfgErr := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc)
 	if cfgErr == nil {

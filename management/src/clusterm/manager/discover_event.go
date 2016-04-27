@@ -31,9 +31,24 @@ func (e *discoverEvent) String() string {
 }
 
 func (e *discoverEvent) process() error {
-	if e.mgr.activeJob != nil {
-		return errActiveJob(e.mgr.activeJob.String())
+	// err shouldn't be redefined below
+	var err error
+
+	err = e.mgr.checkAndSetActiveJob(
+		e.discoverRunner,
+		func(status JobStatus, errRet error) {
+			if status == Errored {
+				log.Errorf("provisioning discovery job failed. Error: %v", errRet)
+			}
+		})
+	if err != nil {
+		return err
 	}
+	defer func() {
+		if err != nil {
+			e.mgr.resetActiveJob()
+		}
+	}()
 
 	// validate
 	existingNodes := []string{}
@@ -48,19 +63,13 @@ func (e *discoverEvent) process() error {
 	}
 
 	// prepare inventory
-	if err := e.pepareInventory(); err != nil {
+	if err = e.pepareInventory(); err != nil {
 		return err
 	}
 
 	// trigger node discovery provisioning
-	e.mgr.activeJob = NewJob(
-		e.discoverRunner,
-		func(status JobStatus, errRet error) {
-			if status == Errored {
-				log.Errorf("provisioning discovery job failed. Error: %v", errRet)
-			}
-		})
-	go e.mgr.activeJob.Run()
+	go e.mgr.runActiveJob()
+
 	return nil
 }
 
@@ -84,9 +93,6 @@ func (e *discoverEvent) pepareInventory() error {
 // discoverRunner is the job runner that runs configuration plabooks on one or more nodes
 // It adds the node(s) to contiv-node hostgroup
 func (e *discoverEvent) discoverRunner(cancelCh CancelChannel) error {
-	// reset active job status once done
-	defer func() { e.mgr.activeJob = nil }()
-
 	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
 		log.Errorf("discover failed. Error: %s", err)

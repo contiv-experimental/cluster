@@ -1,6 +1,6 @@
 ##Ansible variables used during provisioning
 
-This file lists the ansible variables that can be passed at the time of commissioning a node or at a global level as described in [README.md](./README.md#commision-a-node). The ansible variables can also be passed at the time of setting up a node for discovery as described in [baremetal.md](./baremetal.md#3-provision-rest-of-the-nodes-for-discovery-from-the-control-host). The variables specified at global level are merged with variables specified for a node level operation, with latter taking precedence over the former in case of a overlap/conflict.
+This file lists the ansible variables that can be passed at the time of commissioning a node or at a global level as described in [README.md](./README.md#setget-global-variables). The ansible variables can also be passed at the time of setting up a node for discovery as described in [baremetal.md](./baremetal.md#3-provision-rest-of-the-nodes-for-discovery-from-the-control-host). The variables specified at global level are merged with variables specified for a node level operation, with latter taking precedence over the former in case of a overlap/conflict.
 
 Setting the variable at a global level that has same value across all nodes in a cluster, can substantially reduce the amount of variables that need to specified at every node level operation and is a recommended way to set the variables when possible.
 

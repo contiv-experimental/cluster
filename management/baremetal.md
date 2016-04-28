@@ -27,11 +27,13 @@ echo [cluster-control] > /tmp/hosts
 echo node1 ansible_host=127.0.0.1 >> /tmp/hosts
 
 # Install Cluster Manager service
-ansible-playbook --key-file=~/.ssh/id_rsa -i /tmp/hosts -e '{"env": {}}' ./site.yml
+ansible-playbook --key-file=~/.ssh/id_rsa -i /tmp/hosts -e '{"env": {}, "control_interface": "ifname"}' ./site.yml
 ```
 
 **Note**:
-- `env` is a mandatory variable. It is used to specify the environment for running ansible tasks like http-proxy. If there is no special environment to be setup then it needs to be set to an empty dictionary as shown in the example above.
+- `env` and `control_interface` need to be specified.
+- `env` is used to specify the environment for running ansible tasks like http-proxy. If there is no special environment to be setup then it needs to be set to an empty dictionary as shown in the example above.
+- `control_interface` is the netdevice that will carry serf traffic on this node.
 
 ###2. Configure the cluster manager service
 Edit the cluster manager configuration file that is created at `/etc/default/clusterm/clusterm.conf` to setup the user and playbook-location information. A sample is shown below. `playbook-location` needs to be set as the path of ansible directory we cloned in previous step. `user` needs to be set as name of `cluster-admin` user and `priv_key_file` is the location of the `id_rsa` file of `cluster-admin` user.
@@ -61,7 +63,7 @@ clusterctl discover <host-ip>
 
 **Note**:
 - Once the above command is run for a host, it will appear in `clusterctl nodes get` output in a few minutes.
-- the `clusterctl discover` command expects `env` and `control_interface` ansible variables to be specified. This can be achieved by using the `--extra-vars` flag or setting the variables at global level using `clusterctl global set` command. For more information on other available variables, also checkout [discovery section of ansible vars](ansible_vars.md#serf-based-discovery)
+- the `clusterctl discover` command expects `env` and `control_interface` ansible variables to be specified. This can be achieved by using the `--extra-vars` flag or setting them at [global level](README.md/#setget-global-variables), if applicable. For more information on other available variables, also checkout [discovery section of ansible vars](ansible_vars.md#serf-based-discovery)
 
 ###4. Ready to rock and roll!
 All set now, you can follow the cluster manager workflows as described [here](./README.md#get-list-of-discovered-nodes).

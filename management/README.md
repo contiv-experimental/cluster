@@ -53,17 +53,16 @@ And info for a single node can be fetched by using `clusterctl node get <node-na
 clusterctl node commission <node-name>
 ```
 
-Commissioning a node involves pushing the configuration and starting infra service on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` groups in [ansible/site.yml](../vendor/ansible/site.yml) to find out more about the serivces that configured. To quickly check if commisioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
+Commissioning a node involves pushing the configuration and starting infra services on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` host-groups in [ansible/site.yml](../vendor/ansible/site.yml) to learn more about the services that are configured. To quickly check if commissioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
 
 **Note**:
-- certain ansible variables  need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.
+- certain ansible variables need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.
 ```
 clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_if": "eth2", "netplugin_if": "eth1" }'
 ```
-- a common set of variables (like environment info etc) can be set just once using `clusterctl global set` command with `--extra-vars` flag set.
-- The variables set at global level are merged with the variables specified as per node level, with latter taking precendence in case of an overlap/conflict.
+- a common set of variables (like environment) can be set just once as [global variables](#setget-global-variables). This eliminates the need to specify the common variables for every commission command.
 
-#### Decommision a node
+#### Decommission a node
 ```
 clusterctl node decommission <node-name>
 ```
@@ -77,9 +76,28 @@ clusterctl node maintain <node-name>
 
 Upgrading a node involves upgrading the configuration for infra services on that node using `ansible` based configuration management.
 
-#### Managing multiple nodes
+#### Set/Get global variables
+```
+clusterctl global set --extra-vars=<vars>
+```
+A common set of variables (like environment, scheduler-provider and so on) can be set just once using the `--extra-vars` flag with `clusterctl global set` command.
 
-**To be added**. This shall allow commission, decommission and rolling-upgrades of all or a subset of nodes.
+**Note**:
+- The variables need to be passed as a quoted JSON string using the `--extra-vars` flag.
+```
+clusterctl global set --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "scheduler_provider": "ucp-swarm"}'
+```
+- The variables set at global level are merged with the variables specified at the node level, with the latter taking precendence in case of an overlap/conflict.
+- The list of useful variables is provided in [ansible_vars.md](./ansible_vars.md).
+
+#### Managing multiple nodes
+```
+clusterctl nodes commission <space separated node-name(s)>
+clusterctl nodes decommission <space separated node-name(s)>
+clusterctl nodes maintain <space separated node-name(s)>
+```
+
+The worflow to commission, decommission or upgrade all or a subset of nodes can be performed by using `clusterctl nodes` subcommands. Please refer the documentation of individual commands above for details.
 
 ##Want to learn more?
 Read the [design spec](DESIGN.md) and/or see the remaining/upcoming items in [roadmap](ROADMAP.md)

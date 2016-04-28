@@ -18,7 +18,7 @@ func (s *SystemTestSuite) TestClustermRestart(c *C) {
 	nodeName1 := validNodeNames[0]
 	nodeName2 := validNodeNames[1]
 
-	// commision the nodes. First node is master, second node is worker
+	// commission the nodes. First node is master, second node is worker
 	s.commissionNode(c, nodeName1, s.tbn1)
 	s.commissionNode(c, nodeName2, s.tbn2)
 

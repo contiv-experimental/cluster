@@ -30,7 +30,7 @@ type Job struct {
 	errRet   error
 }
 
-// NewJob initializes and returns an instance of a job decribed by the runner and done callback
+// NewJob initializes and returns an instance of a job described by the runner and done callback
 func NewJob(jr JobRunner, done DoneCallback) *Job {
 	return &Job{
 		runner:   jr,

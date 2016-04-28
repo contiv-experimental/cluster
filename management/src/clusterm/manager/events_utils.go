@@ -48,3 +48,30 @@ func logOutputAndReturnStatus(r io.Reader, errCh chan error, cancelCh CancelChan
 		}
 	}
 }
+
+// commonEventValidate does common validation for events. It returns a map of nodes
+// associted with their name on success
+func (m *Manager) commonEventValidate(nodeNames []string) (map[string]*node, error) {
+	if len(nodeNames) == 0 {
+		return nil, errored.Errorf("atleast one node should be specified")
+	}
+
+	err := m.areDiscoveredNodes(nodeNames)
+	if err != nil {
+		return nil, err
+	}
+
+	enodes := map[string]*node{}
+	for _, name := range nodeNames {
+		node, err := m.findNode(name)
+		if err != nil {
+			return nil, err
+		}
+		if node.Cfg == nil {
+			return nil, nodeConfigNotExistsError(name)
+		}
+		enodes[name] = node
+	}
+
+	return enodes, nil
+}

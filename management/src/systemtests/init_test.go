@@ -16,7 +16,7 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { TestingT(t) }
 
-type CliTestSuite struct {
+type SystemTestSuite struct {
 	tb        vagrantssh.Testbed
 	tbn1      vagrantssh.TestbedNode
 	tbn2      vagrantssh.TestbedNode
@@ -24,9 +24,9 @@ type CliTestSuite struct {
 	skipTests map[string]string
 }
 
-var _ = Suite(&CliTestSuite{
+var _ = Suite(&SystemTestSuite{
 	// add tests to skip due to known issues here.
-	// The key of the map is test name like CliTestSuite.TestCommissionDisappearedNode
+	// The key of the map is test name like SystemTestSuite.TestCommissionDisappearedNode
 	// The value of the map is the github issue# or url tracking reason for skip
 	skipTests: map[string]string{},
 })
@@ -39,7 +39,7 @@ var (
 	testDataDir      = os.Getenv("TESTDATA_DIR")
 )
 
-func (s *CliTestSuite) SetUpSuite(c *C) {
+func (s *SystemTestSuite) SetUpSuite(c *C) {
 	pwd, err := os.Getwd()
 	s.Assert(c, err, IsNil)
 
@@ -87,7 +87,7 @@ func (s *CliTestSuite) SetUpSuite(c *C) {
 	s.restartClusterm(c, s.tbn1, 30)
 }
 
-func (s *CliTestSuite) TearDownSuite(c *C) {
+func (s *SystemTestSuite) TearDownSuite(c *C) {
 	// don't cleanup if stop-on-error is set
 	if os.Getenv("CONTIV_SOE") != "" && s.failed {
 		return
@@ -97,7 +97,7 @@ func (s *CliTestSuite) TearDownSuite(c *C) {
 	s.tb.Teardown()
 }
 
-func (s *CliTestSuite) SetUpTest(c *C) {
+func (s *SystemTestSuite) SetUpTest(c *C) {
 	if issue, ok := s.skipTests[c.TestName()]; ok {
 		c.Skip(fmt.Sprintf("skipped due to known issue: %q", issue))
 	}
@@ -118,7 +118,7 @@ func (s *CliTestSuite) SetUpTest(c *C) {
 	s.restartClusterm(c, s.tbn1, 30)
 }
 
-func (s *CliTestSuite) TearDownTest(c *C) {
+func (s *SystemTestSuite) TearDownTest(c *C) {
 	if s.failed {
 		out, _ := tutils.ServiceLogs(s.tbn1, "clusterm", 100)
 		c.Logf(out)

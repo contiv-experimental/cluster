@@ -13,9 +13,9 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 		var me event
 		switch e.Type {
 		case monitor.Discovered:
-			me = newNodeDiscovered(m, e.Node)
+			me = newDiscoveredEvent(m, e.Node)
 		case monitor.Disappeared:
-			me = newNodeDisappeared(m, e.Node)
+			me = newDisappearedEvent(m, e.Node)
 		}
 		m.reqQ <- me
 		log.Debugf("enqueued manager event: %+v", me)

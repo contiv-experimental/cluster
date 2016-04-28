@@ -8,25 +8,25 @@ import (
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
-// nodeDiscovered processes the discovered event from monitoring subsytem
-type nodeDiscovered struct {
+// discoveredEvent processes the discovered event from monitoring subsystem
+type discoveredEvent struct {
 	mgr  *Manager
 	node monitor.SubsysNode
 }
 
-// newNodeDiscovered creates and returns nodeDiscovered event
-func newNodeDiscovered(mgr *Manager, node monitor.SubsysNode) *nodeDiscovered {
-	return &nodeDiscovered{
+// newDiscoveredEvent creates and returns discoveredEvent event
+func newDiscoveredEvent(mgr *Manager, node monitor.SubsysNode) *discoveredEvent {
+	return &discoveredEvent{
 		mgr:  mgr,
 		node: node,
 	}
 }
 
-func (e *nodeDiscovered) String() string {
-	return fmt.Sprintf("nodeDiscovered: %+v", e.node)
+func (e *discoveredEvent) String() string {
+	return fmt.Sprintf("discoveredEvent: %+v", e.node)
 }
 
-func (e *nodeDiscovered) process() error {
+func (e *discoveredEvent) process() error {
 	//XXX: need to form the name that adheres to collins tag requirements
 	name := e.node.GetLabel() + "-" + e.node.GetSerial()
 

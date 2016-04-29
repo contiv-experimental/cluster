@@ -16,6 +16,12 @@ if ENV['CONTIV_SRV_INIT'] then
     service_init = true
 end
 
+clusterm_dev = true
+if ENV['CONTIV_REL_CLUSTERM'] then
+    # use released version of cluterm
+    clusterm_dev = false
+end
+
 box = "contiv/centos72"
 if ENV['CONTIV_BOX'] then
     box = ENV['CONTIV_BOX']
@@ -71,7 +77,7 @@ chown -R vagrant:vagrant #{gopath_dir}
 
 # if we are coming up in non-demo environment then load
 # the clusterm binaries from dev workspace
-if [ "#{service_init}" = "false" ]; then
+if [ "#{clusterm_dev}" = "true" ]; then
     echo mounting binaries from dev workspace
     rm -f /usr/bin/clusterm /usr/bin/clusterctl
     ln -s #{gopath_dir}/src/github.com/contiv/cluster/management/src/bin/clusterm /usr/bin/clusterm

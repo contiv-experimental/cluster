@@ -53,6 +53,11 @@
     - "tcp:127.0.0.1:6640"
     - "ptcp:6640"
 
+- name: permit openvswitch_t type in selinux
+  shell: >
+      semanage permissive -a openvswitch_t
+  become: true
+
 - name: setup iptables for vxlan vtep port
   shell: >
       ( iptables -L INPUT | grep "{{ netplugin_rule_comment }} ({{ item }})" ) || \

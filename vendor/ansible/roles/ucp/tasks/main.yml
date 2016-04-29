@@ -23,15 +23,6 @@
     - "{{ ucp_swarm_port }}"
     - "{{ ucp_controller_port }}"
 
-- name: copy the ucp files to worker nodes
-  copy:
-    src: "{{ ucp_local_dir }}/{{ item }}"
-    dest: "{{ ucp_remote_dir }}/{{ item }}"
-  with_items:
-    - "{{ ucp_fingerprint_file }}"
-    - "{{ ucp_instance_id_file }}"
-  when: node_name != ucp_bootstrap_node_name
-
 - name: copy the ucp license to the remote machine
   copy: src={{ ucp_license_file }} dest={{ ucp_license_remote }}
   when: (ucp_license_file is defined) and (node_name == ucp_bootstrap_node_name)
@@ -69,3 +60,12 @@
     - "{{ ucp_fingerprint_file }}"
     - "{{ ucp_instance_id_file }}"
   when: node_name == ucp_bootstrap_node_name
+
+- name: copy the ucp files to replicas and worker nodes
+  copy:
+    src: "{{ ucp_local_dir }}/{{ item }}"
+    dest: "{{ ucp_remote_dir }}/{{ item }}"
+  with_items:
+    - "{{ ucp_fingerprint_file }}"
+    - "{{ ucp_instance_id_file }}"
+  when: node_name != ucp_bootstrap_node_name

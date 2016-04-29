@@ -21,7 +21,7 @@ if ENV['CONTIV_BOX'] then
     box = ENV['CONTIV_BOX']
 end
 
-box_version = "0.3.3996217"
+box_version = "0.3.6ba5a75"
 if ENV['CONTIV_BOX_VERSION'] then
     box_version = ENV['CONTIV_BOX_VERSION']
 end
@@ -60,7 +60,7 @@ ansible_extra_vars = {
     "validate_certs" => "no",
     "control_interface" => "eth1",
     "netplugin_if" => "eth2",
-    "docker_version" => "1.10.2",
+    "docker_version" => "1.10.3",
     "scheduler_provider" => "native-swarm",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
@@ -173,12 +173,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 node.vm.synced_folder "shared", "/shared"
 
                 ansible_extra_vars = ansible_extra_vars.merge(node_vars)
-                if n <= 2 then
+                # first 3 nodes are master, out of that first 2 nodes are for bootstrap
+                if n < 3 then
                     # for bootstrap-node we need to use a separate host group variable
                     # as otherwise `vagrant provision` ends up running on all hosts.
                     # This seems to be due to difference in provisioning behavior
                     # between `vagrant up` and `vagrant provision`
-                    if n == 0 then
+                    if n < 2 then
                         if bootstrap_node_ansible_groups["service-master"] == nil then
                             bootstrap_node_ansible_groups["service-master"] = [ ]
                         end

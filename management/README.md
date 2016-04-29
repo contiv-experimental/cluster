@@ -5,7 +5,6 @@ If you are trying cluster manager with baremetal hosts or a personal VM setup fo
 To try with a built-in vagrant based VM environment continue reading.
 
 ### 0. Ensure correct dependencies are installed
-- docker 1.9 or higher
 - vagrant 1.7.3 or higher
 - virtualbox 5.0 or higher
 - ansible 2.0 or higher
@@ -14,23 +13,14 @@ To try with a built-in vagrant based VM environment continue reading.
 ```
 cd $GOPATH/src/github.com/contiv/
 git clone https://github.com/contiv/cluster.git
-cd cluster/management/src
-make build
-```
-
-**Note**: `build` is run inside a docker container, so it requires docker to be installed
-and running on the host. To avoid having to use `sudo` for builds you can add the current
-user to `docker` group once by using the following command:
-```
-sudo usermod -a -G docker `id -un`
 ```
 
 ### 2. launch three vagrant nodes. 
 
 **Note:** If you look at the project's `Vagrantfile`, you will notice that all the vagrant nodes (except for the first node) boot up with stock centos7.2 OS and a `serf` agent running. `serf` is used as the node discovery service. This is intentional to meet the goal of limiting the amount of services that user needs to setup to start bringing up a cluster and hence making management easier.
 ```
-cd ../..
-CONTIV_NODES=3 vagrant up
+cd cluster/
+CONTIV_NODES=3 make demo-cluster
 ```
 
 ### 3. login to the first node to manage the cluster

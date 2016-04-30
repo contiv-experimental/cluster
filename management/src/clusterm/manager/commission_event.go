@@ -17,17 +17,19 @@ type commissionEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
+	hostGroup string
 
 	_hosts  configuration.SubsysHosts
 	_enodes map[string]*node
 }
 
 // newCommissionEvent creates and returns commissionEvent
-func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars string) *commissionEvent {
+func newCommissionEvent(mgr *Manager, nodeNames []string, flags ActionFlags) *commissionEvent {
 	return &commissionEvent{
 		mgr:       mgr,
 		nodeNames: nodeNames,
-		extraVars: extraVars,
+		extraVars: flags.ExtraVars,
+		hostGroup: flags.HostGroup,
 	}
 }
 
@@ -89,9 +91,10 @@ func (e *commissionEvent) process() error {
 // of the existing master nodes.
 // XXX: revisit once node role PR is committed: https://github.com/contiv/cluster/pull/87
 func (e *commissionEvent) prepareInventory() error {
-	nodeGroup := ansibleMasterGroupName
+	nodeGroup := e.hostGroup
 	masterAddr := ""
 	masterName := ""
+	masterCommissioned := false
 	for name, node := range e.mgr.nodes {
 		if _, ok := e._enodes[name]; ok {
 			// skip nodes in the event
@@ -119,8 +122,13 @@ func (e *commissionEvent) prepareInventory() error {
 		// found a master node
 		masterAddr = node.Mon.GetMgmtAddress()
 		masterName = node.Cfg.GetTag()
-		nodeGroup = ansibleWorkerGroupName
+
+		masterCommissioned = true
 		break
+	}
+
+	if (masterCommissioned == false) && (nodeGroup == ansibleWorkerGroupName) {
+		return errored.Errorf("Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.")
 	}
 
 	// prepare inventory

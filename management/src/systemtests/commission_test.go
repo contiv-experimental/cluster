@@ -12,7 +12,7 @@ import (
 
 func (s *SystemTestSuite) TestCommissionNodeFailureNonExistent(c *C) {
 	nodeName := invalidNodeName
-	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, ansibleMasterGroupName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptStr := fmt.Sprintf(".*node.*%s.*doesn't exists.*", nodeName)
@@ -33,7 +33,7 @@ func (s *SystemTestSuite) TestCommissionNodesFailureDisappeared(c *C) {
 
 	//try to commission the nodes
 	nodesStr := strings.Join(nodeNames, " ")
-	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodesStr)
+	cmdStr := fmt.Sprintf("clusterctl nodes commission %s --host-group %s", nodesStr, ansibleMasterGroupName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptStr := fmt.Sprintf(".*one or more nodes are not in discovered state.*%s.*", nodeName)
@@ -56,7 +56,7 @@ func (s *SystemTestSuite) TestCommissionProvisionFailure(c *C) {
 	nodeName := validNodeNames[0]
 	// create the temporary file, which shall be deleted as part of cleanup on provision failure
 	s.touchFileAndWaitForStatToSucceed(c, s.tbn1, dummyAnsibleFile)
-	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, ansibleMasterGroupName)
 	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	s.checkProvisionStatus(c, s.tbn1, nodeName, "Unallocated")
@@ -70,11 +70,11 @@ func (s *SystemTestSuite) TestCommissionNodesFailureAlreadyAllocated(c *C) {
 	nodeNames := []string{secondNode, nodeName}
 
 	// commission the first node
-	s.commissionNode(c, nodeName, s.tbn1)
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
 
 	//try to commission the nodes
 	nodesStr := strings.Join(nodeNames, " ")
-	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodesStr)
+	cmdStr := fmt.Sprintf("clusterctl nodes commission %s --host-group %s", nodesStr, ansibleMasterGroupName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptStr := fmt.Sprintf(".*failed to update %s.*transition from.*%s.*%s.*is not allowed.*", nodeName, "Allocated", "Provisioning")
@@ -87,23 +87,88 @@ func (s *SystemTestSuite) TestCommissionNodesFailureAlreadyAllocated(c *C) {
 
 func (s *SystemTestSuite) TestCommissionNodeSuccess(c *C) {
 	nodeName := validNodeNames[0]
-	s.commissionNode(c, nodeName, s.tbn1)
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
 }
 
 func (s *SystemTestSuite) TestCommissionNodeSerialSuccess(c *C) {
 	nodeName := validNodeNames[0]
-	s.commissionNode(c, nodeName, s.tbn1)
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
 	s.checkHostGroup(c, nodeName, "service-master")
 
 	// commission second node and make sure it is added as worker
 	nodeName = validNodeNames[1]
-	s.commissionNode(c, nodeName, s.tbn1)
+	s.commissionNode(c, nodeName, ansibleWorkerGroupName, s.tbn2)
 	s.checkHostGroup(c, nodeName, "service-worker")
+}
+
+func (s *SystemTestSuite) TestCommissionNodeSerialMastersSuccess(c *C) {
+	nodeName := validNodeNames[0]
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
+	s.checkHostGroup(c, nodeName, "service-master")
+
+	// commission second node
+	nodeName = validNodeNames[1]
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
+	s.checkHostGroup(c, nodeName, "service-master")
+}
+
+func (s *SystemTestSuite) TestCommissionNodesWithoutHostGroupFailure(c *C) {
+	nodeName := validNodeNames[0]
+
+	// commission a worker node directly
+	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodeName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := ".*host-group is a mandatory parameter and is not specified.*"
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *SystemTestSuite) TestCommissionNodeWithoutHostGroupFailure(c *C) {
+	nodeName := validNodeNames[0]
+
+	// commission a worker node directly
+	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := ".*host-group is a mandatory parameter and is not specified.*"
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *SystemTestSuite) TestCommissionWorkerNodesWithoutMasterFailure(c *C) {
+	nodeName := validNodeNames[0]
+
+	// commission a worker node directly
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, ansibleWorkerGroupName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptdOut := ".*Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.*"
+	s.assertMatch(c, exptdOut, out)
+}
+
+func (s *SystemTestSuite) TestCommissionWorkerNodesWithMasterDisappearedFailure(c *C) {
+	nodeName := validNodeNames[0]
+	secondNode := validNodeNames[1]
+
+	s.commissionNode(c, secondNode, ansibleMasterGroupName, s.tbn2)
+	s.checkHostGroup(c, secondNode, "service-master")
+
+	// stop serf discovery on test node
+	s.stopSerf(c, s.tbn2)
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn1, secondNode, "failed")
+
+	// commission second node
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, ansibleWorkerGroupName)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, NotNil, Commentf("output: %s", out))
+	exptStr := ".*Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.*"
+	s.assertMatch(c, exptStr, out)
 }
 
 func (s *SystemTestSuite) TestCommissionNodesSuccess(c *C) {
 	nodeNames := validNodeNames
-	s.commissionNodes(c, nodeNames)
+	s.commissionNodes(c, nodeNames, ansibleMasterGroupName)
 	// make sure all nodes got assigned as master
 	for _, name := range nodeNames {
 		s.checkHostGroup(c, name, "service-master")

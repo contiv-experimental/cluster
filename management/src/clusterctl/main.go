@@ -21,11 +21,22 @@ var (
 		},
 	}
 
-	extraVarsFlags = []cli.Flag{
+	extraVarsStringFlag = cli.StringFlag{
+		Name:  "extra-vars, e",
+		Value: "",
+		Usage: "extra vars for ansible configuration. This should be a quoted json string.",
+	}
+
+	cmdFlags = []cli.Flag{
+		extraVarsStringFlag,
+	}
+
+	commissionFlags = []cli.Flag{
+		extraVarsStringFlag,
 		cli.StringFlag{
-			Name:  "extra-vars, e",
+			Name:  "host-group, g",
 			Value: "",
-			Usage: "extra vars for ansible configuration. This should be a quoted json string.",
+			Usage: "host-group. service-master, service-worker",
 		},
 	}
 )
@@ -46,21 +57,21 @@ func main() {
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeCommission)),
-					Flags:   extraVarsFlags,
+					Flags:   commissionFlags,
 				},
 				{
 					Name:    "decommission",
 					Aliases: []string{"d"},
 					Usage:   "decommission a node",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeDecommission)),
-					Flags:   extraVarsFlags,
+					Flags:   cmdFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a node in maintenance",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeMaintenance)),
-					Flags:   extraVarsFlags,
+					Flags:   cmdFlags,
 				},
 				{
 					Name:    "get",
@@ -80,21 +91,21 @@ func main() {
 					Aliases: []string{"c"},
 					Usage:   "commission a set of nodes",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesCommission)),
-					Flags:   extraVarsFlags,
+					Flags:   commissionFlags,
 				},
 				{
 					Name:    "decommission",
 					Aliases: []string{"d"},
 					Usage:   "decommission a set of nodes",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesDecommission)),
-					Flags:   extraVarsFlags,
+					Flags:   cmdFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a set of nodes in maintenance",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesMaintenance)),
-					Flags:   extraVarsFlags,
+					Flags:   cmdFlags,
 				},
 				{
 					Name:    "get",
@@ -119,7 +130,7 @@ func main() {
 					Name:    "set",
 					Aliases: []string{"s"},
 					Usage:   "set global info",
-					Flags:   extraVarsFlags,
+					Flags:   cmdFlags,
 					Action:  doAction(newPostActioner(validateZeroArgs, globalsSet)),
 				},
 			},
@@ -129,7 +140,7 @@ func main() {
 			Aliases: []string{"d"},
 			Usage:   "provision one or more nodes for discovery",
 			Action:  doAction(newPostActioner(validateMultiNodeAddrs, nodesDiscover)),
-			Flags:   extraVarsFlags,
+			Flags:   cmdFlags,
 		},
 	}
 
@@ -161,12 +172,12 @@ func doAction(a actioner) func(*cli.Context) {
 	}
 }
 
-type postCallback func(c *manager.Client, args []string, extraVars string) error
+type postCallback func(c *manager.Client, args []string, flags manager.ActionFlags) error
 type validateCallback func(args []string) error
 
 type postActioner struct {
 	args       []string
-	extraVars  string
+	flags      manager.ActionFlags
 	validateCb validateCallback
 	postCb     postCallback
 }
@@ -179,7 +190,11 @@ func newPostActioner(validateCb validateCallback, postCb postCallback) *postActi
 }
 
 func (npa *postActioner) procFlags(c *cli.Context) {
-	npa.extraVars = c.String("extra-vars")
+	npa.flags.ExtraVars = c.String("extra-vars")
+
+	// c.String returns "" if the flag does not exist
+	// so it is ok to include it without any checks
+	npa.flags.HostGroup = c.String("host-group")
 }
 
 func (npa *postActioner) procArgs(c *cli.Context) {
@@ -190,7 +205,7 @@ func (npa *postActioner) action(c *manager.Client) error {
 	if err := npa.validateCb(npa.args); err != nil {
 		return err
 	}
-	return npa.postCb(c, npa.args, npa.extraVars)
+	return npa.postCb(c, npa.args, npa.flags)
 }
 
 func validateOneNodeName(args []string) error {
@@ -200,19 +215,19 @@ func validateOneNodeName(args []string) error {
 	return nil
 }
 
-func nodeCommission(c *manager.Client, args []string, extraVars string) error {
+func nodeCommission(c *manager.Client, args []string, flags manager.ActionFlags) error {
 	nodeName := args[0]
-	return c.PostNodeCommission(nodeName, extraVars)
+	return c.PostNodeCommission(nodeName, flags)
 }
 
-func nodeDecommission(c *manager.Client, args []string, extraVars string) error {
+func nodeDecommission(c *manager.Client, args []string, flags manager.ActionFlags) error {
 	nodeName := args[0]
-	return c.PostNodeDecommission(nodeName, extraVars)
+	return c.PostNodeDecommission(nodeName, flags)
 }
 
-func nodeMaintenance(c *manager.Client, args []string, extraVars string) error {
+func nodeMaintenance(c *manager.Client, args []string, flags manager.ActionFlags) error {
 	nodeName := args[0]
-	return c.PostNodeInMaintenance(nodeName, extraVars)
+	return c.PostNodeInMaintenance(nodeName, flags)
 }
 
 func validateMultiNodeNames(args []string) error {
@@ -222,16 +237,16 @@ func validateMultiNodeNames(args []string) error {
 	return nil
 }
 
-func nodesCommission(c *manager.Client, args []string, extraVars string) error {
-	return c.PostNodesCommission(args, extraVars)
+func nodesCommission(c *manager.Client, args []string, flags manager.ActionFlags) error {
+	return c.PostNodesCommission(args, flags)
 }
 
-func nodesDecommission(c *manager.Client, args []string, extraVars string) error {
-	return c.PostNodesDecommission(args, extraVars)
+func nodesDecommission(c *manager.Client, args []string, flags manager.ActionFlags) error {
+	return c.PostNodesDecommission(args, flags)
 }
 
-func nodesMaintenance(c *manager.Client, args []string, extraVars string) error {
-	return c.PostNodesInMaintenance(args, extraVars)
+func nodesMaintenance(c *manager.Client, args []string, flags manager.ActionFlags) error {
+	return c.PostNodesInMaintenance(args, flags)
 }
 
 func validateMultiNodeAddrs(args []string) error {
@@ -246,8 +261,8 @@ func validateMultiNodeAddrs(args []string) error {
 	return nil
 }
 
-func nodesDiscover(c *manager.Client, args []string, extraVars string) error {
-	return c.PostNodesDiscover(args, extraVars)
+func nodesDiscover(c *manager.Client, args []string, flags manager.ActionFlags) error {
+	return c.PostNodesDiscover(args, flags)
 }
 
 func validateZeroArgs(args []string) error {
@@ -257,8 +272,8 @@ func validateZeroArgs(args []string) error {
 	return nil
 }
 
-func globalsSet(c *manager.Client, noop []string, extraVars string) error {
-	return c.PostGlobals(extraVars)
+func globalsSet(c *manager.Client, noop []string, flags manager.ActionFlags) error {
+	return c.PostGlobals(flags)
 }
 
 type getActioner struct {

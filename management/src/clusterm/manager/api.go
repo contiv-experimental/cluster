@@ -15,8 +15,9 @@ import (
 
 // APIRequest is the general request body expected by clusterm from it's client
 type APIRequest struct {
-	Nodes []string `json:"nodes,omitempty"`
-	Addrs []string `json:"addrs,omitempty"`
+	Nodes     []string `json:"nodes,omitempty"`
+	Addrs     []string `json:"addrs,omitempty"`
+	HostGroup string   `json:"hostgroup"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -72,11 +73,12 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-type postCallback func(tagsOrAddrs []string, sanitizedExtraVars string) error
+type postCallback func(tagsOrAddrs []string, flags ActionFlags) error
 
 func post(postCb postCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tagsOrAddrs := []string{}
+		var flags ActionFlags
 
 		// process data from request body, if any
 		body, err := ioutil.ReadAll(r.Body)
@@ -94,6 +96,7 @@ func post(postCb postCallback) http.HandlerFunc {
 			// handled as part of handler callback
 			tagsOrAddrs = append(tagsOrAddrs, req.Nodes...)
 			tagsOrAddrs = append(tagsOrAddrs, req.Addrs...)
+			flags.HostGroup = req.HostGroup
 		}
 
 		// process data from url, if any
@@ -107,16 +110,17 @@ func post(postCb postCallback) http.HandlerFunc {
 
 		// process query variables
 		extraVars := r.FormValue(ExtraVarsQuery)
-		sanitzedExtraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
+		sanitizedExtraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
 		if err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
 			return
 		}
+		flags.ExtraVars = sanitizedExtraVars
 
 		// call the handler
-		if err := postCb(tagsOrAddrs, sanitzedExtraVars); err != nil {
+		if err := postCb(tagsOrAddrs, flags); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -141,32 +145,32 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	return extraVars, nil
 }
 
-func (m *Manager) nodesCommission(tags []string, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newCommissionEvent(m, tags, sanitizedExtraVars))
+func (m *Manager) nodesCommission(tags []string, flags ActionFlags) error {
+	me := newWaitableEvent(newCommissionEvent(m, tags, flags))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDecommission(tags []string, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newDecommissionEvent(m, tags, sanitizedExtraVars))
+func (m *Manager) nodesDecommission(tags []string, flags ActionFlags) error {
+	me := newWaitableEvent(newDecommissionEvent(m, tags, flags.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesMaintenance(tags []string, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newMaintenanceEvent(m, tags, sanitizedExtraVars))
+func (m *Manager) nodesMaintenance(tags []string, flags ActionFlags) error {
+	me := newWaitableEvent(newMaintenanceEvent(m, tags, flags.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDiscover(addrs []string, sanitizedExtraVars string) error {
-	me := newWaitableEvent(newDiscoverEvent(m, addrs, sanitizedExtraVars))
+func (m *Manager) nodesDiscover(addrs []string, flags ActionFlags) error {
+	me := newWaitableEvent(newDiscoverEvent(m, addrs, flags.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) globalsSet(noop []string, extraVars string) error {
-	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
+func (m *Manager) globalsSet(noop []string, flags ActionFlags) error {
+	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, flags.ExtraVars)
 	if err != nil {
 		return err
 	}

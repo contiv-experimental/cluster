@@ -16,6 +16,12 @@ var httpErrorResp = func(rsrc string, req *APIRequest, status string, body []byt
 	return errored.Errorf("Request URL: %s Request Body: %+v Response status: %q. Response body: %s", rsrc, req, status, body)
 }
 
+// ActionFlags is used to save cmdFlags
+type ActionFlags struct {
+	ExtraVars string
+	HostGroup string
+}
+
 // Client provides the methods for issuing post and get requests to cluster manager
 type Client struct {
 	url   string
@@ -93,55 +99,67 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 }
 
 // PostNodeCommission posts the request to commission a node
-func (c *Client) PostNodeCommission(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), extraVars, nil)
+func (c *Client) PostNodeCommission(nodeName string, flags ActionFlags) error {
+	if !IsValidHostGroup(flags.HostGroup) {
+		return errored.Errorf("host-group is a mandatory parameter and is not specified %s", flags.HostGroup)
+	}
+
+	req := &APIRequest{
+		HostGroup: flags.HostGroup,
+	}
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), flags.ExtraVars, req)
 }
 
 // PostNodesCommission posts the request to commission a set of nodes
-func (c *Client) PostNodesCommission(nodeNames []string, extraVars string) error {
-	req := &APIRequest{
-		Nodes: nodeNames,
+func (c *Client) PostNodesCommission(nodeNames []string, flags ActionFlags) error {
+	if !IsValidHostGroup(flags.HostGroup) {
+		return errored.Errorf("host-group is a mandatory parameter and is not specified %s", flags.HostGroup)
 	}
-	return c.doPost(PostNodesCommission, extraVars, req)
+
+	req := &APIRequest{
+		Nodes:     nodeNames,
+		HostGroup: flags.HostGroup,
+	}
+	return c.doPost(PostNodesCommission, flags.ExtraVars, req)
 }
 
 // PostNodeDecommission posts the request to decommission a node
-func (c *Client) PostNodeDecommission(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), extraVars, nil)
+func (c *Client) PostNodeDecommission(nodeName string, flags ActionFlags) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), flags.ExtraVars, nil)
 }
 
 // PostNodesDecommission posts the request to decommission a set of nodes
-func (c *Client) PostNodesDecommission(nodeNames []string, extraVars string) error {
+func (c *Client) PostNodesDecommission(nodeNames []string, flags ActionFlags) error {
 	req := &APIRequest{
 		Nodes: nodeNames,
 	}
-	return c.doPost(PostNodesDecommission, extraVars, req)
+	return c.doPost(PostNodesDecommission, flags.ExtraVars, req)
 }
 
 // PostNodeInMaintenance posts the request to put a node in-maintenance
-func (c *Client) PostNodeInMaintenance(nodeName, extraVars string) error {
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), extraVars, nil)
+func (c *Client) PostNodeInMaintenance(nodeName string, flags ActionFlags) error {
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), flags.ExtraVars, nil)
 }
 
 // PostNodesInMaintenance posts the request to put a set of nodes in-maintenance
-func (c *Client) PostNodesInMaintenance(nodeNames []string, extraVars string) error {
+func (c *Client) PostNodesInMaintenance(nodeNames []string, flags ActionFlags) error {
 	req := &APIRequest{
 		Nodes: nodeNames,
 	}
-	return c.doPost(PostNodesMaintenance, extraVars, req)
+	return c.doPost(PostNodesMaintenance, flags.ExtraVars, req)
 }
 
 // PostNodesDiscover posts the request to provision a set of nodes for discovery
-func (c *Client) PostNodesDiscover(nodeAddrs []string, extraVars string) error {
+func (c *Client) PostNodesDiscover(nodeAddrs []string, flags ActionFlags) error {
 	req := &APIRequest{
 		Addrs: nodeAddrs,
 	}
-	return c.doPost(PostNodesDiscover, extraVars, req)
+	return c.doPost(PostNodesDiscover, flags.ExtraVars, req)
 }
 
 // PostGlobals posts the request to set global extra vars
-func (c *Client) PostGlobals(extraVars string) error {
-	return c.doPost(PostGlobals, extraVars, nil)
+func (c *Client) PostGlobals(flags ActionFlags) error {
+	return c.doPost(PostGlobals, flags.ExtraVars, nil)
 }
 
 // GetNode requests info of a specified node

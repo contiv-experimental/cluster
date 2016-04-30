@@ -32,11 +32,13 @@ var _ = Suite(&SystemTestSuite{
 })
 
 var (
-	validNodeNames   = []string{"cluster-node1-0", "cluster-node2-0"}
-	validNodeAddrs   = []string{}
-	invalidNodeName  = "invalid-test-node"
-	dummyAnsibleFile = "/tmp/yay"
-	testDataDir      = os.Getenv("TESTDATA_DIR")
+	validNodeNames         = []string{"cluster-node1-0", "cluster-node2-0"}
+	validNodeAddrs         = []string{}
+	invalidNodeName        = "invalid-test-node"
+	dummyAnsibleFile       = "/tmp/yay"
+	testDataDir            = os.Getenv("TESTDATA_DIR")
+	ansibleMasterGroupName = "service-master"
+	ansibleWorkerGroupName = "service-worker"
 )
 
 func (s *SystemTestSuite) SetUpSuite(c *C) {

@@ -152,9 +152,9 @@ func (s *SystemTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *SystemTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) commissionNode(c *C, nodeName string, hostGroup string, nut vagrantssh.TestbedNode) {
 	// provision the node
-	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, hostGroup)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	s.checkProvisionStatus(c, s.tbn1, nodeName, "Allocated")
@@ -163,10 +163,10 @@ func (s *SystemTestSuite) commissionNode(c *C, nodeName string, nut vagrantssh.T
 	s.waitForStatToSucceed(c, nut, dummyAnsibleFile)
 }
 
-func (s *SystemTestSuite) commissionNodes(c *C, nodeNames []string) {
+func (s *SystemTestSuite) commissionNodes(c *C, nodeNames []string, hostGroup string) {
 	// provision the nodes
 	nodesStr := strings.Join(nodeNames, " ")
-	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodesStr)
+	cmdStr := fmt.Sprintf("clusterctl nodes commission %s --host-group %s", nodesStr, hostGroup)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	for _, name := range nodeNames {

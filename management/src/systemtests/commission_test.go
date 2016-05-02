@@ -115,7 +115,6 @@ func (s *SystemTestSuite) TestCommissionNodeSerialMastersSuccess(c *C) {
 func (s *SystemTestSuite) TestCommissionNodesWithoutHostGroupFailure(c *C) {
 	nodeName := validNodeNames[0]
 
-	// commission a worker node directly
 	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
@@ -126,7 +125,6 @@ func (s *SystemTestSuite) TestCommissionNodesWithoutHostGroupFailure(c *C) {
 func (s *SystemTestSuite) TestCommissionNodeWithoutHostGroupFailure(c *C) {
 	nodeName := validNodeNames[0]
 
-	// commission a worker node directly
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))

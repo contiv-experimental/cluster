@@ -24,12 +24,12 @@ type commissionEvent struct {
 }
 
 // newCommissionEvent creates and returns commissionEvent
-func newCommissionEvent(mgr *Manager, nodeNames []string, flags ActionFlags) *commissionEvent {
+func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars string, hostGroup string) *commissionEvent {
 	return &commissionEvent{
 		mgr:       mgr,
 		nodeNames: nodeNames,
-		extraVars: flags.ExtraVars,
-		hostGroup: flags.HostGroup,
+		extraVars: extraVars,
+		hostGroup: hostGroup,
 	}
 }
 
@@ -63,7 +63,7 @@ func (e *commissionEvent) process() error {
 	}()
 
 	// validate event data
-	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+	if err = e.eventValidate(); err != nil {
 		return err
 	}
 
@@ -82,6 +82,16 @@ func (e *commissionEvent) process() error {
 	go e.mgr.runActiveJob()
 
 	return nil
+}
+
+func (e *commissionEvent) eventValidate() error {
+	var err error
+	if !IsValidHostGroup(e.hostGroup) {
+		return errored.Errorf("host-group is a mandatory parameter and is not specified %s", e.hostGroup)
+	}
+
+	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)
+	return err
 }
 
 // prepareInventory takes care of assigning nodes to respective host-groups as part of

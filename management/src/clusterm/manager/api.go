@@ -17,7 +17,7 @@ import (
 type APIRequest struct {
 	Nodes     []string `json:"nodes,omitempty"`
 	Addrs     []string `json:"addrs,omitempty"`
-	HostGroup string   `json:"hostgroup"`
+	HostGroup string   `json:"hostgroup,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -73,39 +73,32 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-type postCallback func(tagsOrAddrs []string, flags ActionFlags) error
+type postCallback func(req *APIRequest, extraVars string) error
 
 func post(postCb postCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagsOrAddrs := []string{}
-		var flags ActionFlags
-
 		// process data from request body, if any
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		req := APIRequest{}
 		if len(body) > 0 {
-			req := APIRequest{}
 			if err := json.Unmarshal(body, &req); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			// append both names and addresses if client specified both, invalid input will be
-			// handled as part of handler callback
-			tagsOrAddrs = append(tagsOrAddrs, req.Nodes...)
-			tagsOrAddrs = append(tagsOrAddrs, req.Addrs...)
-			flags.HostGroup = req.HostGroup
 		}
 
 		// process data from url, if any
 		vars := mux.Vars(r)
 		if vars["tag"] != "" {
-			tagsOrAddrs = append(tagsOrAddrs, vars["tag"])
+			req.Nodes = append(req.Nodes, vars["tag"])
 		}
 		if vars["addr"] != "" {
-			tagsOrAddrs = append(tagsOrAddrs, vars["addr"])
+			req.Addrs = append(req.Addrs, vars["addr"])
 		}
 
 		// process query variables
@@ -117,10 +110,9 @@ func post(postCb postCallback) http.HandlerFunc {
 				http.StatusInternalServerError)
 			return
 		}
-		flags.ExtraVars = sanitizedExtraVars
 
 		// call the handler
-		if err := postCb(tagsOrAddrs, flags); err != nil {
+		if err := postCb(&req, sanitizedExtraVars); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -145,35 +137,31 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	return extraVars, nil
 }
 
-func (m *Manager) nodesCommission(tags []string, flags ActionFlags) error {
-	me := newWaitableEvent(newCommissionEvent(m, tags, flags))
+func (m *Manager) nodesCommission(req *APIRequest, extraVars string) error {
+	me := newWaitableEvent(newCommissionEvent(m, req.Nodes, extraVars, req.HostGroup))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDecommission(tags []string, flags ActionFlags) error {
-	me := newWaitableEvent(newDecommissionEvent(m, tags, flags.ExtraVars))
+func (m *Manager) nodesDecommission(req *APIRequest, extraVars string) error {
+	me := newWaitableEvent(newDecommissionEvent(m, req.Nodes, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesMaintenance(tags []string, flags ActionFlags) error {
-	me := newWaitableEvent(newMaintenanceEvent(m, tags, flags.ExtraVars))
+func (m *Manager) nodesMaintenance(req *APIRequest, extraVars string) error {
+	me := newWaitableEvent(newMaintenanceEvent(m, req.Nodes, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDiscover(addrs []string, flags ActionFlags) error {
-	me := newWaitableEvent(newDiscoverEvent(m, addrs, flags.ExtraVars))
+func (m *Manager) nodesDiscover(req *APIRequest, extraVars string) error {
+	me := newWaitableEvent(newDiscoverEvent(m, req.Addrs, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) globalsSet(noop []string, flags ActionFlags) error {
-	extraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, flags.ExtraVars)
-	if err != nil {
-		return err
-	}
+func (m *Manager) globalsSet(req *APIRequest, extraVars string) error {
 	me := newWaitableEvent(newSetGlobalsEvent(m, extraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()

@@ -40,15 +40,15 @@ And info for a single node can be fetched by using `clusterctl node get <node-na
 
 #### Commision a node
 ```
-clusterctl node commission <node-name>
+clusterctl node commission <node-name> --host-group <service-master/service-worker>
 ```
 
-Commissioning a node involves pushing the configuration and starting infra services on that node using `ansible` based configuration management. Checkout the `service-master` and `service-worker` host-groups in [ansible/site.yml](../vendor/ansible/site.yml) to learn more about the services that are configured. To quickly check if commissioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
+Commissioning a node involves pushing the configuration and starting infra services on that node using `ansible` based configuration management. The services that are configured depend on the mandatory parameter `--host-group`. Checkout the `service-master` and `service-worker` host-groups in [ansible/site.yml](../vendor/ansible/site.yml) to learn more about the services that are configured. To quickly check if commissioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
 
 **Note**:
 - certain ansible variables need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.
 ```
-clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_if": "eth2", "netplugin_if": "eth1" }'
+clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_if": "eth2", "netplugin_if": "eth1" }' --host-group "service-master"
 ```
 - a common set of variables (like environment) can be set just once as [global variables](#setget-global-variables). This eliminates the need to specify the common variables for every commission command.
 

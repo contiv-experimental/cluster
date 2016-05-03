@@ -1,9 +1,13 @@
 package manager
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/contiv/errored"
@@ -14,20 +18,20 @@ type CancelChannel chan struct{}
 
 // JobRunner is blocking call that runs the task. On receiving a signal on the
 // cancel-channel, it is expected to return immediately
-type JobRunner func(cancelCh CancelChannel) error
+type JobRunner func(cancelCh CancelChannel, logs io.Writer) error
 
 // DoneCallback is called when job completes, errors or is cancelled
-type DoneCallback func(status JobStatus, errRet error)
+type DoneCallback func(status JobStatus, errVal error)
 
 // Job corresponds to a long running task, triggered by an event
-// XXX: add log buffer support to store job specific logs
 type Job struct {
 	sync.Mutex
 	runner   JobRunner
 	done     DoneCallback
 	cancelCh CancelChannel
 	status   JobStatus
-	errRet   error
+	errVal   error
+	logs     bytes.Buffer
 }
 
 // NewJob initializes and returns an instance of a job described by the runner and done callback
@@ -37,33 +41,34 @@ func NewJob(jr JobRunner, done DoneCallback) *Job {
 		done:     done,
 		cancelCh: make(chan struct{}),
 		status:   Queued,
-		errRet:   nil,
+		errVal:   nil,
 	}
+}
+
+func (j *Job) runnerName() string {
+	return runtime.FuncForPC(reflect.ValueOf(j.runner).Pointer()).Name()
 }
 
 // String returns a brief description of the job
 func (j *Job) String() string {
-	runnerName := runtime.FuncForPC(reflect.ValueOf(j.runner).Pointer()).Name()
-	return fmt.Sprintf("[task: %s status: %v errRet: %v]", runnerName, j.status, j.errRet)
+	return fmt.Sprintf("[task: %s status: %v errVal: %v]", j.runnerName(), j.status, j.errVal)
 }
 
 func (j *Job) setStatus(status JobStatus, err error) {
 	j.Lock()
 	j.status = status
-	j.errRet = err
+	j.errVal = err
 	j.Unlock()
 }
 
 // Run begins the job and wait for completion. This function blocks
 func (j *Job) Run() {
-	var err error
-
 	j.setStatus(Running, nil)
 	defer func() {
-		j.done(j.status, j.errRet)
+		j.done(j.status, j.errVal)
 	}()
 
-	if err = j.runner(j.cancelCh); err != nil {
+	if err := j.runner(j.cancelCh, &j.logs); err != nil {
 		j.setStatus(Errored, err)
 		return
 	}
@@ -85,5 +90,30 @@ func (j *Job) Cancel() error {
 
 // Status returns the status of a job at the time of call
 func (j *Job) Status() (JobStatus, error) {
-	return j.status, j.errRet
+	return j.status, j.errVal
+}
+
+// Logs returns the current logs associated with the job.
+func (j *Job) Logs() io.Reader {
+	// instead of returning the buffer itself we instead need to return
+	// a reader created over current contents of the buffer without changing
+	// it's read offset. This will allow accessing logs over and over again.
+	return bytes.NewReader(j.logs.Bytes())
+}
+
+// MarshalJSON marshals and returns the JSON for job info
+func (j *Job) MarshalJSON() ([]byte, error) {
+	toJSON := struct {
+		Task   string   `json:"task"`
+		Status string   `json:"status"`
+		ErrVal string   `json:"error"`
+		Logs   []string `json:"logs"`
+	}{
+		Task:   j.runnerName(),
+		Status: j.status.String(),
+		ErrVal: fmt.Sprintf("%v", j.errVal),
+		Logs:   strings.Split(j.logs.String(), "\n"),
+	}
+
+	return json.Marshal(toJSON)
 }

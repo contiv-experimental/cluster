@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"io"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
@@ -124,9 +125,9 @@ func (e *decommissionEvent) prepareInventory() error {
 }
 
 // cleanupRunner is the job runner that runs cleanup playbooks on one or more nodes
-func (e *decommissionEvent) cleanupRunner(cancelCh CancelChannel) error {
+func (e *decommissionEvent) cleanupRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
 	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
-	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
+	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
 		return err
 	}
 	return nil

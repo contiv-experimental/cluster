@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"io"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
@@ -89,9 +90,9 @@ func (e *maintenanceEvent) pepareInventory() error {
 }
 
 // upgradeRunner is the job runner that runs upgrade plabook on one or more nodes
-func (e *maintenanceEvent) upgradeRunner(cancelCh CancelChannel) error {
+func (e *maintenanceEvent) upgradeRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
 	outReader, cancelFunc, errCh := e.mgr.configuration.Upgrade(e._hosts, e.extraVars)
-	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
+	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
 		log.Errorf("upgrade failed. Error: %s", err)
 		return err
 	}

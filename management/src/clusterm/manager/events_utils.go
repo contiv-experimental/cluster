@@ -16,14 +16,16 @@ var errJobCancelled = errored.Errorf("job was cancelled")
 // helper function to log the stream of bytes from a reader while waiting on
 // the error channel. It returns on first error received on the channel
 func logOutputAndReturnStatus(r io.Reader, errCh chan error, cancelCh CancelChannel,
-	cancelFunc context.CancelFunc) error {
+	cancelFunc context.CancelFunc, jobLogs io.Writer) error {
 	// this can happen if an error occurred before the ansible could be run,
 	// just return that error
 	if r == nil {
 		return <-errCh
 	}
 
-	s := bufio.NewScanner(r)
+	// redirect read output to job logs
+	t := io.TeeReader(r, jobLogs)
+	s := bufio.NewScanner(t)
 	ticker := time.Tick(50 * time.Millisecond)
 	for {
 		var err error

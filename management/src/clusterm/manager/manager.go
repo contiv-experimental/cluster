@@ -84,6 +84,7 @@ type Manager struct {
 	addr          string
 	nodes         map[string]*node
 	activeJob     *Job // there can be only one active job at a time
+	lastJob       *Job
 }
 
 // NewManager initializes and returns an instance of the Manager. It returns nil

@@ -17,17 +17,19 @@ type commissionEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
+	hostGroup string
 
 	_hosts  configuration.SubsysHosts
 	_enodes map[string]*node
 }
 
 // newCommissionEvent creates and returns commissionEvent
-func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars string) *commissionEvent {
+func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup string) *commissionEvent {
 	return &commissionEvent{
 		mgr:       mgr,
 		nodeNames: nodeNames,
 		extraVars: extraVars,
+		hostGroup: hostGroup,
 	}
 }
 
@@ -61,7 +63,7 @@ func (e *commissionEvent) process() error {
 	}()
 
 	// validate event data
-	if e._enodes, err = e.mgr.commonEventValidate(e.nodeNames); err != nil {
+	if err = e.eventValidate(); err != nil {
 		return err
 	}
 
@@ -82,6 +84,16 @@ func (e *commissionEvent) process() error {
 	return nil
 }
 
+func (e *commissionEvent) eventValidate() error {
+	var err error
+	if !IsValidHostGroup(e.hostGroup) {
+		return errored.Errorf("invalid or empty host-group specified: %q", e.hostGroup)
+	}
+
+	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)
+	return err
+}
+
 // prepareInventory takes care of assigning nodes to respective host-groups as part of
 // the commission workflow. It assigns nodes by following rules:
 // - if there are no commissioned nodes in discovered state, then add the current set to master group
@@ -89,9 +101,10 @@ func (e *commissionEvent) process() error {
 // of the existing master nodes.
 // XXX: revisit once node role PR is committed: https://github.com/contiv/cluster/pull/87
 func (e *commissionEvent) prepareInventory() error {
-	nodeGroup := ansibleMasterGroupName
+	nodeGroup := e.hostGroup
 	masterAddr := ""
 	masterName := ""
+	masterCommissioned := false
 	for name, node := range e.mgr.nodes {
 		if _, ok := e._enodes[name]; ok {
 			// skip nodes in the event
@@ -119,8 +132,13 @@ func (e *commissionEvent) prepareInventory() error {
 		// found a master node
 		masterAddr = node.Mon.GetMgmtAddress()
 		masterName = node.Cfg.GetTag()
-		nodeGroup = ansibleWorkerGroupName
+
+		masterCommissioned = true
 		break
+	}
+
+	if (masterCommissioned == false) && (nodeGroup == ansibleWorkerGroupName) {
+		return errored.Errorf("Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.")
 	}
 
 	// prepare inventory

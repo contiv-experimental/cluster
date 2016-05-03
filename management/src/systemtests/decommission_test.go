@@ -13,7 +13,7 @@ func (s *SystemTestSuite) TestDecommissionNodeSuccess(c *C) {
 	nodeName := validNodeNames[0]
 
 	// commission the node
-	s.commissionNode(c, nodeName, s.tbn1)
+	s.commissionNode(c, nodeName, ansibleMasterGroupName, s.tbn1)
 
 	// decommission the node
 	s.decommissionNode(c, nodeName, s.tbn1)
@@ -24,8 +24,8 @@ func (s *SystemTestSuite) TestDecommissionNodeSuccessSerial(c *C) {
 	nodeName2 := validNodeNames[1]
 
 	// commission the nodes. First node is master, second node is worker
-	s.commissionNode(c, nodeName1, s.tbn1)
-	s.commissionNode(c, nodeName2, s.tbn2)
+	s.commissionNode(c, nodeName1, ansibleMasterGroupName, s.tbn1)
+	s.commissionNode(c, nodeName2, ansibleWorkerGroupName, s.tbn2)
 
 	// decommission the node
 	s.decommissionNode(c, nodeName2, s.tbn2)
@@ -36,7 +36,7 @@ func (s *SystemTestSuite) TestDecommissionNodesSuccess(c *C) {
 	nodeNames := validNodeNames
 
 	// commission the nodes
-	s.commissionNodes(c, nodeNames)
+	s.commissionNodes(c, nodeNames, ansibleMasterGroupName)
 
 	// decommission the nodes
 	s.decommissionNodes(c, nodeNames)
@@ -47,8 +47,8 @@ func (s *SystemTestSuite) TestDecommissionNodeFailureRemainingWorker(c *C) {
 	nodeName2 := validNodeNames[1]
 
 	//commission the nodes. First node is master, second node is worker
-	s.commissionNode(c, nodeName1, s.tbn1)
-	s.commissionNode(c, nodeName2, s.tbn2)
+	s.commissionNode(c, nodeName1, ansibleMasterGroupName, s.tbn1)
+	s.commissionNode(c, nodeName2, ansibleWorkerGroupName, s.tbn2)
 
 	// decommission the master node
 	cmdStr := fmt.Sprintf("clusterctl node decommission %s", nodeName1)
@@ -63,7 +63,7 @@ func (s *SystemTestSuite) TestDecommissionNodesFailureDisappeared(c *C) {
 	nodeName := validNodeNames[1]
 
 	// commission the nodes
-	s.commissionNodes(c, nodeNames)
+	s.commissionNodes(c, nodeNames, ansibleMasterGroupName)
 
 	// make sure test node is visible in inventory
 	s.getNodeInfoSuccess(c, nodeName)
@@ -89,7 +89,7 @@ func (s *SystemTestSuite) TestDecommissionNodesFailureAlreadyDecommissioned(c *C
 	nodeNames := []string{secondNode, nodeName}
 
 	// commission the nodes
-	s.commissionNodes(c, nodeNames)
+	s.commissionNodes(c, nodeNames, ansibleMasterGroupName)
 
 	// decommission one node
 	s.decommissionNode(c, nodeName, s.tbn1)

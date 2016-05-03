@@ -19,8 +19,8 @@ func (s *SystemTestSuite) TestClustermRestart(c *C) {
 	nodeName2 := validNodeNames[1]
 
 	// commission the nodes. First node is master, second node is worker
-	s.commissionNode(c, nodeName1, s.tbn1)
-	s.commissionNode(c, nodeName2, s.tbn2)
+	s.commissionNode(c, nodeName1, ansibleMasterGroupName, s.tbn1)
+	s.commissionNode(c, nodeName2, ansibleWorkerGroupName, s.tbn2)
 
 	// decommission one node
 	s.decommissionNode(c, nodeName2, s.tbn2)
@@ -40,13 +40,13 @@ func (s *SystemTestSuite) TestClustermFailureActiveJob(c *C) {
 	// launch commission on a node
 	done := make(chan struct{})
 	go func() {
-		s.commissionNode(c, nodeName1, s.tbn1)
+		s.commissionNode(c, nodeName1, ansibleMasterGroupName, s.tbn1)
 		done <- struct{}{}
 	}()
 
 	// try to start another commission job
 	time.Sleep(time.Second)
-	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName2)
+	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName2, ansibleWorkerGroupName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
 	exptStr := ".*there is already an active job.*"

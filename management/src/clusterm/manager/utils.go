@@ -147,3 +147,14 @@ func (m *Manager) runActiveJob() {
 	// reset the active job once done
 	m.resetActiveJob()
 }
+
+// IsValidHostGroup checks if the passed hostGroup is valid
+func IsValidHostGroup(hostGroup string) bool {
+	switch hostGroup {
+	case
+		ansibleMasterGroupName,
+		ansibleWorkerGroupName:
+		return true
+	}
+	return false
+}

@@ -93,7 +93,7 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 }
 
 // PostNodeCommission posts the request to commission a node
-func (c *Client) PostNodeCommission(nodeName string, extraVars string, hostGroup string) error {
+func (c *Client) PostNodeCommission(nodeName, extraVars, hostGroup string) error {
 	req := &APIRequest{
 		HostGroup: hostGroup,
 	}
@@ -101,7 +101,7 @@ func (c *Client) PostNodeCommission(nodeName string, extraVars string, hostGroup
 }
 
 // PostNodesCommission posts the request to commission a set of nodes
-func (c *Client) PostNodesCommission(nodeNames []string, extraVars string, hostGroup string) error {
+func (c *Client) PostNodesCommission(nodeNames []string, extraVars, hostGroup string) error {
 	req := &APIRequest{
 		Nodes:     nodeNames,
 		HostGroup: hostGroup,

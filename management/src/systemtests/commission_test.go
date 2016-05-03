@@ -118,7 +118,7 @@ func (s *SystemTestSuite) TestCommissionNodesWithoutHostGroupFailure(c *C) {
 	cmdStr := fmt.Sprintf("clusterctl nodes commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
-	exptdOut := ".*host-group is a mandatory parameter and is not specified.*"
+	exptdOut := ".*invalid or empty host-group specified.*"
 	s.assertMatch(c, exptdOut, out)
 }
 
@@ -128,7 +128,7 @@ func (s *SystemTestSuite) TestCommissionNodeWithoutHostGroupFailure(c *C) {
 	cmdStr := fmt.Sprintf("clusterctl node commission %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, NotNil, Commentf("output: %s", out))
-	exptdOut := ".*host-group is a mandatory parameter and is not specified.*"
+	exptdOut := ".*invalid or empty host-group specified.*"
 	s.assertMatch(c, exptdOut, out)
 }
 

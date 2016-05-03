@@ -152,7 +152,7 @@ func (s *SystemTestSuite) waitForSerfMembership(c *C, nut vagrantssh.TestbedNode
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 }
 
-func (s *SystemTestSuite) commissionNode(c *C, nodeName string, hostGroup string, nut vagrantssh.TestbedNode) {
+func (s *SystemTestSuite) commissionNode(c *C, nodeName, hostGroup string, nut vagrantssh.TestbedNode) {
 	// provision the node
 	cmdStr := fmt.Sprintf("clusterctl node commission %s --host-group %s", nodeName, hostGroup)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)

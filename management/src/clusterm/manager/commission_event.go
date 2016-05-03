@@ -24,7 +24,7 @@ type commissionEvent struct {
 }
 
 // newCommissionEvent creates and returns commissionEvent
-func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars string, hostGroup string) *commissionEvent {
+func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup string) *commissionEvent {
 	return &commissionEvent{
 		mgr:       mgr,
 		nodeNames: nodeNames,
@@ -87,7 +87,7 @@ func (e *commissionEvent) process() error {
 func (e *commissionEvent) eventValidate() error {
 	var err error
 	if !IsValidHostGroup(e.hostGroup) {
-		return errored.Errorf("host-group is a mandatory parameter and is not specified %s", e.hostGroup)
+		return errored.Errorf("invalid or empty host-group specified: %q", e.hostGroup)
 	}
 
 	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)

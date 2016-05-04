@@ -84,7 +84,7 @@ func (s *jobsSuite) TestJobRunSuccess(c *C) {
 	c.Assert(errRet, Equals, nil)
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }
@@ -106,7 +106,7 @@ func (s *jobsSuite) TestJobStatusRunning(c *C) {
 	c.Assert(errRet, Equals, nil)
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }
@@ -124,7 +124,7 @@ func (s *jobsSuite) TestJobRunErrored(c *C) {
 	c.Assert(errRet, DeepEquals, err)
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }
@@ -145,7 +145,7 @@ func (s *jobsSuite) TestJobRunCancel(c *C) {
 	c.Assert(errRet, DeepEquals, err)
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }
@@ -174,7 +174,7 @@ func (s *jobsSuite) TestJobLogs(c *C) {
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr))
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }
@@ -208,7 +208,7 @@ func (s *jobsSuite) TestJobLogsLongRunning(c *C) {
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr1+exptdLogStr2))
 	select {
 	case <-cbCh:
-	case <-time.After(0):
+	case <-time.After(100 * time.Millisecond):
 		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
 	}
 }

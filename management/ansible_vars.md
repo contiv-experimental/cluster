@@ -60,6 +60,11 @@ There are several variables that are made available to provide a good level of p
   ```
   {"ucp_bootstrap_node_name": "cluster-node1-0"}
   ```
+  - **ucp_license_file** identifies the path to UCP license file on the host where ansible is run. This can be used to pass the UCP license at the time of configuring UCP cluster.
+    - **ucp_license_file** is specified as a JSON string
+  ```
+  {"ucp_license_file": "/path/to/ucp/licence"}
+  ```
 
 ####Contiv Networking
 - **contiv_network_mode** identifies the mode of operation for netplugin. Netplugin supports two modes viz. `aci` and `standalone`. The first is used to bring-up netplugin in a Cisco APIC managed fabric deployment, while the second mode can be used when deploying netplugin with standalone Layer2/Layer3 switches.

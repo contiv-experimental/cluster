@@ -22,29 +22,52 @@ type managerSuite struct {
 }
 
 var (
-	_             = Suite(&managerSuite{})
-	baseURL       = "baseUrl.foo:1234"
-	testNodeName  = "testNode"
-	testGetData   = []byte("testdata123")
-	testExtraVars = "extraVars"
-	testReqBody   = APIRequest{
+	_                = Suite(&managerSuite{})
+	baseURL          = "baseUrl.foo:1234"
+	testNodeName     = "testNode"
+	testGetData      = []byte("testdata123")
+	testExtraVars    = "extraVars"
+	testReqNodesBody = APIRequest{
 		Nodes: []string{testNodeName},
 	}
+	testReqEmptyBody = APIRequest{}
 
-	testReqCommissionWithNodesBody = APIRequest{
+	testReqExtraVarsBody = APIRequest{
+		ExtraVars: testExtraVars,
+	}
+
+	testReqHostGroupBody = APIRequest{
+		HostGroup: ansibleMasterGroupName,
+	}
+
+	testReqNodesExtraVarsBody = APIRequest{
+		Nodes:     []string{testNodeName},
+		ExtraVars: testExtraVars,
+	}
+
+	testReqNodesHostGroupBody = APIRequest{
 		Nodes:     []string{testNodeName},
 		HostGroup: ansibleMasterGroupName,
 	}
 
-	testReqCommissionWithoutNodesBody = APIRequest{
-		Nodes:     []string{},
+	testReqHostGroupExtraVarsBody = APIRequest{
 		HostGroup: ansibleMasterGroupName,
+		ExtraVars: testExtraVars,
 	}
 
-	testReqCommissionWithoutHostGroupBody = APIRequest{}
+	testReqNodesHostGroupExtraVarsBody = APIRequest{
+		Nodes:     []string{testNodeName},
+		HostGroup: ansibleMasterGroupName,
+		ExtraVars: testExtraVars,
+	}
 
 	testReqDiscoverBody = APIRequest{
 		Addrs: []string{testNodeName},
+	}
+
+	testReqDiscoverExtraVarsBody = APIRequest{
+		Addrs:     []string{testNodeName},
+		ExtraVars: testExtraVars,
 	}
 
 	failureReturner = func(c *C, expURL *url.URL, expBody []byte) http.HandlerFunc {
@@ -102,11 +125,17 @@ func (s *managerSuite) TestPostSuccess(c *C) {
 		url: baseURL,
 	}
 
-	var reqCommissionWithoutHostGroupBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqCommissionWithoutHostGroupBody).Encode(testReqCommissionWithoutHostGroupBody), IsNil)
-
 	var reqHostGroupBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqHostGroupBody).Encode(testReqCommissionWithoutNodesBody), IsNil)
+	c.Assert(json.NewEncoder(&reqHostGroupBody).Encode(testReqHostGroupBody), IsNil)
+
+	var reqHostGroupExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqHostGroupExtraVarsBody).Encode(testReqHostGroupExtraVarsBody), IsNil)
+
+	var reqExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqExtraVarsBody).Encode(testReqExtraVarsBody), IsNil)
+
+	var reqEmptyBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
 
 	testsCommission := map[string]struct {
 		expURLStr string
@@ -121,16 +150,15 @@ func (s *managerSuite) TestPostSuccess(c *C) {
 			nodeName:  testNodeName,
 			extraVars: "",
 			hostGroup: "",
-			exptdBody: reqCommissionWithoutHostGroupBody.Bytes(),
+			exptdBody: reqEmptyBody.Bytes(),
 			cb:        clstrC.PostNodeCommission,
 		},
 		"commission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
-				baseURL, PostNodeCommissionPrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: testExtraVars,
 			hostGroup: "",
-			exptdBody: reqCommissionWithoutHostGroupBody.Bytes(),
+			exptdBody: reqExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodeCommission,
 		},
 		"commission-host-group": {
@@ -142,12 +170,11 @@ func (s *managerSuite) TestPostSuccess(c *C) {
 			cb:        clstrC.PostNodeCommission,
 		},
 		"commission-extra-vars-host-group": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
-				baseURL, PostNodeCommissionPrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: testExtraVars,
 			hostGroup: ansibleMasterGroupName,
-			exptdBody: reqHostGroupBody.Bytes(),
+			exptdBody: reqHostGroupExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodeCommission,
 		},
 	}
@@ -172,30 +199,28 @@ func (s *managerSuite) TestPostSuccess(c *C) {
 			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: "",
-			exptdBody: []byte{},
+			exptdBody: reqEmptyBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
 		"decommission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
-				baseURL, PostNodeDecommissionPrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: testExtraVars,
-			exptdBody: []byte{},
+			exptdBody: reqExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
 		"maintenance": {
 			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: "",
-			exptdBody: []byte{},
+			exptdBody: reqEmptyBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
 		"maintenance-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s?%s=%s",
-				baseURL, PostNodeMaintenancePrefix, testNodeName, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: testExtraVars,
-			exptdBody: []byte{},
+			exptdBody: reqExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
 	}
@@ -216,13 +241,22 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 	}
 
 	var reqBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqBody).Encode(testReqBody), IsNil)
+	c.Assert(json.NewEncoder(&reqBody).Encode(testReqNodesBody), IsNil)
 
-	var reqHostGroupBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqHostGroupBody).Encode(testReqCommissionWithNodesBody), IsNil)
+	var reqNodesExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqNodesExtraVarsBody).Encode(testReqNodesExtraVarsBody), IsNil)
+
+	var reqNodesHostGroupBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqNodesHostGroupBody).Encode(testReqNodesHostGroupBody), IsNil)
+
+	var reqNodesHostGroupExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqNodesHostGroupExtraVarsBody).Encode(testReqNodesHostGroupExtraVarsBody), IsNil)
 
 	var reqDiscoverBody bytes.Buffer
 	c.Assert(json.NewEncoder(&reqDiscoverBody).Encode(testReqDiscoverBody), IsNil)
+
+	var reqDiscoverExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqDiscoverExtraVarsBody).Encode(testReqDiscoverExtraVarsBody), IsNil)
 
 	testsCommission := map[string]struct {
 		expURLStr string
@@ -241,12 +275,11 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			cb:        clstrC.PostNodesCommission,
 		},
 		"commission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
-				baseURL, PostNodesCommission, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesCommission),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
 			hostGroup: "",
-			exptdBody: reqBody.Bytes(),
+			exptdBody: reqNodesExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesCommission,
 		},
 
@@ -255,16 +288,15 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			nodeNames: []string{testNodeName},
 			extraVars: "",
 			hostGroup: ansibleMasterGroupName,
-			exptdBody: reqHostGroupBody.Bytes(),
+			exptdBody: reqNodesHostGroupBody.Bytes(),
 			cb:        clstrC.PostNodesCommission,
 		},
 		"commission-extra-vars-host-group": {
-			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
-				baseURL, PostNodesCommission, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesCommission),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
 			hostGroup: ansibleMasterGroupName,
-			exptdBody: reqHostGroupBody.Bytes(),
+			exptdBody: reqNodesHostGroupExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesCommission,
 		},
 	}
@@ -293,11 +325,10 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			cb:        clstrC.PostNodesDecommission,
 		},
 		"decommission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
-				baseURL, PostNodesDecommission, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesDecommission),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
-			exptdBody: reqBody.Bytes(),
+			exptdBody: reqNodesExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesDecommission,
 		},
 		"maintenance": {
@@ -308,11 +339,10 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			cb:        clstrC.PostNodesDecommission,
 		},
 		"maintenance-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
-				baseURL, PostNodesMaintenance, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
-			exptdBody: reqBody.Bytes(),
+			exptdBody: reqNodesExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesDecommission,
 		},
 		"discover": {
@@ -323,11 +353,10 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			cb:        clstrC.PostNodesDiscover,
 		},
 		"discover-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s?%s=%s",
-				baseURL, PostNodesDiscover, ExtraVarsQuery, testExtraVars),
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesDiscover),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
-			exptdBody: reqDiscoverBody.Bytes(),
+			exptdBody: reqDiscoverExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesDiscover,
 		},
 	}
@@ -343,11 +372,12 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 }
 
 func (s *managerSuite) TestPostGlobalsWithVarsSuccess(c *C) {
-	expURLStr := fmt.Sprintf("http://%s/%s?%s=%s",
-		baseURL, PostGlobals, ExtraVarsQuery, testExtraVars)
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostGlobals)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, []byte{}))
+	var reqExtraVarsBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqExtraVarsBody).Encode(testReqExtraVarsBody), IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, reqExtraVarsBody.Bytes()))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
@@ -362,7 +392,9 @@ func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
 	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostGlobals)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, []byte{}))
+	var reqEmptyBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, reqEmptyBody.Bytes()))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
@@ -374,10 +406,12 @@ func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
 }
 
 func (s *managerSuite) TestPostError(c *C) {
+	var reqEmptyBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
 	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, []byte{}))
+	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqEmptyBody.Bytes()))
 	defer httpS.Close()
 	clstrC := Client{
 		url:   baseURL,
@@ -390,7 +424,7 @@ func (s *managerSuite) TestPostError(c *C) {
 	expURL, err = url.Parse(expURLStr)
 	c.Assert(err, IsNil)
 	var reqBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqBody).Encode(testReqBody), IsNil)
+	c.Assert(json.NewEncoder(&reqBody).Encode(testReqNodesBody), IsNil)
 	httpS, httpC = getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqBody.Bytes()))
 	defer httpS.Close()
 	clstrC = Client{

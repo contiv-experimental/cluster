@@ -18,6 +18,7 @@ type APIRequest struct {
 	Nodes     []string `json:"nodes,omitempty"`
 	Addrs     []string `json:"addrs,omitempty"`
 	HostGroup string   `json:"hostgroup,omitempty"`
+	ExtraVars string   `json:"extravars,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -73,7 +74,7 @@ func (m *Manager) apiLoop(errCh chan error) {
 	}
 }
 
-type postCallback func(req *APIRequest, extraVars string) error
+type postCallback func(req *APIRequest) error
 
 func post(postCb postCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -102,8 +103,7 @@ func post(postCb postCallback) http.HandlerFunc {
 		}
 
 		// process query variables
-		extraVars := r.FormValue(ExtraVarsQuery)
-		sanitizedExtraVars, err := validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, extraVars)
+		req.ExtraVars, err = validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, req.ExtraVars)
 		if err != nil {
 			http.Error(w,
 				err.Error(),
@@ -112,7 +112,7 @@ func post(postCb postCallback) http.HandlerFunc {
 		}
 
 		// call the handler
-		if err := postCb(&req, sanitizedExtraVars); err != nil {
+		if err := postCb(&req); err != nil {
 			http.Error(w,
 				err.Error(),
 				http.StatusInternalServerError)
@@ -137,32 +137,32 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	return extraVars, nil
 }
 
-func (m *Manager) nodesCommission(req *APIRequest, extraVars string) error {
-	me := newWaitableEvent(newCommissionEvent(m, req.Nodes, extraVars, req.HostGroup))
+func (m *Manager) nodesCommission(req *APIRequest) error {
+	me := newWaitableEvent(newCommissionEvent(m, req.Nodes, req.ExtraVars, req.HostGroup))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDecommission(req *APIRequest, extraVars string) error {
-	me := newWaitableEvent(newDecommissionEvent(m, req.Nodes, extraVars))
+func (m *Manager) nodesDecommission(req *APIRequest) error {
+	me := newWaitableEvent(newDecommissionEvent(m, req.Nodes, req.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesMaintenance(req *APIRequest, extraVars string) error {
-	me := newWaitableEvent(newMaintenanceEvent(m, req.Nodes, extraVars))
+func (m *Manager) nodesMaintenance(req *APIRequest) error {
+	me := newWaitableEvent(newMaintenanceEvent(m, req.Nodes, req.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesDiscover(req *APIRequest, extraVars string) error {
-	me := newWaitableEvent(newDiscoverEvent(m, req.Addrs, extraVars))
+func (m *Manager) nodesDiscover(req *APIRequest) error {
+	me := newWaitableEvent(newDiscoverEvent(m, req.Addrs, req.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }
 
-func (m *Manager) globalsSet(req *APIRequest, extraVars string) error {
-	me := newWaitableEvent(newSetGlobalsEvent(m, extraVars))
+func (m *Manager) globalsSet(req *APIRequest) error {
+	me := newWaitableEvent(newSetGlobalsEvent(m, req.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }

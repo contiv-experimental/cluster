@@ -19,12 +19,24 @@ type APIRequest struct {
 	Addrs     []string `json:"addrs,omitempty"`
 	HostGroup string   `json:"hostgroup,omitempty"`
 	ExtraVars string   `json:"extravars,omitempty"`
+	Job       string   `json:"job,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
 // the ansible extra variables configuration
-var errInvalidJSON = func(name string, err error) error {
+func errInvalidJSON(name string, err error) error {
 	return errored.Errorf("%q should be a valid json. Error: %s", name, err)
+}
+
+// errJobNotExist is the error returned when a job with specified label doesn't exists
+func errJobNotExist(job string) error {
+	return errored.Errorf("info for %q job doesn't exist", job)
+}
+
+// errInvalidJobLabel is the error returned when an invalid or empty job label
+// is specified as part of job info request
+func errInvalidJobLabel(job string) error {
+	return errored.Errorf("Invalid or empty job label specified: %q", job)
 }
 
 func (m *Manager) apiLoop(errCh chan error) {
@@ -41,6 +53,7 @@ func (m *Manager) apiLoop(errCh chan error) {
 			{"/" + getNodeInfo, emptyHdrs, get(m.oneNode)},
 			{"/" + GetNodesInfo, emptyHdrs, get(m.allNodes)},
 			{"/" + GetGlobals, emptyHdrs, get(m.globalsGet)},
+			{"/" + getJob, emptyHdrs, get(m.jobGet)},
 		},
 		"POST": {
 			{"/" + postNodeCommission, emptyHdrs, post(m.nodesCommission)},
@@ -167,13 +180,16 @@ func (m *Manager) globalsSet(req *APIRequest) error {
 	return me.waitForCompletion()
 }
 
-type getCallback func(tag string) ([]byte, error)
+type getCallback func(req *APIRequest) ([]byte, error)
 
 func get(getCb getCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		tag := vars["tag"]
-		out, err := getCb(tag)
+		req := &APIRequest{
+			Nodes: []string{strings.TrimSpace(vars["tag"])},
+			Job:   strings.TrimSpace(vars["job"]),
+		}
+		out, err := getCb(req)
 		if err != nil {
 			http.Error(w,
 				err.Error(),
@@ -184,8 +200,8 @@ func get(getCb getCallback) http.HandlerFunc {
 	}
 }
 
-func (m *Manager) oneNode(tag string) ([]byte, error) {
-	node, err := m.findNode(tag)
+func (m *Manager) oneNode(req *APIRequest) ([]byte, error) {
+	node, err := m.findNode(req.Nodes[0])
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +213,7 @@ func (m *Manager) oneNode(tag string) ([]byte, error) {
 	return out, nil
 }
 
-func (m *Manager) allNodes(noop string) ([]byte, error) {
+func (m *Manager) allNodes(noop *APIRequest) ([]byte, error) {
 	out, err := json.Marshal(m.nodes)
 	if err != nil {
 		return nil, err
@@ -205,7 +221,7 @@ func (m *Manager) allNodes(noop string) ([]byte, error) {
 	return out, nil
 }
 
-func (m *Manager) globalsGet(noop string) ([]byte, error) {
+func (m *Manager) globalsGet(noop *APIRequest) ([]byte, error) {
 	globals := m.configuration.GetGlobals()
 	globalData := struct {
 		ExtraVars map[string]interface{} `json:"extra-vars"`
@@ -219,5 +235,28 @@ func (m *Manager) globalsGet(noop string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return out, nil
+}
+
+func (m *Manager) jobGet(req *APIRequest) ([]byte, error) {
+	var j *Job
+	switch req.Job {
+	case jobLabelActive:
+		j = m.activeJob
+	case jobLabelLast:
+		j = m.lastJob
+	default:
+		return nil, errInvalidJobLabel(req.Job)
+	}
+
+	if j == nil {
+		return nil, errJobNotExist(req.Job)
+	}
+
+	out, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+
 	return out, nil
 }

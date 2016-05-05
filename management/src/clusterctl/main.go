@@ -142,6 +142,19 @@ func main() {
 			},
 		},
 		{
+			Name:    "job",
+			Aliases: []string{"j"},
+			Usage:   "provisioning job info",
+			Subcommands: []cli.Command{
+				{
+					Name:    "get",
+					Aliases: []string{"g"},
+					Usage:   "get job info. Expects an arg with value 'active' or 'last'",
+					Action:  doAction(newGetActioner(jobGet)),
+				},
+			},
+		},
+		{
 			Name:    "discover",
 			Aliases: []string{"d"},
 			Usage:   "provision one or more nodes for discovery",
@@ -280,8 +293,8 @@ func globalsSet(c *manager.Client, noop []string, flags parsedFlags) error {
 }
 
 type getActioner struct {
-	nodeName string
-	getCb    func(c *manager.Client, nodeName string) error
+	arg   string
+	getCb func(c *manager.Client, arg string) error
 }
 
 func newGetActioner(getCb func(c *manager.Client, nodeName string) error) *getActioner {
@@ -293,11 +306,17 @@ func (nga *getActioner) procFlags(c *cli.Context) {
 }
 
 func (nga *getActioner) procArgs(c *cli.Context) {
-	nga.nodeName = c.Args().First()
+	nga.arg = c.Args().First()
 }
 
 func (nga *getActioner) action(c *manager.Client) error {
-	return nga.getCb(c, nga.nodeName)
+	return nga.getCb(c, nga.arg)
+}
+
+func ppJSON(out []byte) {
+	var outBuf bytes.Buffer
+	json.Indent(&outBuf, out, "", "    ")
+	outBuf.WriteTo(os.Stdout)
 }
 
 func nodeGet(c *manager.Client, nodeName string) error {
@@ -310,9 +329,7 @@ func nodeGet(c *manager.Client, nodeName string) error {
 		return err
 	}
 
-	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "    ")
-	outBuf.WriteTo(os.Stdout)
+	ppJSON(out)
 	return nil
 }
 
@@ -322,9 +339,7 @@ func nodesGet(c *manager.Client, noop string) error {
 		return err
 	}
 
-	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "    ")
-	outBuf.WriteTo(os.Stdout)
+	ppJSON(out)
 	return nil
 }
 
@@ -334,8 +349,20 @@ func globalsGet(c *manager.Client, noop string) error {
 		return err
 	}
 
-	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "    ")
-	outBuf.WriteTo(os.Stdout)
+	ppJSON(out)
+	return nil
+}
+
+func jobGet(c *manager.Client, job string) error {
+	if job == "" {
+		return errUnexpectedArgCount("1", 0)
+	}
+
+	out, err := c.GetJob(job)
+	if err != nil {
+		return err
+	}
+
+	ppJSON(out)
 	return nil
 }

@@ -51,6 +51,12 @@ const (
 	// to fetch the global configuration values
 	GetGlobals = "info/globals"
 
+	// GetJobPrefix is the prefix for the GET REST endpoint
+	// to fetch the status and logs of a provisioning job. {job} value can be
+	// 'active' or 'last'
+	GetJobPrefix = "info/job"
+	getJob       = GetJobPrefix + "/{job}"
+
 	// ExtraVarsQuery is the key for the query variable used to specify the ansible extra
 	// variables for configuration actions. The variables shall be specified as a json map.
 	ExtraVarsQuery = "extra_vars"
@@ -64,6 +70,9 @@ const (
 	ansibleNodeAddrHostVar       = "node_addr"
 	ansibleEtcdMasterAddrHostVar = "etcd_master_addr"
 	ansibleEtcdMasterNameHostVar = "etcd_master_name"
+
+	jobLabelActive = "active"
+	jobLabelLast   = "last"
 )
 
 // JobStatus corresponds to possible status values of a job

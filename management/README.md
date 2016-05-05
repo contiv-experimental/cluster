@@ -38,9 +38,9 @@ clusterctl nodes get
 
 And info for a single node can be fetched by using `clusterctl node get <node-name>`.
 
-#### Commision a node
+#### Commission a node
 ```
-clusterctl node commission <node-name> --host-group <service-master/service-worker>
+clusterctl node commission <node-name> --host-group=<service-master|service-worker>
 ```
 
 Commissioning a node involves pushing the configuration and starting infra services on that node using `ansible` based configuration management. The services that are configured depend on the mandatory parameter `--host-group`. Checkout the `service-master` and `service-worker` host-groups in [ansible/site.yml](../vendor/ansible/site.yml) to learn more about the services that are configured. To quickly check if commissioning a node worked, you can run `etcdctl member list` on the node. It shall list all the commissioned members in the list.
@@ -77,8 +77,14 @@ A common set of variables (like environment, scheduler-provider and so on) can b
 ```
 clusterctl global set --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "scheduler_provider": "ucp-swarm"}'
 ```
-- The variables set at global level are merged with the variables specified at the node level, with the latter taking precendence in case of an overlap/conflict.
+- The variables set at global level are merged with the variables specified at the node level, with the latter taking precedence in case of an overlap/conflict.
 - The list of useful variables is provided in [ansible_vars.md](./ansible_vars.md).
+
+#### Get provisioning job status
+```
+clusterctl job get <active|last>
+```
+Common cluster management workflows like commission, decommission and so on involve running an ansible playbook. Each such run per workflow is referred to as a job. You can see the status of an ongoing (active) or last run job using this command.
 
 #### Managing multiple nodes
 ```

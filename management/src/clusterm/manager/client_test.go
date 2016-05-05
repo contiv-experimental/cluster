@@ -27,6 +27,7 @@ var (
 	testNodeName     = "testNode"
 	testGetData      = []byte("testdata123")
 	testExtraVars    = "extraVars"
+	testJobLabel     = "testjob"
 	testReqNodesBody = APIRequest{
 		Nodes: []string{testNodeName},
 	}
@@ -479,6 +480,22 @@ func (s *managerSuite) TestGetGlobalsSuccess(c *C) {
 	}
 
 	resp, err := clstrC.GetGlobals()
+	c.Assert(err, IsNil)
+	c.Assert(resp, DeepEquals, testGetData)
+}
+
+func (s *managerSuite) TestGetJobSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetJobPrefix, testJobLabel)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okGetReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	resp, err := clstrC.GetJob(testJobLabel)
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }

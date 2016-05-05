@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"io"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
@@ -99,7 +100,6 @@ func (e *commissionEvent) eventValidate() error {
 // - if there are no commissioned nodes in discovered state, then add the current set to master group
 // - else add the nodes to worker group. And update the online master address to one
 // of the existing master nodes.
-// XXX: revisit once node role PR is committed: https://github.com/contiv/cluster/pull/87
 func (e *commissionEvent) prepareInventory() error {
 	nodeGroup := e.hostGroup
 	masterAddr := ""
@@ -157,15 +157,15 @@ func (e *commissionEvent) prepareInventory() error {
 
 // configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
 // It runs cleanup playbook on failure
-func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel) error {
+func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
 	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
-	cfgErr := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc)
+	cfgErr := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs)
 	if cfgErr == nil {
 		return nil
 	}
 	log.Errorf("configuration failed, starting cleanup. Error: %s", cfgErr)
 	outReader, cancelFunc, errCh = e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
-	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc); err != nil {
+	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
 		log.Errorf("cleanup failed. Error: %s", err)
 	}
 

@@ -135,6 +135,9 @@ func (m *Manager) checkAndSetActiveJob(runner JobRunner, doneCb DoneCallback) er
 
 // resetActiveJob() is a helper to reset active jobs if any
 func (m *Manager) resetActiveJob() {
+	if m.activeJob != nil {
+		m.lastJob = m.activeJob
+	}
 	m.activeJob = nil
 }
 

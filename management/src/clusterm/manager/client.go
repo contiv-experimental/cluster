@@ -66,7 +66,6 @@ func (c *Client) doPost(rsrc string, req *APIRequest) error {
 	return nil
 }
 
-// XXX: we should have a well defined structure for the info that is resturned
 func (c *Client) doGet(rsrc string) ([]byte, error) {
 	resp, err := c.httpC.Get(c.formURL(rsrc))
 	if err != nil {
@@ -168,4 +167,10 @@ func (c *Client) GetAllNodes() ([]byte, error) {
 // GetGlobals requests the value global extra vars
 func (c *Client) GetGlobals() ([]byte, error) {
 	return c.doGet(GetGlobals)
+}
+
+// GetJob requests the info of a provisioning job specified by jobLabel.
+// Accepted values of jobLabel are "active" and "last"
+func (c *Client) GetJob(jobLabel string) ([]byte, error) {
+	return c.doGet(fmt.Sprintf("%s/%s", GetJobPrefix, jobLabel))
 }

@@ -112,7 +112,7 @@ func (m *Manager) setAssetsStatusBestEffort(names []string, newStatusCb setInvSt
 	}
 }
 
-// try to atomically set the newStatus as state of all assets or revert ot revertStatus in case of failure
+// try to atomically set the newStatus as state of all assets or revert to revertStatus in case of failure
 func (m *Manager) setAssetsStatusAtomic(names []string, newStatusCb setInvStateCallback, revertStatusCb setInvStateCallback) error {
 	for i, name := range names {
 		if err := newStatusCb(name); err != nil {
@@ -143,8 +143,9 @@ func (m *Manager) resetActiveJob() {
 
 // runActiveJob() is a wrapper to run the job and reset the active job once the actual job is done
 func (m *Manager) runActiveJob() {
-	if m.activeJob != nil {
+	if m.activeJob == nil {
 		log.Errorf("run called without an active job")
+		return
 	}
 	m.activeJob.Run()
 	// reset the active job once done

@@ -53,9 +53,15 @@
     - "tcp:127.0.0.1:6640"
     - "ptcp:6640"
 
+- name: check selinux status
+  shell: sestatus
+  register: selinux_set
+  when: (ansible_os_family == "RedHat")
+
 - name: permit openvswitch_t type in selinux
   shell: >
       semanage permissive -a openvswitch_t
+  when: (ansible_os_family == "RedHat") and (selinux_set.stdout | search(".*SELinux status:.*enabled.*"))
   become: true
 
 - name: setup iptables for vxlan vtep port

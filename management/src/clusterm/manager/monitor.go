@@ -10,15 +10,26 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 	// revisit later as batching requirements become more clear
 	for _, e := range events {
 		log.Debugf("processing monitor event: %+v", e)
-		var me event
+		eventName := ""
 		switch e.Type {
 		case monitor.Discovered:
-			me = newDiscoveredEvent(m, e.Node)
+			eventName = monitor.Discovered.String()
 		case monitor.Disappeared:
-			me = newDisappearedEvent(m, e.Node)
+			eventName = monitor.Disappeared.String()
+		default:
+			log.Errorf("unexpected monitor event type %v", e.Type)
+			continue
 		}
-		m.reqQ <- me
-		log.Debugf("enqueued manager event: %+v", me)
+		if err := NewClient(m.addr).PostMonitorEvent(eventName,
+			[]MonitorNode{
+				{
+					Label:    e.Node.GetLabel(),
+					Serial:   e.Node.GetSerial(),
+					MgmtAddr: e.Node.GetMgmtAddress(),
+				},
+			}); err != nil {
+			log.Errorf("error posting monitor event %q. Error: %v", eventName, err)
+		}
 	}
 }
 

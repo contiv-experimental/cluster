@@ -154,6 +154,17 @@ func (c *Client) PostGlobals(extraVars string) error {
 	return c.doPost(PostGlobals, req)
 }
 
+// PostMonitorEvent posts a monitor event for one or more nodes.
+func (c *Client) PostMonitorEvent(event string, nodes []MonitorNode) error {
+	req := &APIRequest{
+		Event: MonitorEvent{
+			Name:  event,
+			Nodes: nodes,
+		},
+	}
+	return c.doPost(PostMonitorEvent, req)
+}
+
 // GetNode requests info of a specified node
 func (c *Client) GetNode(nodeName string) ([]byte, error) {
 	return c.doGet(fmt.Sprintf("%s/%s", GetNodeInfoPrefix, nodeName))

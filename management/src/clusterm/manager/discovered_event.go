@@ -10,35 +10,35 @@ import (
 
 // discoveredEvent processes the discovered event from monitoring subsystem
 type discoveredEvent struct {
-	mgr  *Manager
-	node monitor.SubsysNode
+	mgr   *Manager
+	nodes []monitor.SubsysNode
 }
 
 // newDiscoveredEvent creates and returns discoveredEvent event
-func newDiscoveredEvent(mgr *Manager, node monitor.SubsysNode) *discoveredEvent {
+func newDiscoveredEvent(mgr *Manager, nodes []monitor.SubsysNode) *discoveredEvent {
 	return &discoveredEvent{
-		mgr:  mgr,
-		node: node,
+		mgr:   mgr,
+		nodes: nodes,
 	}
 }
 
 func (e *discoveredEvent) String() string {
-	return fmt.Sprintf("discoveredEvent: %+v", e.node)
+	return fmt.Sprintf("discoveredEvent: %+v", e.nodes[0])
 }
 
 func (e *discoveredEvent) process() error {
 	//XXX: need to form the name that adheres to collins tag requirements
-	name := e.node.GetLabel() + "-" + e.node.GetSerial()
+	name := e.nodes[0].GetLabel() + "-" + e.nodes[0].GetSerial()
 
 	enode, err := e.mgr.findNode(name)
 	if err != nil && err.Error() == nodeNotExistsError(name).Error() {
 		e.mgr.nodes[name] = &node{
 			// XXX: node's role/group shall come from manager's role assignment logic or
 			// from user configuration
-			Cfg: configuration.NewAnsibleHost(name, e.node.GetMgmtAddress(),
+			Cfg: configuration.NewAnsibleHost(name, e.nodes[0].GetMgmtAddress(),
 				ansibleMasterGroupName, map[string]string{
 					ansibleNodeNameHostVar: name,
-					ansibleNodeAddrHostVar: e.node.GetMgmtAddress(),
+					ansibleNodeAddrHostVar: e.nodes[0].GetMgmtAddress(),
 				}),
 		}
 		enode = e.mgr.nodes[name]
@@ -47,7 +47,7 @@ func (e *discoveredEvent) process() error {
 	}
 
 	// update node's monitoring info to the one received in the event
-	enode.Mon = e.node
+	enode.Mon = e.nodes[0]
 	enode.Inv = e.mgr.inventory.GetAsset(name)
 	if enode.Inv == nil {
 		if err := e.mgr.inventory.AddAsset(name); err != nil {

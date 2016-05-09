@@ -9,17 +9,32 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
+	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
 	"github.com/gorilla/mux"
 )
 
+// MonitorNode contains the info about a node in monitor event.
+type MonitorNode struct {
+	Label    string `json:"label"`
+	Serial   string `json:"serial"`
+	MgmtAddr string `json:"addr"`
+}
+
+// MonitorEvent wraps the info about monitor event type and respective nodes
+type MonitorEvent struct {
+	Name  string        `json:"name"`
+	Nodes []MonitorNode `json:"nodes"`
+}
+
 // APIRequest is the general request body expected by clusterm from it's client
 type APIRequest struct {
-	Nodes     []string `json:"nodes,omitempty"`
-	Addrs     []string `json:"addrs,omitempty"`
-	HostGroup string   `json:"hostgroup,omitempty"`
-	ExtraVars string   `json:"extravars,omitempty"`
-	Job       string   `json:"job,omitempty"`
+	Nodes     []string     `json:"nodes,omitempty"`
+	Addrs     []string     `json:"addrs,omitempty"`
+	HostGroup string       `json:"hostgroup,omitempty"`
+	ExtraVars string       `json:"extravars,omitempty"`
+	Job       string       `json:"job,omitempty"`
+	Event     MonitorEvent `json:"monitor-event,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -39,6 +54,12 @@ func errInvalidJobLabel(job string) error {
 	return errored.Errorf("Invalid or empty job label specified: %q", job)
 }
 
+// errInvalidEventName is the error returned when an invalid or empty event name
+// is specified as part of monitor event request
+func errInvalidEventName(event string) error {
+	return errored.Errorf("Invalid or empty event name specified: %q", event)
+}
+
 func (m *Manager) apiLoop(errCh chan error) {
 	//set following headers for requests expecting a body
 	jsonContentHdrs := []string{"Content-Type", "application/json"}
@@ -56,14 +77,15 @@ func (m *Manager) apiLoop(errCh chan error) {
 			{"/" + getJob, emptyHdrs, get(m.jobGet)},
 		},
 		"POST": {
-			{"/" + postNodeCommission, emptyHdrs, post(m.nodesCommission)},
+			{"/" + postNodeCommission, jsonContentHdrs, post(m.nodesCommission)},
 			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},
-			{"/" + postNodeDecommission, emptyHdrs, post(m.nodesDecommission)},
+			{"/" + postNodeDecommission, jsonContentHdrs, post(m.nodesDecommission)},
 			{"/" + PostNodesDecommission, jsonContentHdrs, post(m.nodesDecommission)},
-			{"/" + postNodeMaintenance, emptyHdrs, post(m.nodesMaintenance)},
+			{"/" + postNodeMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
 			{"/" + PostNodesMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
 			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
-			{"/" + PostGlobals, emptyHdrs, post(m.globalsSet)},
+			{"/" + PostGlobals, jsonContentHdrs, post(m.globalsSet)},
+			{"/" + PostMonitorEvent, jsonContentHdrs, post(m.monitorEvent)},
 		},
 	}
 
@@ -178,6 +200,30 @@ func (m *Manager) globalsSet(req *APIRequest) error {
 	me := newWaitableEvent(newSetGlobalsEvent(m, req.ExtraVars))
 	m.reqQ <- me
 	return me.waitForCompletion()
+}
+
+func (m *Manager) monitorEvent(req *APIRequest) error {
+	var (
+		e     event
+		nodes []monitor.SubsysNode
+	)
+
+	for _, node := range req.Event.Nodes {
+		nodes = append(nodes, monitor.NewNode(node.Label, node.Serial, node.MgmtAddr))
+	}
+
+	switch strings.ToLower(req.Event.Name) {
+	case strings.ToLower(monitor.Discovered.String()):
+		e = newDiscoveredEvent(m, nodes)
+	case strings.ToLower(monitor.Disappeared.String()):
+		e = newDisappearedEvent(m, nodes)
+	default:
+		return errInvalidEventName(req.Event.Name)
+	}
+
+	// XXX: revisit, do we need to process monitor events as waitable-events?
+	m.reqQ <- e
+	return nil
 }
 
 type getCallback func(req *APIRequest) ([]byte, error)

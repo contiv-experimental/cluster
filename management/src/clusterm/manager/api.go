@@ -60,7 +60,7 @@ func errInvalidEventName(event string) error {
 	return errored.Errorf("Invalid or empty event name specified: %q", event)
 }
 
-func (m *Manager) apiLoop(errCh chan error) {
+func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 	//set following headers for requests expecting a body
 	jsonContentHdrs := []string{"Content-Type", "application/json"}
 	//set following headers for requests that don't expect a body like get node info.
@@ -102,6 +102,10 @@ func (m *Manager) apiLoop(errCh chan error) {
 		errCh <- err
 		return
 	}
+
+	//signal that socket is being served
+	servingCh <- struct{}{}
+
 	if err := http.Serve(l, r); err != nil {
 		log.Errorf("Error listening for http requests. Error: %s", err)
 		errCh <- err

@@ -138,11 +138,15 @@ func NewManager(config *Config) (*Manager, error) {
 // Run triggers the manager loops
 func (m *Manager) Run(errCh chan error) {
 
-	// start http server for service REST api endpoints. It feeds api/ux events.
-	go m.apiLoop(errCh)
+	apiServingCh := make(chan struct{}, 1)
+
+	// start http server for servicing REST api endpoints. It feeds api/ux events.
+	go m.apiLoop(errCh, apiServingCh)
 
 	// start monitor subsystem. It feeds node state monitoring events.
-	// It needs to be started after api loop as monitor subsystem post events through API endpoints
+	// It needs to be started after api loop as monitor subsystem post events through API endpoints.
+	// Additionally, we wait for api loop to signal that it has setup socket to receive requests
+	<-apiServingCh
 	go m.monitorLoop(errCh)
 
 	// start the event loop. It processes the events.

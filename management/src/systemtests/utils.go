@@ -55,6 +55,12 @@ func (s *SystemTestSuite) restartClusterm(c *C, nut vagrantssh.TestbedNode, time
 	c.Logf("clusterm is running. %s", out)
 }
 
+func (s *SystemTestSuite) checkClustermState(c *C, nut vagrantssh.TestbedNode, state string) {
+	out, err := tutils.ServiceActionAndWaitForState(nut, "clusterm", 5, state,
+		func(vagrantssh.TestbedNode, string) (string, error) { return "noop", nil })
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+}
+
 func (s *SystemTestSuite) nukeNodeInCollins(c *C, nodeName string) {
 	// Ignore errors here as asset might not exist.
 	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf(`curl --basic -u blake:admin:first -d status="Decommissioned" -d reason="test" -X POST http://localhost:9000/api/asset/%s`, nodeName))

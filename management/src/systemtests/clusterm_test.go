@@ -62,3 +62,30 @@ func (s *SystemTestSuite) TestClustermFailureActiveJob(c *C) {
 	// try a decommission job once previous job is done
 	s.decommissionNode(c, nodeName1, s.tbn2)
 }
+
+func (s *SystemTestSuite) TestSerfFailureOnClustermHost(c *C) {
+	nodeName1 := validNodeNames[0]
+	nodeName2 := validNodeNames[1]
+
+	// make sure test node is visible in inventory
+	s.getNodeInfoSuccess(c, nodeName1)
+
+	// stop serf discovery on test node
+	s.stopSerf(c, s.tbn1)
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn2, nodeName1, "failed")
+
+	// make sure clusterm is up and running
+	s.checkClustermState(c, s.tbn1, "active")
+	s.commissionNode(c, nodeName2, ansibleMasterGroupName, s.tbn2)
+
+	// start serf discovery on test node
+	s.startSerf(c, s.tbn1)
+
+	// wait for serf membership to update
+	s.waitForSerfMembership(c, s.tbn2, nodeName1, "alive")
+
+	// make sure clusterm stays up and running
+	s.checkClustermState(c, s.tbn1, "active")
+}

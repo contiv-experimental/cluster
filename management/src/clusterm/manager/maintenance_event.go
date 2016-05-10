@@ -28,7 +28,7 @@ func newMaintenanceEvent(mgr *Manager, nodeNames []string, extraVars string) *ma
 }
 
 func (e *maintenanceEvent) String() string {
-	return fmt.Sprintf("maintenanceEvent: %v", e.nodeNames)
+	return fmt.Sprintf("maintenanceEvent: nodes: %v extra-vars: %v", e.nodeNames, e.extraVars)
 }
 
 func (e *maintenanceEvent) process() error {
@@ -36,6 +36,7 @@ func (e *maintenanceEvent) process() error {
 	var err error
 
 	err = e.mgr.checkAndSetActiveJob(
+		e.String(),
 		e.upgradeRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {

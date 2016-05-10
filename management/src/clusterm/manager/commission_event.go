@@ -35,7 +35,8 @@ func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup s
 }
 
 func (e *commissionEvent) String() string {
-	return fmt.Sprintf("commissionEvent: %v", e.nodeNames)
+	return fmt.Sprintf("commissionEvent: nodes:%v extra-vars:%v host-group:%v",
+		e.nodeNames, e.extraVars, e.hostGroup)
 }
 
 func (e *commissionEvent) process() error {
@@ -43,6 +44,7 @@ func (e *commissionEvent) process() error {
 	var err error
 
 	err = e.mgr.checkAndSetActiveJob(
+		e.String(),
 		e.configureOrCleanupOnErrorRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {

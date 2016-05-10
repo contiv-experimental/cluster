@@ -29,7 +29,7 @@ func newDecommissionEvent(mgr *Manager, nodeNames []string, extraVars string) *d
 }
 
 func (e *decommissionEvent) String() string {
-	return fmt.Sprintf("decommissionEvent: %v", e.nodeNames)
+	return fmt.Sprintf("decommissionEvent: nodes:%v extra-vars: %v", e.nodeNames, e.extraVars)
 }
 
 func (e *decommissionEvent) process() error {
@@ -37,6 +37,7 @@ func (e *decommissionEvent) process() error {
 	var err error
 
 	err = e.mgr.checkAndSetActiveJob(
+		e.String(),
 		e.cleanupRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {

@@ -14,7 +14,7 @@ or virtual machine.
   - note that `cluster-admin` can be an existing user.
   - this user needs to have **passwordless sudo** access configured. You can use `visudo` tool for this.
 - a ssh key has been generated for `cluster-admin`. You can use `ssh-keygen` tool for this.
-- the public key for `cluster-admin` user is added to all other hosts in your setup. You can use `ssh-copy-id cluster-admin@<hostname>` for this, where `<hostname>` is name of the host in your setup where `cluster-admin` is being added as authorized user.
+- the public key for `cluster-admin` user is added to all the hosts(including the control host) in your setup. You can use `ssh-copy-id cluster-admin@<hostname>` for this, where `<hostname>` is name of the host in your setup where `cluster-admin` is being added as authorized user.
 
 ###1. Download and install Cluster Manager
 ```

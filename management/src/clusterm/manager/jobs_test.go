@@ -99,7 +99,7 @@ func checkDoneCb(c *C, cbCh chan struct{}) {
 func (s *jobsSuite) TestJobRunSuccess(c *C) {
 	wg := &sync.WaitGroup{}
 	cbCh := make(chan struct{}, 1)
-	j := NewJob(runner(wg, 0, nil), expectDoneCb(c, cbCh, Complete, nil))
+	j := NewJob("", runner(wg, 0, nil), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
 
@@ -111,7 +111,7 @@ func (s *jobsSuite) TestJobRunSuccess(c *C) {
 func (s *jobsSuite) TestJobStatusRunning(c *C) {
 	wg := &sync.WaitGroup{}
 	cbCh := make(chan struct{}, 1)
-	j := NewJob(runner(wg, 3*time.Second, nil), expectDoneCb(c, cbCh, Complete, nil))
+	j := NewJob("", runner(wg, 3*time.Second, nil), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
 	// give some time for job to start
@@ -129,7 +129,7 @@ func (s *jobsSuite) TestJobRunErrored(c *C) {
 	wg := &sync.WaitGroup{}
 	cbCh := make(chan struct{}, 1)
 	err := errored.Errorf("test job failure")
-	j := NewJob(runner(wg, 0, err), expectDoneCb(c, cbCh, Errored, err))
+	j := NewJob("", runner(wg, 0, err), expectDoneCb(c, cbCh, Errored, err))
 	wg.Add(1)
 	go j.Run()
 
@@ -142,7 +142,7 @@ func (s *jobsSuite) TestJobRunCancel(c *C) {
 	wg := &sync.WaitGroup{}
 	cbCh := make(chan struct{}, 1)
 	err := errored.Errorf("test job cancellation")
-	j := NewJob(cancellableRunner(c, wg, 3*time.Second, err), expectDoneCb(c, cbCh, Errored, err))
+	j := NewJob("", cancellableRunner(c, wg, 3*time.Second, err), expectDoneCb(c, cbCh, Errored, err))
 	wg.Add(1)
 	go j.Run()
 	// give some time for job to start
@@ -162,7 +162,7 @@ func (s *jobsSuite) TestJobLogs(c *C) {
 	bar 1 2 3
 	multi line.
 	`
-	j := NewJob(logRunner(c, wg, exptdLogStr), expectDoneCb(c, cbCh, Complete, nil))
+	j := NewJob("", logRunner(c, wg, exptdLogStr), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
 
@@ -192,7 +192,7 @@ func (s *jobsSuite) TestJobLogsLongRunning(c *C) {
 	bar1 1 2 3
 	multi line. 1
 	`
-	j := NewJob(logRunnerLong(c, wg, 3*time.Second, exptdLogStr1, exptdLogStr2), expectDoneCb(c, cbCh, Complete, nil))
+	j := NewJob("", logRunnerLong(c, wg, 3*time.Second, exptdLogStr1, exptdLogStr2), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
 	// give some time for job to start and fetch logs once
@@ -215,9 +215,12 @@ func (s *jobsSuite) TestJobInfoMarshal(c *C) {
 	bar 1 2 3
 	multi line.
 	`
+	exptdDesc := "testJob"
+	exptdErr := errored.Errorf("testError")
 	j := &Job{
+		desc:   exptdDesc,
 		status: Running,
-		errVal: nil,
+		errVal: exptdErr,
 		logs:   *bytes.NewBuffer([]byte(exptdLogStr)),
 	}
 
@@ -226,13 +229,15 @@ func (s *jobsSuite) TestJobInfoMarshal(c *C) {
 
 	// verify the relevant fields
 	exptdInfo := struct {
+		Desc   string   `json:"desc"`
 		Status string   `json:"status"`
 		ErrVal string   `json:"error"`
 		Logs   []string `json:"logs"`
 	}{}
 	err = json.Unmarshal(out, &exptdInfo)
 	c.Assert(err, IsNil)
+	c.Assert(exptdInfo.Desc, Equals, exptdDesc)
 	c.Assert(exptdInfo.Status, Equals, Running.String())
-	c.Assert(exptdInfo.ErrVal, Equals, fmt.Sprintf("%v", j.errVal))
+	c.Assert(exptdInfo.ErrVal, Equals, fmt.Sprintf("%v", exptdErr))
 	c.Assert(exptdInfo.Logs, DeepEquals, strings.Split(exptdLogStr, "\n"))
 }

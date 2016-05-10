@@ -125,11 +125,11 @@ func (m *Manager) setAssetsStatusAtomic(names []string, newStatusCb setInvStateC
 }
 
 // checkAndGetNewJob() is a wrapper to check that there are no active jobs before a job is run
-func (m *Manager) checkAndSetActiveJob(runner JobRunner, doneCb DoneCallback) error {
+func (m *Manager) checkAndSetActiveJob(jobDesc string, runner JobRunner, doneCb DoneCallback) error {
 	if m.activeJob != nil {
 		return errActiveJob(m.activeJob.String())
 	}
-	m.activeJob = NewJob(runner, doneCb)
+	m.activeJob = NewJob(jobDesc, runner, doneCb)
 	return nil
 }
 

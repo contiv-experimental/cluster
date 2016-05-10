@@ -28,7 +28,7 @@ func newDiscoverEvent(mgr *Manager, nodeAddrs []string, extraVars string) *disco
 }
 
 func (e *discoverEvent) String() string {
-	return fmt.Sprintf("discoverEvent: %v", e.nodeAddrs)
+	return fmt.Sprintf("discoverEvent: addr: %v extra-vars: %v", e.nodeAddrs, e.extraVars)
 }
 
 func (e *discoverEvent) process() error {
@@ -36,6 +36,7 @@ func (e *discoverEvent) process() error {
 	var err error
 
 	err = e.mgr.checkAndSetActiveJob(
+		e.String(),
 		e.discoverRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {

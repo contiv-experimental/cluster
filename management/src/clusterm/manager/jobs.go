@@ -32,13 +32,15 @@ type Job struct {
 	status   JobStatus
 	errVal   error
 	logs     bytes.Buffer
+	desc     string
 }
 
 // NewJob initializes and returns an instance of a job described by the runner and done callback
-func NewJob(jr JobRunner, done DoneCallback) *Job {
+func NewJob(desc string, jr JobRunner, done DoneCallback) *Job {
 	return &Job{
 		runner:   jr,
 		done:     done,
+		desc:     desc,
 		cancelCh: make(chan struct{}),
 		status:   Queued,
 		errVal:   nil,
@@ -104,15 +106,19 @@ func (j *Job) Logs() io.Reader {
 // MarshalJSON marshals and returns the JSON for job info
 func (j *Job) MarshalJSON() ([]byte, error) {
 	toJSON := struct {
+		Desc   string   `json:"desc"`
 		Task   string   `json:"task"`
 		Status string   `json:"status"`
 		ErrVal string   `json:"error"`
 		Logs   []string `json:"logs"`
 	}{
+		Desc:   j.desc,
 		Task:   j.runnerName(),
 		Status: j.status.String(),
-		ErrVal: fmt.Sprintf("%v", j.errVal),
 		Logs:   strings.Split(j.logs.String(), "\n"),
+	}
+	if j.errVal != nil {
+		toJSON.ErrVal = fmt.Sprintf("%v", j.errVal)
 	}
 
 	return json.Marshal(toJSON)

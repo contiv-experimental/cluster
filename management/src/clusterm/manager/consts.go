@@ -38,6 +38,10 @@ const (
 	// to set global configuration values
 	PostGlobals = "globals"
 
+	// PostMonitorEvent is the prefix for the POST REST endpoint
+	// to post a monitor event for one or more nodes.
+	PostMonitorEvent = "monitor/event"
+
 	// GetNodeInfoPrefix is the prefix for the GET REST endpoint
 	// to fetch info for an asset
 	GetNodeInfoPrefix = "info/node"

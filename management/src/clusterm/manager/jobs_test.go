@@ -72,21 +72,40 @@ func logRunnerLong(c *C, wg *sync.WaitGroup, timeout time.Duration, logStr1, log
 	}
 }
 
+func waitAndCheckJobStatus(c *C, wg *sync.WaitGroup, job *Job, exptdStatus JobStatus, exptdErr error) {
+	wg.Wait()
+
+	// wait for sometime to ensure runner has completly stopped
+	<-time.After(100 * time.Millisecond)
+
+	status, errRet := job.Status()
+	c.Assert(status, Equals, exptdStatus)
+	if exptdErr == nil {
+		c.Assert(errRet, IsNil)
+	} else {
+		c.Assert(errRet, NotNil)
+		c.Assert(errRet.Error(), Equals, exptdErr.Error())
+	}
+}
+
+func checkDoneCb(c *C, cbCh chan struct{}) {
+	select {
+	case <-cbCh:
+	case <-time.After(100 * time.Millisecond):
+		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
+	}
+}
+
 func (s *jobsSuite) TestJobRunSuccess(c *C) {
 	wg := &sync.WaitGroup{}
 	cbCh := make(chan struct{}, 1)
 	j := NewJob(runner(wg, 0, nil), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
-	wg.Wait()
-	status, errRet := j.Status()
-	c.Assert(status, Equals, Complete)
-	c.Assert(errRet, Equals, nil)
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	waitAndCheckJobStatus(c, wg, j, Complete, nil)
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobStatusRunning(c *C) {
@@ -100,15 +119,10 @@ func (s *jobsSuite) TestJobStatusRunning(c *C) {
 	status, errRet := j.Status()
 	c.Assert(status, Equals, Running)
 	c.Assert(errRet, Equals, nil)
-	wg.Wait()
-	status, errRet = j.Status()
-	c.Assert(status, Equals, Complete)
-	c.Assert(errRet, Equals, nil)
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	waitAndCheckJobStatus(c, wg, j, Complete, nil)
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobRunErrored(c *C) {
@@ -118,15 +132,10 @@ func (s *jobsSuite) TestJobRunErrored(c *C) {
 	j := NewJob(runner(wg, 0, err), expectDoneCb(c, cbCh, Errored, err))
 	wg.Add(1)
 	go j.Run()
-	wg.Wait()
-	status, errRet := j.Status()
-	c.Assert(status, Equals, Errored)
-	c.Assert(errRet, DeepEquals, err)
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	waitAndCheckJobStatus(c, wg, j, Errored, err)
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobRunCancel(c *C) {
@@ -139,15 +148,10 @@ func (s *jobsSuite) TestJobRunCancel(c *C) {
 	// give some time for job to start
 	time.Sleep(1 * time.Second)
 	c.Assert(j.Cancel(), IsNil)
-	wg.Wait()
-	status, errRet := j.Status()
-	c.Assert(status, Equals, Errored)
-	c.Assert(errRet, DeepEquals, err)
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	waitAndCheckJobStatus(c, wg, j, Errored, err)
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobLogs(c *C) {
@@ -161,10 +165,9 @@ func (s *jobsSuite) TestJobLogs(c *C) {
 	j := NewJob(logRunner(c, wg, exptdLogStr), expectDoneCb(c, cbCh, Complete, nil))
 	wg.Add(1)
 	go j.Run()
-	wg.Wait()
-	status, errRet := j.Status()
-	c.Assert(status, Equals, Complete)
-	c.Assert(errRet, Equals, nil)
+
+	waitAndCheckJobStatus(c, wg, j, Complete, nil)
+
 	rcvdLogs, err := ioutil.ReadAll(j.Logs())
 	c.Assert(err, IsNil)
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr))
@@ -172,11 +175,8 @@ func (s *jobsSuite) TestJobLogs(c *C) {
 	rcvdLogs, err = ioutil.ReadAll(j.Logs())
 	c.Assert(err, IsNil)
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr))
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobLogsLongRunning(c *C) {
@@ -199,18 +199,14 @@ func (s *jobsSuite) TestJobLogsLongRunning(c *C) {
 	time.Sleep(1 * time.Second)
 	j.Logs()
 	_, _ = ioutil.ReadAll(j.Logs())
-	wg.Wait()
-	status, errRet := j.Status()
-	c.Assert(status, Equals, Complete)
-	c.Assert(errRet, Equals, nil)
+
+	waitAndCheckJobStatus(c, wg, j, Complete, nil)
+
 	rcvdLogs, err := ioutil.ReadAll(j.Logs())
 	c.Assert(err, IsNil)
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr1+exptdLogStr2))
-	select {
-	case <-cbCh:
-	case <-time.After(100 * time.Millisecond):
-		c.Assert(false, Equals, true, Commentf("didn't receive job completion callback"))
-	}
+
+	checkDoneCb(c, cbCh)
 }
 
 func (s *jobsSuite) TestJobInfoMarshal(c *C) {

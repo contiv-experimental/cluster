@@ -79,7 +79,7 @@ var (
 				c.Assert(r.URL.Query(), DeepEquals, expURL.Query())
 				body, err := ioutil.ReadAll(r.Body)
 				c.Assert(err, IsNil)
-				c.Assert(body, DeepEquals, expBody)
+				c.Assert(string(body), Equals, string(expBody))
 				http.Error(w, "test failure", http.StatusInternalServerError)
 			})
 	}
@@ -92,7 +92,7 @@ var (
 				c.Assert(r.URL.Query(), DeepEquals, expURL.Query())
 				body, err := ioutil.ReadAll(r.Body)
 				c.Assert(err, IsNil)
-				c.Assert(body, DeepEquals, expBody)
+				c.Assert(string(body), Equals, string(expBody))
 				w.WriteHeader(http.StatusOK)
 			})
 	}
@@ -403,6 +403,35 @@ func (s *managerSuite) TestPostGlobalsWithEmptyVarsSuccess(c *C) {
 	}
 
 	err = clstrC.PostGlobals("")
+	c.Assert(err, IsNil)
+}
+
+func (s *managerSuite) TestPostMonitorEvent(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostMonitorEvent)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	testEvent := "fooEvent"
+	testNode := MonitorNode{
+		Label:    "foo",
+		Serial:   "bar",
+		MgmtAddr: "1234",
+	}
+	reqBody := &APIRequest{
+		Event: MonitorEvent{
+			Name:  testEvent,
+			Nodes: []MonitorNode{testNode},
+		},
+	}
+	var reqJSON bytes.Buffer
+	c.Assert(json.NewEncoder(&reqJSON).Encode(reqBody), IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, reqJSON.Bytes()))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostMonitorEvent(testEvent, []MonitorNode{testNode})
 	c.Assert(err, IsNil)
 }
 

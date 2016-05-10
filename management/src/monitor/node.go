@@ -9,6 +9,15 @@ type Node struct {
 	addr   string
 }
 
+// NewNode returns an instamce of node in monitoring subsystem
+func NewNode(label, serial, addr string) *Node {
+	return &Node{
+		label:  label,
+		serial: serial,
+		addr:   addr,
+	}
+}
+
 // GetLabel returns the label associated with the node in the monitoring system.
 // This is usually the hostname but can be anything more descriptive.
 func (n *Node) GetLabel() string {

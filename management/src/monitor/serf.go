@@ -3,6 +3,7 @@ package monitor
 import (
 	"encoding/json"
 	"os/exec"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
@@ -76,12 +77,8 @@ func (sm *SerfSubsys) RegisterCb(e EventType, cb EventCb) error {
 	return errored.Errorf("Unsupported event type: %d", e)
 }
 
-// Start implements the start interface of monitoring sub-system
-func (sm *SerfSubsys) Start() error {
+func (sm *SerfSubsys) restore() error {
 	// read any members and call the Discovered callback.
-	// XXX: should this happen elsewhere?
-	// XXX: for now just screen scrape the 'serf members' command, need to
-	// use the client rpc
 	type serfMemberInfo struct {
 		Members []struct {
 			Name   string            `json:"name"`
@@ -118,11 +115,19 @@ func (sm *SerfSubsys) Start() error {
 		events = append(events, e)
 	}
 	sm.discoveredCb(events)
-
-	// start serf event loop for member join and leave events.
-	if err := sm.router.InitSerfFromConfigAndServe(sm.config); err != nil {
-		log.Errorf("error occured in event loop. Error: %s", err)
-		return err
-	}
 	return nil
+}
+
+// Start implements the start interface of monitoring sub-system
+func (sm *SerfSubsys) Start() error {
+	for {
+		if err := sm.restore(); err != nil {
+			log.Errorf("error occurred while restoring monitor state. Error: %v", err)
+		} else if err := sm.router.InitSerfFromConfigAndServe(sm.config); err != nil {
+			log.Errorf("error occured in monitor loop. Error: %s", err)
+		}
+
+		// wait and retry for serf errors to be resolved
+		<-time.After(1 * time.Minute)
+	}
 }

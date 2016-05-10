@@ -15,6 +15,9 @@ import (
 	"github.com/imdario/mergo"
 )
 
+// version is provided by build
+var version = ""
+
 type logLevel struct {
 	value log.Level
 }
@@ -40,6 +43,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = os.Args[0]
 	app.Usage = "cluster manager daemon"
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.GenericFlag{
 			Name:  "debug",

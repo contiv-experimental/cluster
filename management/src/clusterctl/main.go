@@ -39,6 +39,9 @@ var (
 			Usage: "host-group of the node(s). Possible values: service-master or service-worker",
 		},
 	}
+
+	// version is provided by build
+	version = ""
 )
 
 // parsedFlags is used to save cmdFlags
@@ -50,6 +53,7 @@ type parsedFlags struct {
 func main() {
 	app := cli.NewApp()
 	app.Name = os.Args[0]
+	app.Version = version
 	app.Usage = "utility to interact with cluster manager"
 	app.Flags = clustermFlags
 	app.Commands = []cli.Command{

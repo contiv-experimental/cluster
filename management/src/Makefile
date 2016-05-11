@@ -77,8 +77,9 @@ build-docker-shell: build-docker-img
 
 build: build-docker-img
 	@echo "building test image..."
-	@$(docker_run) bash -c "make checks generate && \
-		($(all_packages) | xargs -n1 go install) && \
+	$(docker_run) bash -c "make checks generate && \
+		($(all_packages) | xargs -n1 go install \
+		    -ldflags '-X main.version=$(if $(BUILD_VERSION),$(BUILD_VERSION),devbuild)') && \
 		make clean-generate"
 	@echo "done building test image..."
 
@@ -129,9 +130,10 @@ TAR_FILENAME:=$(NAME)-$(VERSION).$(TAR_EXT)
 TAR_LOC:=.
 TAR_FILE:=$(TAR_LOC)/$(TAR_FILENAME)
 
-tar: build
+tar:
 	@echo "building tarball"
-	@echo "v0.0.0-`date -u +%m-%d-%Y.%H-%M-%S.UTC`" > $(VERSION_FILE)
+	@echo "v0.1-`date -u +%m-%d-%Y.%H-%M-%S.UTC`" > $(VERSION_FILE)
+	@BUILD_VERSION=$(VERSION) make build
 	@tar -jcf $(TAR_FILE) -C ./bin clusterctl clusterm
 	@echo "done building tarball"
 

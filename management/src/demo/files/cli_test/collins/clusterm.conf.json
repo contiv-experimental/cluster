@@ -1,6 +1,6 @@
 {
     "ansible": {
-        "playbook-location":  "/vagrant/management/src/demo/files"
+        "playbook_location":  "/vagrant/management/src/demo/files"
     },
     "inventory": {
         "collins": {

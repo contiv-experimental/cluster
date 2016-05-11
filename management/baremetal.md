@@ -41,7 +41,7 @@ Edit the cluster manager configuration file that is created at `/etc/default/clu
 # cat /etc/default/clusterm/clusterm.conf
 {
     "ansible": {
-        "playbook-location": "/home/cluster-admin/ansible/",
+        "playbook_location": "/home/cluster-admin/ansible/",
         "user": "cluster-admin",
         "priv_key_file": "/home/cluster-admin/.ssh/id_rsa"
     }

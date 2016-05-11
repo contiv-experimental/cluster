@@ -189,9 +189,9 @@ func (a *Asset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Name       string `json:"name"`
 		Status     string `json:"status"`
-		PrevStatus string `json:"prev-status"`
+		PrevStatus string `json:"prev_status"`
 		State      string `json:"state"`
-		PrevState  string `json:"prev-state"`
+		PrevState  string `json:"prev_state"`
 	}{
 		Name:       a.name,
 		Status:     a.status.String(),

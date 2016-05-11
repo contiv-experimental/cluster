@@ -101,7 +101,7 @@ func (s *SystemTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode
 }
 
 func (s *SystemTestSuite) checkHostGroup(c *C, nodeName, exptdGroup string) {
-	exptdStr := fmt.Sprintf(`.*"host-group".*"%s".*`, exptdGroup)
+	exptdStr := fmt.Sprintf(`.*"host_group".*"%s".*`, exptdGroup)
 	cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
@@ -214,10 +214,10 @@ func (s *SystemTestSuite) getNodeInfoSuccess(c *C, nodeName string) {
 	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	exptdOut := `.*"monitoring-state":.*`
+	exptdOut := `.*"monitoring_state":.*`
 	s.assertMultiMatch(c, exptdOut, out, 1)
-	exptdOut = `.*"inventory-state":.*`
+	exptdOut = `.*"inventory_state":.*`
 	s.assertMultiMatch(c, exptdOut, out, 1)
-	exptdOut = `.*"configuration-state".*`
+	exptdOut = `.*"configuration_state".*`
 	s.assertMultiMatch(c, exptdOut, out, 1)
 }

@@ -40,10 +40,10 @@ func (s *SystemTestSuite) TestGetNodesInfoSuccess(c *C) {
 	cmdStr := `clusterctl nodes get`
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
-	exptdOut := `.*"monitoring-state":.*`
+	exptdOut := `.*"monitoring_state":.*`
 	s.assertMultiMatch(c, exptdOut, out, 2)
-	exptdOut = `.*"inventory-state":.*`
+	exptdOut = `.*"inventory_state":.*`
 	s.assertMultiMatch(c, exptdOut, out, 2)
-	exptdOut = `.*"configuration-state".*`
+	exptdOut = `.*"configuration_state".*`
 	s.assertMultiMatch(c, exptdOut, out, 2)
 }

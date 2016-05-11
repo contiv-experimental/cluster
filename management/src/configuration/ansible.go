@@ -14,11 +14,11 @@ import (
 
 // AnsibleSubsysConfig describes the configuration for ansible based configuration management subsystem
 type AnsibleSubsysConfig struct {
-	ConfigurePlaybook string `json:"configure-playbook"`
-	CleanupPlaybook   string `json:"cleanup-playbook"`
-	UpgradePlaybook   string `json:"upgrade-playbook"`
-	PlaybookLocation  string `json:"playbook-location"`
-	ExtraVariables    string `json:"extra-variables"`
+	ConfigurePlaybook string `json:"configure_playbook"`
+	CleanupPlaybook   string `json:"cleanup_playbook"`
+	UpgradePlaybook   string `json:"upgrade_playbook"`
+	PlaybookLocation  string `json:"playbook_location"`
+	ExtraVariables    string `json:"extra_variables"`
 	// XXX: revisit the user credential configuration. We may need to allow other provisions.
 	User        string `json:"user"`
 	PrivKeyFile string `json:"priv_key_file"`
@@ -71,10 +71,10 @@ func (h *AnsibleHost) SetGroup(group string) {
 // MarshalJSON satisfies the json marshaller interface and shall encode asset info in json
 func (h *AnsibleHost) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Tag       string            `json:"inventory-name"`
-		HostGroup string            `json:"host-group"`
-		Addr      string            `json:"ssh-address"`
-		Vars      map[string]string `json:"inventory-vars"`
+		Tag       string            `json:"inventory_name"`
+		HostGroup string            `json:"host_group"`
+		Addr      string            `json:"ssh_address"`
+		Vars      map[string]string `json:"inventory_vars"`
 	}{
 		Tag:       h.tag,
 		HostGroup: h.group,

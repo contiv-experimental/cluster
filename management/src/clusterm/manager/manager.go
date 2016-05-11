@@ -29,8 +29,8 @@ type clustermConfig struct {
 }
 
 type inventorySubsysConfig struct {
-	Collins *collins.Config `json:"collins,omit-empty"`
-	BoltDB  *boltdb.Config  `json:"boltdb,omit-empty"`
+	Collins *collins.Config `json:"collins,omitempty"`
+	BoltDB  *boltdb.Config  `json:"boltdb,omitempty"`
 }
 
 // Config is the configuration to cluster manager daemon
@@ -69,9 +69,9 @@ func DefaultConfig() *Config {
 // node is an aggregate structure that contains information about a cluster
 // node as seen by cluster management subsystems.
 type node struct {
-	Mon monitor.SubsysNode       `json:"monitoring-state"`
-	Inv inventory.SubsysAsset    `json:"inventory-state"`
-	Cfg configuration.SubsysHost `json:"configuration-state"`
+	Mon monitor.SubsysNode       `json:"monitoring_state"`
+	Inv inventory.SubsysAsset    `json:"inventory_state"`
+	Cfg configuration.SubsysHost `json:"configuration_state"`
 }
 
 // Manager integrates the cluster infra services like node discovery, inventory

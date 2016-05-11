@@ -23,7 +23,7 @@ func (s *mainSuite) TestMergeConfigSuccess(c *C) {
 	dst := manager.DefaultConfig()
 	srcBytes := []byte(`{
 		"ansible" : {
-			"playbook-location" : "override-location"
+			"playbook_location" : "override-location"
 		}
 	}`)
 	exptdDst := manager.DefaultConfig()
@@ -95,7 +95,7 @@ func (s *mainSuite) TestMergeConfigInvalidJSON(c *C) {
 	dst := manager.DefaultConfig()
 	srcBytes := []byte(`{
 		"ansible" : {
-			"playbook-location" : "extra-comma-error",
+			"playbook_location" : "extra-comma-error",
 		}
 	}`)
 

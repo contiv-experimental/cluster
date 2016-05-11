@@ -39,8 +39,8 @@ func (n *Node) GetMgmtAddress() string {
 func (n *Node) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Label       string `json:"label"`
-		Serial      string `json:"serial-number"`
-		MgmtAddress string `json:"management-address"`
+		Serial      string `json:"serial_number"`
+		MgmtAddress string `json:"management_address"`
 	}{
 		Label:       n.label,
 		Serial:      n.serial,

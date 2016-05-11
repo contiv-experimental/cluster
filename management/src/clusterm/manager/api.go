@@ -31,10 +31,10 @@ type MonitorEvent struct {
 type APIRequest struct {
 	Nodes     []string     `json:"nodes,omitempty"`
 	Addrs     []string     `json:"addrs,omitempty"`
-	HostGroup string       `json:"hostgroup,omitempty"`
-	ExtraVars string       `json:"extravars,omitempty"`
+	HostGroup string       `json:"host_group,omitempty"`
+	ExtraVars string       `json:"extra_vars,omitempty"`
 	Job       string       `json:"job,omitempty"`
-	Event     MonitorEvent `json:"monitor-event,omitempty"`
+	Event     MonitorEvent `json:"monitor_event,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -142,7 +142,7 @@ func post(postCb postCallback) http.HandlerFunc {
 		}
 
 		// process query variables
-		req.ExtraVars, err = validateAndSanitizeEmptyExtraVars(ExtraVarsQuery, req.ExtraVars)
+		req.ExtraVars, err = validateAndSanitizeEmptyExtraVars("extra_vars", req.ExtraVars)
 		if err != nil {
 			http.Error(w,
 				err.Error(),
@@ -274,7 +274,7 @@ func (m *Manager) allNodes(noop *APIRequest) ([]byte, error) {
 func (m *Manager) globalsGet(noop *APIRequest) ([]byte, error) {
 	globals := m.configuration.GetGlobals()
 	globalData := struct {
-		ExtraVars map[string]interface{} `json:"extra-vars"`
+		ExtraVars map[string]interface{} `json:"extra_vars"`
 	}{
 		ExtraVars: make(map[string]interface{}),
 	}

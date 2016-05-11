@@ -60,10 +60,6 @@ const (
 	// 'active' or 'last'
 	GetJobPrefix = "info/job"
 	getJob       = GetJobPrefix + "/{job}"
-
-	// ExtraVarsQuery is the key for the query variable used to specify the ansible extra
-	// variables for configuration actions. The variables shall be specified as a json map.
-	ExtraVarsQuery = "extra_vars"
 )
 
 const (

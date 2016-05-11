@@ -77,7 +77,7 @@ build-docker-shell: build-docker-img
 
 build: build-docker-img
 	@echo "building test image..."
-	$(docker_run) bash -c "make checks generate && \
+	@$(docker_run) bash -c "make checks generate && \
 		($(all_packages) | xargs -n1 go install \
 		    -ldflags '-X main.version=$(if $(BUILD_VERSION),$(BUILD_VERSION),devbuild)') && \
 		make clean-generate"

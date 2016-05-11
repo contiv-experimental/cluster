@@ -86,7 +86,7 @@ func (s *SystemTestSuite) nukeNodesInInventory(c *C) {
 func (s *SystemTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode, nodeName, exptdStatus string) {
 	exptdStr := fmt.Sprintf(`.*"status".*"%s".*`, exptdStatus)
 	out, err := tutils.WaitForDone(func() (string, bool) {
-		cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
+		cmdStr := fmt.Sprintf("clusterctl node get %s --json", nodeName)
 		out, err := tbn1.RunCommandWithOutput(cmdStr)
 		if err != nil {
 			return out, false
@@ -102,7 +102,7 @@ func (s *SystemTestSuite) checkProvisionStatus(c *C, tbn1 vagrantssh.TestbedNode
 
 func (s *SystemTestSuite) checkHostGroup(c *C, nodeName, exptdGroup string) {
 	exptdStr := fmt.Sprintf(`.*"host_group".*"%s".*`, exptdGroup)
-	cmdStr := fmt.Sprintf("clusterctl node get %s", nodeName)
+	cmdStr := fmt.Sprintf("clusterctl node get %s --json", nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	//replace newline with empty string for regex to match properly
@@ -211,7 +211,7 @@ func (s *SystemTestSuite) getNodeInfoFailureNonExistentNode(c *C, nodeName strin
 }
 
 func (s *SystemTestSuite) getNodeInfoSuccess(c *C, nodeName string) {
-	cmdStr := fmt.Sprintf(`clusterctl node get %s`, nodeName)
+	cmdStr := fmt.Sprintf(`clusterctl node get %s --json`, nodeName)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	exptdOut := `.*"monitoring_state":.*`

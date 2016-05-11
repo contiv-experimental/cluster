@@ -23,7 +23,16 @@ var (
 		Usage: "extra vars for ansible configuration. This should be a quoted json string.",
 	}
 
-	cmdFlags = []cli.Flag{
+	jsonFlag = cli.BoolFlag{
+		Name:  "json, j",
+		Usage: "print command output in JSON",
+	}
+
+	getFlags = []cli.Flag{
+		jsonFlag,
+	}
+
+	postFlags = []cli.Flag{
 		extraVarsFlag,
 	}
 
@@ -54,20 +63,21 @@ var (
 					Aliases: []string{"d"},
 					Usage:   "decommission a node",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeDecommission)),
-					Flags:   cmdFlags,
+					Flags:   postFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a node in maintenance",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeMaintenance)),
-					Flags:   cmdFlags,
+					Flags:   postFlags,
 				},
 				{
 					Name:    "get",
 					Aliases: []string{"g"},
 					Usage:   "get node's status information",
 					Action:  doAction(newGetActioner(nodeGet)),
+					Flags:   getFlags,
 				},
 			},
 		},
@@ -88,20 +98,21 @@ var (
 					Aliases: []string{"d"},
 					Usage:   "decommission a set of nodes",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesDecommission)),
-					Flags:   cmdFlags,
+					Flags:   postFlags,
 				},
 				{
 					Name:    "maintenance",
 					Aliases: []string{"m"},
 					Usage:   "put a set of nodes in maintenance",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesMaintenance)),
-					Flags:   cmdFlags,
+					Flags:   postFlags,
 				},
 				{
 					Name:    "get",
 					Aliases: []string{"g"},
 					Usage:   "get status information for all nodes",
 					Action:  doAction(newGetActioner(nodesGet)),
+					Flags:   getFlags,
 				},
 			},
 		},
@@ -115,13 +126,14 @@ var (
 					Aliases: []string{"g"},
 					Usage:   "get global info",
 					Action:  doAction(newGetActioner(globalsGet)),
+					Flags:   getFlags,
 				},
 				{
 					Name:    "set",
 					Aliases: []string{"s"},
 					Usage:   "set global info",
-					Flags:   cmdFlags,
 					Action:  doAction(newPostActioner(validateZeroArgs, globalsSet)),
+					Flags:   postFlags,
 				},
 			},
 		},
@@ -135,6 +147,7 @@ var (
 					Aliases: []string{"g"},
 					Usage:   "get job info. Expects an arg with value 'active' or 'last'",
 					Action:  doAction(newGetActioner(jobGet)),
+					Flags:   getFlags,
 				},
 			},
 		},
@@ -143,7 +156,7 @@ var (
 			Aliases: []string{"d"},
 			Usage:   "provision one or more nodes for discovery",
 			Action:  doAction(newPostActioner(validateMultiNodeAddrs, nodesDiscover)),
-			Flags:   cmdFlags,
+			Flags:   postFlags,
 		},
 	}
 )
@@ -154,6 +167,12 @@ func errUnexpectedArgCount(exptd string, rcvd int) error {
 
 func errInvalidIPAddr(a string) error {
 	return errored.Errorf("failed to parse ip address %q", a)
+}
+
+type parsedFlags struct {
+	extraVars  string
+	hostGroup  string
+	jsonOutput bool
 }
 
 type actioner interface {

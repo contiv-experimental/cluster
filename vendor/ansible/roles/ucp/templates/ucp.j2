@@ -36,14 +36,14 @@ start)
     {% if ucp_swarm_strategy != "spread" -%}
           --{{ ucp_swarm_strategy }} \
     {% endif -%}
-          --image-version={{ ucp_version }} | tee /tmp/ucp.log)
+          --image-version={{ ucp_version }} --fresh-install | tee /tmp/ucp.log)
 
     cat /tmp/ucp.log
     rm /tmp/ucp.log
     # copy out the instance ID
     instanceId=$(echo ${out} | egrep -o 'UCP instance ID: [a-zA-Z0-9:_]*' | \
         awk --field-separator='UCP instance ID: ' '{print $2}')
-    echo instance-id: $instanceId
+    echo instance-id: ${instanceId}
     echo ${instanceId} > "{{ ucp_remote_dir }}/{{ ucp_instance_id_file }}"
 
     # copy out the fingerprint.
@@ -54,10 +54,13 @@ start)
     # XXX: we need a way for this fingerprint to stick around wherever
     # contiv/cluster service is running. May be we can save this file on a
     # distributed filesystem
-    out=$(/usr/bin/docker run --rm -t --name ucp \
+    out=$(/usr/bin/docker run --rm --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
         docker/ucp fingerprint)
-    echo ${out} > "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}"
+    fingerprint=$(echo ${out} | egrep -o 'Fingerprint=[a-zA-Z0-9:]*' | \
+        awk --field-separator='=' '{print $2}')
+    echo fingerprint: ${fingerprint}
+    echo ${fingerprint} > "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}"
     {% else -%}
     /usr/bin/docker run --rm -t --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
@@ -86,6 +89,9 @@ stop)
 
     #remove the ucp containers and associated volumes
     docker ps -a | grep 'ucp-' | awk '{print $1}' | xargs docker rm -v
+
+    #explicitly try and remove ucp volumes (in case they were left over)
+    docker volume ls | grep ucp-* | awk '{print $2}' | xargs docker volume rm
 
     # XXX: do we need to uninstall ucp too?
     #/usr/bin/docker run --rm -t --name ucp \

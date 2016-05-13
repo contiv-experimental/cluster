@@ -20,6 +20,11 @@
     - "{{ ucp_port3 }}"
     - "{{ ucp_port4 }}"
     - "{{ ucp_port5 }}"
+    - "{{ ucp_port6 }}"
+    - "{{ ucp_port7 }}"
+    - "{{ ucp_port8 }}"
+    - "{{ ucp_port9 }}"
+    - "{{ ucp_hb_port }}"
     - "{{ ucp_swarm_port }}"
     - "{{ ucp_controller_port }}"
 

@@ -27,7 +27,7 @@ if ENV['CONTIV_BOX'] then
     box = ENV['CONTIV_BOX']
 end
 
-box_version = "0.3.6ba5a75"
+box_version = "0.5.0"
 if ENV['CONTIV_BOX_VERSION'] then
     box_version = ENV['CONTIV_BOX_VERSION']
 end

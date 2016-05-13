@@ -10,11 +10,6 @@ import (
 type postCallback func(c *manager.Client, args []string, flags parsedFlags) error
 type validateCallback func(args []string) error
 
-type parsedFlags struct {
-	extraVars string
-	hostGroup string
-}
-
 type postActioner struct {
 	args       []string
 	flags      parsedFlags

@@ -13,7 +13,7 @@ func (s *SystemTestSuite) TestSetGetGlobalExtraVarsSuccess(c *C) {
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 
-	cmdStr = fmt.Sprintf(`clusterctl global get`)
+	cmdStr = fmt.Sprintf(`clusterctl global get --json`)
 	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	exptdOut := `.*"foo":.*"bar".*`
@@ -37,7 +37,7 @@ func (s *SystemTestSuite) TestGetNodeInfoSuccess(c *C) {
 }
 
 func (s *SystemTestSuite) TestGetNodesInfoSuccess(c *C) {
-	cmdStr := `clusterctl nodes get`
+	cmdStr := `clusterctl nodes get --json`
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	exptdOut := `.*"monitoring_state":.*`

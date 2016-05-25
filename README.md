@@ -157,6 +157,7 @@ in the cluster.
 
 * [Installation and Operations Guide:](management/README.md) Deploy Contiv Cluster to bare metal servers
 or a Vagrant development environment.
+* [Troubleshooting Guide:](management/troubleshoot.md) Troubleshoot Contiv Cluster workflow failures.
 * [Design Documentation:](management/DESIGN.md) Learn more about the design details of
 Contiv Cluster.
 * [Roadmap:](management/ROADMAP.md) Learn more about the future of Contiv Cluster development.

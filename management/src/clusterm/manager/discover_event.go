@@ -61,7 +61,8 @@ func (e *discoverEvent) process() error {
 		}
 	}
 	if len(existingNodes) > 0 {
-		return errored.Errorf("one or more nodes already exist with the specified management addresses. Existing nodes: %v", existingNodes)
+		err = errored.Errorf("one or more nodes already exist with the specified management addresses. Existing nodes: %v", existingNodes)
+		return err
 	}
 
 	// prepare inventory

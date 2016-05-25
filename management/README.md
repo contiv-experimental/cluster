@@ -48,7 +48,7 @@ Commissioning a node involves pushing the configuration and starting infra servi
 **Note**:
 - certain ansible variables need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.
 ```
-clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_if": "eth2", "netplugin_if": "eth1" }' --host-group "service-master"
+clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_interface": "eth2", "netplugin_if": "eth1" }' --host-group "service-master"
 ```
 - a common set of variables (like environment) can be set just once as [global variables](#setget-global-variables). This eliminates the need to specify the common variables for every commission command.
 

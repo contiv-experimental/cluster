@@ -20,7 +20,7 @@
         - contiv_storage
         - swarm
         - ucp
-        - docker
         - etcd
         - ucarp
+        - docker
       ignore_errors: yes

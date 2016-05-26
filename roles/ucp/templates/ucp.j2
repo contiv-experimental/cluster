@@ -15,10 +15,10 @@ start)
     {% if ucp_bootstrap_node_name != node_name -%}
     # if node is running as a replica or worker make sure fingerprint file
     # exists before procceeding
-    for true; do
+    while [ 1 ]; do
         if [ ! -f  "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}" ]; then
             echo `date` ": waiting for fingerprint file..."
-            sleep 2s
+            sleep 5s
         else
             break
         fi
@@ -26,7 +26,7 @@ start)
     {% endif %}
 
     {% if ucp_bootstrap_node_name == node_name -%}
-    out=$(/usr/bin/docker run --rm -t --name ucp \
+    /usr/bin/docker run --rm -t --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
     {% if ucp_license_file is defined -%}
         -v {{ ucp_license_remote  }}:/docker_subscription.lic \
@@ -36,13 +36,17 @@ start)
     {% if ucp_swarm_strategy != "spread" -%}
           --{{ ucp_swarm_strategy }} \
     {% endif -%}
-          --image-version={{ ucp_version }} --fresh-install | tee /tmp/ucp.log)
+          --image-version={{ ucp_version }} --fresh-install
 
-    cat /tmp/ucp.log
-    rm /tmp/ucp.log
     # copy out the instance ID
-    instanceId=$(echo ${out} | egrep -o 'UCP instance ID: [a-zA-Z0-9:_]*' | \
-        awk --field-separator='UCP instance ID: ' '{print $2}')
+    out=$(/usr/bin/docker run --rm --name ucp \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        docker/ucp id)
+    instanceId=$(echo ${out} | egrep -o '[A-Z0-9:]*')
+    if [ "${instanceId}" == "" ]; then
+        echo failed to parse instance-id
+        exit 1
+    fi
     echo instance-id: ${instanceId}
     echo ${instanceId} > "{{ ucp_remote_dir }}/{{ ucp_instance_id_file }}"
 
@@ -57,8 +61,12 @@ start)
     out=$(/usr/bin/docker run --rm --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
         docker/ucp fingerprint)
-    fingerprint=$(echo ${out} | egrep -o 'Fingerprint=[a-zA-Z0-9:]*' | \
+    fingerprint=$(echo ${out} | egrep -o 'Fingerprint=[A-Z0-9:]*' | \
         awk --field-separator='=' '{print $2}')
+    if [ "${fingerprint}" == "" ]; then
+        echo failed to parse fingerprint
+        exit 1
+    fi
     echo fingerprint: ${fingerprint}
     echo ${fingerprint} > "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}"
     {% else -%}
@@ -83,6 +91,9 @@ start)
 
 stop)
     # don't `set -e` as we shouldn't stop on error
+
+    #remove the fifo file
+    rm -f "{{ ucp_remote_dir }}/{{ ucp_fifo_file }}"
 
     #stop the ucp containers and associated volumes
     docker ps -a | grep 'ucp-' | awk '{print $1}' | xargs docker stop

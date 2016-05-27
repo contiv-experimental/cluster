@@ -50,6 +50,7 @@
   wait_for:
     path: "{{ ucp_remote_dir }}/{{ item }}"
     state: present
+    timeout: 600
   with_items:
     - "{{ ucp_fingerprint_file }}"
     - "{{ ucp_instance_id_file }}"

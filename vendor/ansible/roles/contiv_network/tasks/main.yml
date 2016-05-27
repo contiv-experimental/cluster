@@ -93,7 +93,7 @@
     force: no
 
 - name: install contivctl
-  shell: tar vxjf {{ contivctl_dest_file }}
+  shell: tar vxzf {{ contivctl_dest_file }} --strip-components=1 contivctl-{{ contivctl_version_no_v }}/contivctl
   args:
     chdir: /usr/bin/
 

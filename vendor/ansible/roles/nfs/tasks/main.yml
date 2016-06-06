@@ -4,11 +4,10 @@
     name: nfs-server
     state: started
     enabled: yes
-  when: use_nfs
+  when: use_nfs_server
 
 - name: enable NFS client
   service:
     name: nfs-client.target
     state: started
     enabled: yes
-  when: use_nfs

@@ -69,6 +69,14 @@ start)
     fi
     echo fingerprint: ${fingerprint}
     echo ${fingerprint} > "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}"
+
+    # Save the root CA Key on bootstrap node
+    # The root CA key is replicated to replicas for HA
+    /usr/bin/docker run --rm -i --name ucp \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        docker/ucp backup --root-ca-only --passphrase "{{ ucp_cert_secret }}" \
+        --id ${instanceId} > "{{ ucp_remote_dir }}/{{ ucp_certificate_file }}"
+
     {% else -%}
     /usr/bin/docker run --rm -t --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
@@ -82,6 +90,16 @@ start)
           --image-version={{ ucp_version }} \
           --url="https://{{ service_vip }}:443" \
           --fingerprint=`cat "{{ ucp_remote_dir }}/{{ ucp_fingerprint_file }}"`
+
+    {% if run_as == "master" -%}
+    # On non-bootstrap master nodes, restore ucp certificates
+    /usr/bin/docker run -it --rm --name ucp \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        docker/ucp restore --root-ca-only --passphrase "{{ ucp_cert_secret }}" \
+        --id `cat "{{ ucp_remote_dir }}/{{ ucp_instance_id_file }}"` \
+        < "{{ ucp_remote_dir }}/{{ ucp_certificate_file }}"
+    {% endif %}
+
     {% endif %}
 
     # now just sleep to keep the service up

@@ -18,7 +18,7 @@ There are several variables that are made available to provide a good level of p
 - **env** is used to set the environment variables that need to be available to ansible tasks. A common usecase of this variable is to set the http-proxy info.
   - **env** is specified as a JSON dictionary. 
   ```
-  {"env": { "var1": "val1"}}
+  {"env": { "var1": "val1", "http_proxy": "http://my.proxy.url", "https_proxy": "http://my.proxy.url" }}
   ```
   - It should be set to empty dictionary if no environment variables needs to be set.
   ```

@@ -22,5 +22,6 @@
         - swarm
         - ucp
         - etcd
+        - nfs
         - docker
       ignore_errors: yes

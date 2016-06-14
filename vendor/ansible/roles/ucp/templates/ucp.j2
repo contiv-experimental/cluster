@@ -93,7 +93,7 @@ start)
 
     {% if run_as == "master" -%}
     # On non-bootstrap master nodes, restore ucp certificates
-    /usr/bin/docker run -it --rm --name ucp \
+    /usr/bin/docker run -i --rm --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
         docker/ucp restore --root-ca-only --passphrase "{{ ucp_cert_secret }}" \
         --id `cat "{{ ucp_remote_dir }}/{{ ucp_instance_id_file }}"` \

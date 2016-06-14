@@ -55,6 +55,16 @@ export ETCD_LISTEN_PEER_URLS=http://{{ node_addr }}:{{ etcd_peer_port1 }}
 export ETCD_HEARTBEAT_INTERVAL={{ etcd_heartbeat_interval }}
 export ETCD_ELECTION_TIMEOUT={{ etcd_election_timeout }}
 
+{% if run_as == "worker" %}
+# add_proxy() sets up the environment to run node as proxy
+# @args:
+#  - name of a peer node
+#  - address of that peer node
+add_proxy() {
+    export ETCD_PROXY=on
+    export ETCD_INITIAL_CLUSTER="{{ cluster_url("${1}", "${2}") }}"
+}
+{% else %}
 # get_peers() returns a comma separated list of peers in 'peers' variable
 get_peers() {
     #query for any members that might have been added overtime
@@ -69,15 +79,6 @@ get_peers() {
     peers="`echo | awk '{print gensub("{{ service_vip }}", "", "g", "'"${peers}"'")}'`"
     peers="`echo | awk '{print gensub(",,", "", "g", "'"${peers}"'")}'`"
     peers="${peers/#,/}"
-}
-
-# add_proxy() sets up the environment to run node as proxy
-# @args:
-#  - name of a peer node
-#  - address of that peer node
-add_proxy() {
-    export ETCD_PROXY=on
-    export ETCD_INITIAL_CLUSTER="{{ cluster_url("${1}", "${2}") }}"
 }
 
 # remove_member() removes the node from an existing cluster
@@ -147,6 +148,7 @@ init_cluster() {
         add_member "${peer}"
     fi
 }
+{% endif %}
 
 set -x
 case $1 in

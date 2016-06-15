@@ -147,11 +147,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 end
             end
 
-            # provision base packages needed for cluster management
-            if ansible_groups["cluster-node"] == nil then
-                ansible_groups["cluster-node"] = [ ]
+            # in dev mode, provision base packages needed for cluster management
+            # by tests
+            if clusterm_dev then
+                if ansible_groups["cluster-node"] == nil then
+                    ansible_groups["cluster-node"] = [ ]
+                end
+                ansible_groups["cluster-node"] << node_name
             end
-            ansible_groups["cluster-node"] << node_name
 
             # The first vm stimulates the first manually **configured** nodes
             # in a cluster

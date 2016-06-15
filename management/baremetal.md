@@ -52,18 +52,5 @@ After the changes look good, restart cluster manager
 sudo systemctl restart clusterm
 ```
 
-###3. Provision additional nodes for discovery
-Cluster Manager uses Serf as a discovery service for node health monitoring and for cluster bootstrapping.
-Use ```clusterctl discover``` to include additional nodes in the discovery service.
-The `<host-ip>` should be an IP address from a management network only used by infra services
-such as serf, etcd, swarm, etc..
-```
-clusterctl discover <host-ip>
-```
-
-**Note**:
-- Once the above command is run for a host, it will appear in `clusterctl nodes get` output in a few minutes.
-- the `clusterctl discover` command expects `env` and `control_interface` ansible variables to be specified. This can be achieved by using the `--extra-vars` flag or setting them at [global level](README.md/#setget-global-variables), if applicable. For more information on other available variables, also checkout [discovery section of ansible vars](ansible_vars.md#serf-based-discovery)
-
-###4. Ready to rock and roll!
-All set now, you can follow the cluster manager workflows as described [here](./README.md#get-list-of-discovered-nodes).
+###3. Ready to rock and roll!
+All set now, you can follow the cluster manager workflows as described [here](./README.md#provision-additional-nodes-for-discovery).

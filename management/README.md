@@ -31,6 +31,19 @@ CONTIV_NODES=3 make demo-cluster
 CONTIV_NODES=3 vagrant ssh cluster-node1
 ```
 
+#### Provision additional nodes for discovery
+```
+clusterctl discover <host-ip(s)>
+```
+Cluster Manager uses Serf as a discovery service for node health monitoring and for cluster bootstrapping. Use `discover` command to include additional nodes in the discovery service. The `<host-ip>` should be an IP address from a management network only used by infra services such as serf, etcd, swarm, etc..
+
+**Note**:
+```
+clusterctl discover 192.168.2.11 192.168.2.12 --extra-vars='{"env" : {}, "control_interface": "eth1" }'
+```
+- The command above will provision the other two vms (viz. cluster-node2 and cluster-node3) in the vagrant setup for serf based discovery. Once it is run, the discovered hosts will appear in `clusterctl nodes get` output in a few minutes.
+- the `clusterctl discover` command expects `env` and `control_interface` ansible variables to be specified. This can be achieved by using the `--extra-vars` flag as shown above or by setting them at [global level](#setget-global-variables), if applicable. For more information on other available variables, also checkout [discovery section of ansible vars](ansible_vars.md#serf-based-discovery)
+
 #### Get list of discovered nodes
 ```
 clusterctl nodes get
@@ -48,7 +61,7 @@ Commissioning a node involves pushing the configuration and starting infra servi
 **Note**:
 - certain ansible variables need to be set for provisioning a node. The list of mandatory and other useful variables is provided in [ansible_vars.md](./ansible_vars.md). The variables need to be passed as a quoted JSON string in node commission command using the `--extra-vars` flag.
 ```
-clusterctl node commission node1 --extra-vars='{"env" : {"http_proxy": "my.proxy.url"}, "control_interface": "eth2", "netplugin_if": "eth1" }' --host-group "service-master"
+clusterctl node commission node1 --extra-vars='{"env" : {}, "control_interface": "eth1", "netplugin_if": "eth2" }' --host-group "service-master"
 ```
 - a common set of variables (like environment) can be set just once as [global variables](#setget-global-variables). This eliminates the need to specify the common variables for every commission command.
 

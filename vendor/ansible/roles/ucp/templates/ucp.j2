@@ -75,7 +75,14 @@ start)
     /usr/bin/docker run --rm -i --name ucp \
         -v /var/run/docker.sock:/var/run/docker.sock \
         docker/ucp backup --root-ca-only --passphrase "{{ ucp_cert_secret }}" \
-        --id ${instanceId} > "{{ ucp_remote_dir }}/{{ ucp_certificate_file }}"
+        --id ${instanceId} > "{{ ucp_remote_dir }}"/cert.tar
+
+    # when directly dumping the output of docker/ucp backup to {{ ucp_certificate_file }}
+    # there is a big window where a empty {{ ucp_certificate_file }} is created first and
+    # then populated with data
+    # ansible fetch task picks up file of size 0 and the md5sum validation also passes
+    # so we create backup in a tmp file and then move it
+    mv "{{ ucp_remote_dir }}"/cert.tar "{{ ucp_remote_dir }}/{{ ucp_certificate_file }}"
 
     {% else -%}
     /usr/bin/docker run --rm -t --name ucp \

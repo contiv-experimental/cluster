@@ -66,7 +66,7 @@ ansible_extra_vars = {
     "validate_certs" => "no",
     "control_interface" => "eth1",
     "netplugin_if" => "eth2",
-    "docker_version" => "1.10.3",
+    "docker_version" => "1.11.1",
     "scheduler_provider" => "native-swarm",
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)

@@ -210,15 +210,15 @@ func (s *managerSuite) TestPostSuccess(c *C) {
 			exptdBody: reqExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
-		"maintenance": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName),
+		"update": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: "",
 			exptdBody: reqEmptyBody.Bytes(),
 			cb:        clstrC.PostNodeDecommission,
 		},
-		"maintenance-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName),
+		"update-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName),
 			nodeName:  testNodeName,
 			extraVars: testExtraVars,
 			exptdBody: reqExtraVarsBody.Bytes(),
@@ -283,7 +283,6 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			exptdBody: reqNodesExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesCommission,
 		},
-
 		"commission-host-group": {
 			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesCommission),
 			nodeNames: []string{testNodeName},
@@ -299,6 +298,38 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 			hostGroup: ansibleMasterGroupName,
 			exptdBody: reqNodesHostGroupExtraVarsBody.Bytes(),
 			cb:        clstrC.PostNodesCommission,
+		},
+		"update": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			hostGroup: "",
+			exptdBody: reqBody.Bytes(),
+			cb:        clstrC.PostNodesUpdate,
+		},
+		"update-extra-vars": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			hostGroup: "",
+			exptdBody: reqNodesExtraVarsBody.Bytes(),
+			cb:        clstrC.PostNodesUpdate,
+		},
+		"update-host-group": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate),
+			nodeNames: []string{testNodeName},
+			extraVars: "",
+			hostGroup: ansibleMasterGroupName,
+			exptdBody: reqNodesHostGroupBody.Bytes(),
+			cb:        clstrC.PostNodesUpdate,
+		},
+		"update-extra-vars-host-group": {
+			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate),
+			nodeNames: []string{testNodeName},
+			extraVars: testExtraVars,
+			hostGroup: ansibleMasterGroupName,
+			exptdBody: reqNodesHostGroupExtraVarsBody.Bytes(),
+			cb:        clstrC.PostNodesUpdate,
 		},
 	}
 	for testname, test := range testsCommission {
@@ -327,20 +358,6 @@ func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 		},
 		"decommission-extra-vars": {
 			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesDecommission),
-			nodeNames: []string{testNodeName},
-			extraVars: testExtraVars,
-			exptdBody: reqNodesExtraVarsBody.Bytes(),
-			cb:        clstrC.PostNodesDecommission,
-		},
-		"maintenance": {
-			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance),
-			nodeNames: []string{testNodeName},
-			extraVars: "",
-			exptdBody: reqBody.Bytes(),
-			cb:        clstrC.PostNodesDecommission,
-		},
-		"maintenance-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance),
 			nodeNames: []string{testNodeName},
 			extraVars: testExtraVars,
 			exptdBody: reqNodesExtraVarsBody.Bytes(),
@@ -438,7 +455,7 @@ func (s *managerSuite) TestPostMonitorEvent(c *C) {
 func (s *managerSuite) TestPostError(c *C) {
 	var reqEmptyBody bytes.Buffer
 	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeMaintenancePrefix, testNodeName)
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName)
 	expURL, err := url.Parse(expURLStr)
 	c.Assert(err, IsNil)
 	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqEmptyBody.Bytes()))
@@ -447,10 +464,10 @@ func (s *managerSuite) TestPostError(c *C) {
 		url:   baseURL,
 		httpC: httpC,
 	}
-	err = clstrC.PostNodeInMaintenance(testNodeName, "")
+	err = clstrC.PostNodeUpdate(testNodeName, "", "")
 	c.Assert(err, ErrorMatches, ".*test failure\n")
 
-	expURLStr = fmt.Sprintf("http://%s/%s", baseURL, PostNodesMaintenance)
+	expURLStr = fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate)
 	expURL, err = url.Parse(expURLStr)
 	c.Assert(err, IsNil)
 	var reqBody bytes.Buffer
@@ -461,7 +478,7 @@ func (s *managerSuite) TestPostError(c *C) {
 		url:   baseURL,
 		httpC: httpC,
 	}
-	err = clstrC.PostNodesInMaintenance([]string{testNodeName}, "")
+	err = clstrC.PostNodesUpdate([]string{testNodeName}, "", "")
 	c.Assert(err, ErrorMatches, ".*test failure\n")
 }
 

@@ -36,6 +36,7 @@ var (
 	validNodeAddrs         = []string{}
 	invalidNodeName        = "invalid-test-node"
 	dummyAnsibleFile       = "/tmp/yay"
+	dummyUpdateAnsibleFile = "/tmp/yay.updated"
 	testDataDir            = os.Getenv("TESTDATA_DIR")
 	ansibleMasterGroupName = "service-master"
 	ansibleWorkerGroupName = "service-worker"

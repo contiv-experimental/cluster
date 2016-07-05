@@ -120,21 +120,25 @@ func (c *Client) PostNodesDecommission(nodeNames []string, extraVars string) err
 	return c.doPost(PostNodesDecommission, req)
 }
 
-// PostNodeInMaintenance posts the request to put a node in-maintenance
-func (c *Client) PostNodeInMaintenance(nodeName, extraVars string) error {
+// PostNodeUpdate posts the request to update a node and optionally change
+// it's host-group when it is specified.
+func (c *Client) PostNodeUpdate(nodeName, extraVars, hostGroup string) error {
 	req := &APIRequest{
 		ExtraVars: extraVars,
+		HostGroup: hostGroup,
 	}
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeMaintenancePrefix, nodeName), req)
+	return c.doPost(fmt.Sprintf("%s/%s", PostNodeUpdatePrefix, nodeName), req)
 }
 
-// PostNodesInMaintenance posts the request to put a set of nodes in-maintenance
-func (c *Client) PostNodesInMaintenance(nodeNames []string, extraVars string) error {
+// PostNodesUpdate posts the request to update a set of node and optionally change
+// their host-group when it is specified.
+func (c *Client) PostNodesUpdate(nodeNames []string, extraVars, hostGroup string) error {
 	req := &APIRequest{
 		Nodes:     nodeNames,
 		ExtraVars: extraVars,
+		HostGroup: hostGroup,
 	}
-	return c.doPost(PostNodesMaintenance, req)
+	return c.doPost(PostNodesUpdate, req)
 }
 
 // PostNodesDiscover posts the request to provision a set of nodes for discovery

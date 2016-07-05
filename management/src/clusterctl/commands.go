@@ -36,7 +36,7 @@ var (
 		extraVarsFlag,
 	}
 
-	commissionFlags = []cli.Flag{
+	postHostGroupFlags = []cli.Flag{
 		extraVarsFlag,
 		cli.StringFlag{
 			Name:  "host-group, g",
@@ -56,7 +56,7 @@ var (
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
 					Action:  doAction(newPostActioner(validateOneNodeName, nodeCommission)),
-					Flags:   commissionFlags,
+					Flags:   postHostGroupFlags,
 				},
 				{
 					Name:    "decommission",
@@ -66,11 +66,11 @@ var (
 					Flags:   postFlags,
 				},
 				{
-					Name:    "maintenance",
-					Aliases: []string{"m"},
-					Usage:   "put a node in maintenance",
-					Action:  doAction(newPostActioner(validateOneNodeName, nodeMaintenance)),
-					Flags:   postFlags,
+					Name:    "update",
+					Aliases: []string{"u"},
+					Usage:   "update a node",
+					Action:  doAction(newPostActioner(validateOneNodeName, nodeUpdate)),
+					Flags:   postHostGroupFlags,
 				},
 				{
 					Name:    "get",
@@ -91,7 +91,7 @@ var (
 					Aliases: []string{"c"},
 					Usage:   "commission a set of nodes",
 					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesCommission)),
-					Flags:   commissionFlags,
+					Flags:   postHostGroupFlags,
 				},
 				{
 					Name:    "decommission",
@@ -101,10 +101,10 @@ var (
 					Flags:   postFlags,
 				},
 				{
-					Name:    "maintenance",
-					Aliases: []string{"m"},
-					Usage:   "put a set of nodes in maintenance",
-					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesMaintenance)),
+					Name:    "update",
+					Aliases: []string{"u"},
+					Usage:   "update a set of nodes",
+					Action:  doAction(newPostActioner(validateMultiNodeNames, nodesUpdate)),
 					Flags:   postFlags,
 				},
 				{

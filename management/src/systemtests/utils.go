@@ -4,6 +4,7 @@ package systemtests
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -173,6 +174,43 @@ func (s *SystemTestSuite) commissionNodes(c *C, nodeNames []string, hostGroup st
 	// provision the nodes
 	nodesStr := strings.Join(nodeNames, " ")
 	cmdStr := fmt.Sprintf("clusterctl nodes commission %s --host-group %s", nodesStr, hostGroup)
+	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	for _, name := range nodeNames {
+		s.checkProvisionStatus(c, s.tbn1, name, "Allocated")
+	}
+}
+
+func (s *SystemTestSuite) updateNode(c *C, nodeName, hostGroup string, nut vagrantssh.TestbedNode) {
+	// temporarily set the site.yml to site.yml.update
+	pwd, err := os.Getwd()
+	s.Assert(c, err, IsNil)
+	origFile := fmt.Sprintf("%s/../demo/files/site.yml", pwd)
+	tmpFile := fmt.Sprintf("%s/../demo/files/site.yml.1", pwd)
+	updtFile := fmt.Sprintf("%s/../demo/files/site.yml.update", pwd)
+	out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo mv %s %s", origFile, tmpFile))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	out, err = s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo cp %s %s", updtFile, origFile))
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	defer func() {
+		out, err := s.tbn1.RunCommandWithOutput(fmt.Sprintf("sudo mv %s %s", tmpFile, origFile))
+		s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	}()
+
+	// update the node
+	cmdStr := fmt.Sprintf("clusterctl node update %s --host-group %s", nodeName, hostGroup)
+	out, err = s.tbn1.RunCommandWithOutput(cmdStr)
+	s.Assert(c, err, IsNil, Commentf("output: %s", out))
+	s.checkProvisionStatus(c, s.tbn1, nodeName, "Allocated")
+
+	// verify that site.yml got executed on the node and created the dummy file
+	s.waitForStatToSucceed(c, nut, dummyUpdateAnsibleFile)
+}
+
+func (s *SystemTestSuite) updateNodes(c *C, nodeNames []string, hostGroup string) {
+	// update the nodes
+	nodesStr := strings.Join(nodeNames, " ")
+	cmdStr := fmt.Sprintf("clusterctl nodes update %s --host-group %s", nodesStr, hostGroup)
 	out, err := s.tbn1.RunCommandWithOutput(cmdStr)
 	s.Assert(c, err, IsNil, Commentf("output: %s", out))
 	for _, name := range nodeNames {

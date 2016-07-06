@@ -102,8 +102,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         node_name = node_names[n]
         node_addr = node_ips[n]
         node_vars = {
-            "etcd_master_addr" => node_ips[0],
-            "etcd_master_name" => node_names[0],
             "ucp_bootstrap_node_name" => node_names[0],
         }
         config.vm.define node_name do |node|
@@ -215,15 +213,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 node.vm.provision 'bootstrap-ansible', type: 'ansible' do |ansible|
                     ansible.groups = bootstrap_node_ansible_groups
                     ansible.playbook = ansible_playbook
-                    ansible.extra_vars = ansible_extra_vars.clone
+                    ansible.extra_vars = ansible_extra_vars
                     ansible.limit = 'all'
                 end
+                # 'main-ansible' provisioner helps us test etcd member addition
+                # scenario in the demo environment
                 node.vm.provision 'main-ansible', type: 'ansible' do |ansible|
                     ansible.groups = ansible_groups
                     ansible.playbook = ansible_playbook
-                    ansible.extra_vars = ansible_extra_vars.clone
-                    # Turn off init cluster as this is a member-add scenario
-                    ansible.extra_vars["etcd_init_cluster"] = false
+                    ansible.extra_vars = ansible_extra_vars
                     ansible.limit = 'all'
                 end
                 # run the shell provisioner on the first node, after all the provisioners,

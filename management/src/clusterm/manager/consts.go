@@ -63,13 +63,11 @@ const (
 )
 
 const (
-	ansibleMasterGroupName       = "service-master"
-	ansibleWorkerGroupName       = "service-worker"
-	ansibleDiscoverGroupName     = "cluster-node"
-	ansibleNodeNameHostVar       = "node_name"
-	ansibleNodeAddrHostVar       = "node_addr"
-	ansibleEtcdMasterAddrHostVar = "etcd_master_addr"
-	ansibleEtcdMasterNameHostVar = "etcd_master_name"
+	ansibleMasterGroupName   = "service-master"
+	ansibleWorkerGroupName   = "service-worker"
+	ansibleDiscoverGroupName = "cluster-node"
+	ansibleNodeNameHostVar   = "node_name"
+	ansibleNodeAddrHostVar   = "node_addr"
 
 	jobLabelActive = "active"
 	jobLabelLast   = "last"

@@ -104,10 +104,8 @@ func (e *commissionEvent) eventValidate() error {
 // of the existing master nodes.
 func (e *commissionEvent) prepareInventory() error {
 	nodeGroup := e.hostGroup
-	masterAddr := ""
-	masterName := ""
 	masterCommissioned := false
-	for name, node := range e.mgr.nodes {
+	for name := range e.mgr.nodes {
 		if _, ok := e._enodes[name]; ok {
 			// skip nodes in the event
 			continue
@@ -132,9 +130,6 @@ func (e *commissionEvent) prepareInventory() error {
 		}
 
 		// found a master node
-		masterAddr = node.Mon.GetMgmtAddress()
-		masterName = node.Cfg.GetTag()
-
 		masterCommissioned = true
 		break
 	}
@@ -148,8 +143,6 @@ func (e *commissionEvent) prepareInventory() error {
 	for _, node := range e._enodes {
 		hostInfo := node.Cfg.(*configuration.AnsibleHost)
 		hostInfo.SetGroup(nodeGroup)
-		hostInfo.SetVar(ansibleEtcdMasterAddrHostVar, masterAddr)
-		hostInfo.SetVar(ansibleEtcdMasterNameHostVar, masterName)
 		hosts = append(hosts, hostInfo)
 	}
 	e._hosts = hosts

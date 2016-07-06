@@ -89,60 +89,59 @@ func (e *commissionEvent) process() error {
 
 func (e *commissionEvent) eventValidate() error {
 	var err error
+	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)
+	if err != nil {
+		return err
+	}
+
 	if !IsValidHostGroup(e.hostGroup) {
 		return errored.Errorf("invalid or empty host-group specified: %q", e.hostGroup)
 	}
 
-	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)
-	return err
+	// when workers are being configured, make sure that there is atleast one service-master
+	if e.hostGroup == ansibleWorkerGroupName {
+		masterCommissioned := false
+		for name := range e.mgr.nodes {
+			if _, ok := e._enodes[name]; ok {
+				// skip nodes in the event
+				continue
+			}
+
+			isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
+			if err != nil || !isDiscoveredAndAllocated {
+				if err != nil {
+					log.Debugf("a node check failed for %q. Error: %s", name, err)
+				}
+				// skip hosts that are not yet provisioned or not in discovered state
+				continue
+			}
+
+			isMasterNode, err := e.mgr.isMasterNode(name)
+			if err != nil || !isMasterNode {
+				if err != nil {
+					log.Debugf("a node check failed for %q. Error: %s", name, err)
+				}
+				//skip the hosts that are not in master group
+				continue
+			}
+
+			// found a master node
+			masterCommissioned = true
+			break
+		}
+		if !masterCommissioned {
+			return errored.Errorf("Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.")
+		}
+	}
+	return nil
 }
 
-// prepareInventory takes care of assigning nodes to respective host-groups as part of
-// the commission workflow. It assigns nodes by following rules:
-// - if there are no commissioned nodes in discovered state, then add the current set to master group
-// - else add the nodes to worker group. And update the online master address to one
-// of the existing master nodes.
+// prepareInventory adds the specifed nodes to the specified host-group
 func (e *commissionEvent) prepareInventory() error {
-	nodeGroup := e.hostGroup
-	masterCommissioned := false
-	for name := range e.mgr.nodes {
-		if _, ok := e._enodes[name]; ok {
-			// skip nodes in the event
-			continue
-		}
-
-		isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
-		if err != nil || !isDiscoveredAndAllocated {
-			if err != nil {
-				log.Debugf("a node check failed for %q. Error: %s", name, err)
-			}
-			// skip hosts that are not yet provisioned or not in discovered state
-			continue
-		}
-
-		isMasterNode, err := e.mgr.isMasterNode(name)
-		if err != nil || !isMasterNode {
-			if err != nil {
-				log.Debugf("a node check failed for %q. Error: %s", name, err)
-			}
-			//skip the hosts that are not in master group
-			continue
-		}
-
-		// found a master node
-		masterCommissioned = true
-		break
-	}
-
-	if (masterCommissioned == false) && (nodeGroup == ansibleWorkerGroupName) {
-		return errored.Errorf("Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.")
-	}
-
-	// prepare inventory
 	hosts := []*configuration.AnsibleHost{}
 	for _, node := range e._enodes {
 		hostInfo := node.Cfg.(*configuration.AnsibleHost)
-		hostInfo.SetGroup(nodeGroup)
+		hostInfo.SetGroup(e.hostGroup)
 		hosts = append(hosts, hostInfo)
 	}
 	e._hosts = hosts

@@ -131,6 +131,7 @@
     url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
     dest: /usr/bin/docker-compose
     mode: u=rwx,g=rx,o=rx
+    force: yes
   when: not (docker_compose_installed_version.stdout | match('docker-compose version {{ docker_compose_version }},.*'))
   tags:
     - prebake-for-dev

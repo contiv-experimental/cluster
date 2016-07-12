@@ -3,28 +3,13 @@
 package manager
 
 const (
-	// PostNodeCommissionPrefix is the prefix for the POST REST endpoint
-	// to commission an asset
-	PostNodeCommissionPrefix = "commission/node"
-	postNodeCommission       = PostNodeCommissionPrefix + "/{tag}"
-
 	// PostNodesCommission is the prefix for the POST REST endpoint
 	// to commission one or more assets
 	PostNodesCommission = "commission/nodes"
 
-	// PostNodeDecommissionPrefix is the prefix for the POST REST endpoint
-	// to decommission an asset
-	PostNodeDecommissionPrefix = "decommission/node"
-	postNodeDecommission       = PostNodeDecommissionPrefix + "/{tag}"
-
 	// PostNodesDecommission is the prefix for the POST REST endpoint
 	// to decommission one or more assets
 	PostNodesDecommission = "decommission/nodes"
-
-	// PostNodeUpdatePrefix is the prefix for the POST REST endpoint
-	// to update configuration of an asset
-	PostNodeUpdatePrefix = "update/node"
-	postNodeUpdate       = PostNodeUpdatePrefix + "/{tag}"
 
 	// PostNodesUpdate is the prefix for the POST REST endpoint
 	// to update configuration of one or more assets

@@ -121,121 +121,6 @@ func getHTTPTestClientAndServer(c *C, handler http.HandlerFunc) (*httptest.Serve
 	return srvr, httpC
 }
 
-func (s *managerSuite) TestPostSuccess(c *C) {
-	clstrC := Client{
-		url: baseURL,
-	}
-
-	var reqHostGroupBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqHostGroupBody).Encode(testReqHostGroupBody), IsNil)
-
-	var reqHostGroupExtraVarsBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqHostGroupExtraVarsBody).Encode(testReqHostGroupExtraVarsBody), IsNil)
-
-	var reqExtraVarsBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqExtraVarsBody).Encode(testReqExtraVarsBody), IsNil)
-
-	var reqEmptyBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
-
-	testsCommission := map[string]struct {
-		expURLStr string
-		nodeName  string
-		extraVars string
-		hostGroup string
-		exptdBody []byte
-		cb        func(name, extraVars, hostGroup string) error
-	}{
-		"commission": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: "",
-			hostGroup: "",
-			exptdBody: reqEmptyBody.Bytes(),
-			cb:        clstrC.PostNodeCommission,
-		},
-		"commission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: testExtraVars,
-			hostGroup: "",
-			exptdBody: reqExtraVarsBody.Bytes(),
-			cb:        clstrC.PostNodeCommission,
-		},
-		"commission-host-group": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: "",
-			hostGroup: ansibleMasterGroupName,
-			exptdBody: reqHostGroupBody.Bytes(),
-			cb:        clstrC.PostNodeCommission,
-		},
-		"commission-extra-vars-host-group": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeCommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: testExtraVars,
-			hostGroup: ansibleMasterGroupName,
-			exptdBody: reqHostGroupExtraVarsBody.Bytes(),
-			cb:        clstrC.PostNodeCommission,
-		},
-	}
-	for testname, test := range testsCommission {
-		expURL, err := url.Parse(test.expURLStr)
-		c.Assert(err, IsNil, Commentf("test: %s", testname))
-
-		httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, test.exptdBody))
-		defer httpS.Close()
-		clstrC.httpC = httpC
-		c.Assert(test.cb(test.nodeName, test.extraVars, test.hostGroup), IsNil, Commentf("test: %s", testname))
-	}
-
-	tests := map[string]struct {
-		expURLStr string
-		nodeName  string
-		extraVars string
-		exptdBody []byte
-		cb        func(name string, extraVars string) error
-	}{
-		"decommission": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: "",
-			exptdBody: reqEmptyBody.Bytes(),
-			cb:        clstrC.PostNodeDecommission,
-		},
-		"decommission-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeDecommissionPrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: testExtraVars,
-			exptdBody: reqExtraVarsBody.Bytes(),
-			cb:        clstrC.PostNodeDecommission,
-		},
-		"update": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: "",
-			exptdBody: reqEmptyBody.Bytes(),
-			cb:        clstrC.PostNodeDecommission,
-		},
-		"update-extra-vars": {
-			expURLStr: fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName),
-			nodeName:  testNodeName,
-			extraVars: testExtraVars,
-			exptdBody: reqExtraVarsBody.Bytes(),
-			cb:        clstrC.PostNodeDecommission,
-		},
-	}
-	for testname, test := range tests {
-		expURL, err := url.Parse(test.expURLStr)
-		c.Assert(err, IsNil, Commentf("test: %s", testname))
-
-		httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, test.exptdBody))
-		defer httpS.Close()
-		clstrC.httpC = httpC
-		c.Assert(test.cb(test.nodeName, test.extraVars), IsNil, Commentf("test: %s", testname))
-	}
-}
-
 func (s *managerSuite) TestPostMultiNodesSuccess(c *C) {
 	clstrC := Client{
 		url: baseURL,
@@ -453,28 +338,14 @@ func (s *managerSuite) TestPostMonitorEvent(c *C) {
 }
 
 func (s *managerSuite) TestPostError(c *C) {
-	var reqEmptyBody bytes.Buffer
-	c.Assert(json.NewEncoder(&reqEmptyBody).Encode(testReqEmptyBody), IsNil)
-	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, PostNodeUpdatePrefix, testNodeName)
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate)
 	expURL, err := url.Parse(expURLStr)
-	c.Assert(err, IsNil)
-	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqEmptyBody.Bytes()))
-	defer httpS.Close()
-	clstrC := Client{
-		url:   baseURL,
-		httpC: httpC,
-	}
-	err = clstrC.PostNodeUpdate(testNodeName, "", "")
-	c.Assert(err, ErrorMatches, ".*test failure\n")
-
-	expURLStr = fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate)
-	expURL, err = url.Parse(expURLStr)
 	c.Assert(err, IsNil)
 	var reqBody bytes.Buffer
 	c.Assert(json.NewEncoder(&reqBody).Encode(testReqNodesBody), IsNil)
-	httpS, httpC = getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqBody.Bytes()))
+	httpS, httpC := getHTTPTestClientAndServer(c, failureReturner(c, expURL, reqBody.Bytes()))
 	defer httpS.Close()
-	clstrC = Client{
+	clstrC := Client{
 		url:   baseURL,
 		httpC: httpC,
 	}

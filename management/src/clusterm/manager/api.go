@@ -81,8 +81,8 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},
 			{"/" + postNodeDecommission, jsonContentHdrs, post(m.nodesDecommission)},
 			{"/" + PostNodesDecommission, jsonContentHdrs, post(m.nodesDecommission)},
-			{"/" + postNodeMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
-			{"/" + PostNodesMaintenance, jsonContentHdrs, post(m.nodesMaintenance)},
+			{"/" + postNodeUpdate, jsonContentHdrs, post(m.nodesUpdate)},
+			{"/" + PostNodesUpdate, jsonContentHdrs, post(m.nodesUpdate)},
 			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
 			{"/" + PostGlobals, jsonContentHdrs, post(m.globalsSet)},
 			{"/" + PostMonitorEvent, jsonContentHdrs, post(m.monitorEvent)},
@@ -188,8 +188,8 @@ func (m *Manager) nodesDecommission(req *APIRequest) error {
 	return me.waitForCompletion()
 }
 
-func (m *Manager) nodesMaintenance(req *APIRequest) error {
-	me := newWaitableEvent(newMaintenanceEvent(m, req.Nodes, req.ExtraVars))
+func (m *Manager) nodesUpdate(req *APIRequest) error {
+	me := newWaitableEvent(newUpdateEvent(m, req.Nodes, req.ExtraVars, req.HostGroup))
 	m.reqQ <- me
 	return me.waitForCompletion()
 }

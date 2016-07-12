@@ -21,14 +21,14 @@ const (
 	// to decommission one or more assets
 	PostNodesDecommission = "decommission/nodes"
 
-	// PostNodeMaintenancePrefix is the prefix for the POST REST endpoint
-	// to put an asset in maintenance
-	PostNodeMaintenancePrefix = "maintenance/node"
-	postNodeMaintenance       = PostNodeMaintenancePrefix + "/{tag}"
+	// PostNodeUpdatePrefix is the prefix for the POST REST endpoint
+	// to update configuration of an asset
+	PostNodeUpdatePrefix = "update/node"
+	postNodeUpdate       = PostNodeUpdatePrefix + "/{tag}"
 
-	// PostNodesMaintenance is the prefix for the POST REST endpoint
-	// to put one or more assets in maintenance
-	PostNodesMaintenance = "maintenance/nodes"
+	// PostNodesUpdate is the prefix for the POST REST endpoint
+	// to update configuration of one or more assets
+	PostNodesUpdate = "update/nodes"
 
 	// PostNodesDiscover is the prefix for the POST REST endpoint
 	// to provision one or more specified nodes for discovery

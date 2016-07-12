@@ -76,12 +76,12 @@ build-docker-shell: build-docker-img
 	@$(docker_run_interactive)
 
 build: build-docker-img
-	@echo "building test image..."
+	@echo "building image..."
 	@$(docker_run) bash -c "make checks generate && \
 		($(all_packages) | xargs -n1 go install \
 		    -ldflags '-X main.version=$(if $(BUILD_VERSION),$(BUILD_VERSION),devbuild)') && \
 		make clean-generate"
-	@echo "done building test image..."
+	@echo "done building image..."
 
 unit-test: build-docker-img
 	@echo "running unit-tests"

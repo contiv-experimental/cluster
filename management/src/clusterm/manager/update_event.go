@@ -9,12 +9,8 @@ import (
 	"github.com/contiv/errored"
 )
 
-func errActiveJob(desc string) error {
-	return errored.Errorf("there is already an active job, please try in sometime. Job: %s", desc)
-}
-
-// commissionEvent triggers the commission workflow
-type commissionEvent struct {
+// updateEvent triggers the upgrade workflow
+type updateEvent struct {
 	mgr       *Manager
 	nodeNames []string
 	extraVars string
@@ -24,9 +20,9 @@ type commissionEvent struct {
 	_enodes map[string]*node
 }
 
-// newCommissionEvent creates and returns commissionEvent
-func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup string) *commissionEvent {
-	return &commissionEvent{
+// newUpdateEvent creates and returns updateEvent
+func newUpdateEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup string) *updateEvent {
+	return &updateEvent{
 		mgr:       mgr,
 		nodeNames: nodeNames,
 		extraVars: extraVars,
@@ -34,18 +30,17 @@ func newCommissionEvent(mgr *Manager, nodeNames []string, extraVars, hostGroup s
 	}
 }
 
-func (e *commissionEvent) String() string {
-	return fmt.Sprintf("commissionEvent: nodes:%v extra-vars:%v host-group:%v",
-		e.nodeNames, e.extraVars, e.hostGroup)
+func (e *updateEvent) String() string {
+	return fmt.Sprintf("updateEvent: nodes: %v extra-vars: %v host-group: %q", e.nodeNames, e.extraVars, e.hostGroup)
 }
 
-func (e *commissionEvent) process() error {
+func (e *updateEvent) process() error {
 	// err shouldn't be redefined below
 	var err error
 
 	err = e.mgr.checkAndSetActiveJob(
 		e.String(),
-		e.configureOrCleanupOnErrorRunner,
+		e.updateRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
 				log.Errorf("configuration job failed. Error: %v", errRet)
@@ -71,31 +66,32 @@ func (e *commissionEvent) process() error {
 	}
 
 	// prepare inventory
-	if err = e.prepareInventory(); err != nil {
+	if err = e.pepareInventory(); err != nil {
 		return err
 	}
 
-	// set assets as provisioning
-	if err = e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetProvisioning,
-		e.mgr.inventory.SetAssetUnallocated); err != nil {
+	//set assets as in-maintenance
+	if err = e.mgr.setAssetsStatusAtomic(e.nodeNames, e.mgr.inventory.SetAssetInMaintenance,
+		e.mgr.inventory.SetAssetCommissioned); err != nil {
 		return err
 	}
 
-	// trigger node configuration
+	// trigger node upgrade event
 	go e.mgr.runActiveJob()
 
 	return nil
 }
 
-func (e *commissionEvent) eventValidate() error {
+// eventValidate perfoms the validations
+func (e *updateEvent) eventValidate() error {
 	var err error
 	e._enodes, err = e.mgr.commonEventValidate(e.nodeNames)
 	if err != nil {
 		return err
 	}
 
-	if !IsValidHostGroup(e.hostGroup) {
-		return errored.Errorf("invalid or empty host-group specified: %q", e.hostGroup)
+	if e.hostGroup != "" && !IsValidHostGroup(e.hostGroup) {
+		return errored.Errorf("invalid host-group specified: %q", e.hostGroup)
 	}
 
 	// when workers are being configured, make sure that there is atleast one service-master
@@ -130,29 +126,37 @@ func (e *commissionEvent) eventValidate() error {
 			break
 		}
 		if !masterCommissioned {
-			return errored.Errorf("Cannot commission a worker node without existence of a master node in the cluster, make sure atleast one master node is commissioned.")
+			return errored.Errorf("Updating these nodes as worker will result in no master node in the cluster, make sure atleast one node is commissioned as master.")
 		}
 	}
 	return nil
 }
 
-// prepareInventory adds the specifed nodes to the specified host-group
-func (e *commissionEvent) prepareInventory() error {
+// pepareInventory prepares the inventory for update event.
+func (e *updateEvent) pepareInventory() error {
 	hosts := []*configuration.AnsibleHost{}
 	for _, node := range e._enodes {
-		hostInfo := node.Cfg.(*configuration.AnsibleHost)
-		hostInfo.SetGroup(e.hostGroup)
-		hosts = append(hosts, hostInfo)
+		host := node.Cfg.(*configuration.AnsibleHost)
+		if e.hostGroup != "" {
+			host.SetGroup(e.hostGroup)
+		}
+		hosts = append(hosts, host)
 	}
 	e._hosts = hosts
 
 	return nil
 }
 
-// configureOrCleanupOnErrorRunner is the job runner that runs configuration playbooks on one or more nodes.
-// It runs cleanup playbook on failure
-func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
-	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
+// updateRunner is the job runner that runs a cleanup playbook followed by provision playbook
+// on one or more nodes. In case of provision failure the cleanup playbook it run again.
+func (e *updateEvent) updateRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
+	outReader, cancelFunc, errCh := e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
+	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
+		log.Errorf("first cleanup failed. Error: %s", err)
+		// XXX: is there a case where we should continue on error here?
+		return err
+	}
+	outReader, cancelFunc, errCh = e.mgr.configuration.Configure(e._hosts, e.extraVars)
 	cfgErr := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs)
 	if cfgErr == nil {
 		return nil
@@ -160,7 +164,7 @@ func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel
 	log.Errorf("configuration failed, starting cleanup. Error: %s", cfgErr)
 	outReader, cancelFunc, errCh = e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
-		log.Errorf("cleanup failed. Error: %s", err)
+		log.Errorf("second cleanup failed. Error: %s", err)
 	}
 
 	//return the error status from provisioning

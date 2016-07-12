@@ -57,9 +57,9 @@ func nodeDecommission(c *manager.Client, args []string, flags parsedFlags) error
 	return c.PostNodeDecommission(nodeName, flags.extraVars)
 }
 
-func nodeMaintenance(c *manager.Client, args []string, flags parsedFlags) error {
+func nodeUpdate(c *manager.Client, args []string, flags parsedFlags) error {
 	nodeName := args[0]
-	return c.PostNodeInMaintenance(nodeName, flags.extraVars)
+	return c.PostNodeUpdate(nodeName, flags.extraVars, flags.hostGroup)
 }
 
 func validateMultiNodeNames(args []string) error {
@@ -77,8 +77,8 @@ func nodesDecommission(c *manager.Client, args []string, flags parsedFlags) erro
 	return c.PostNodesDecommission(args, flags.extraVars)
 }
 
-func nodesMaintenance(c *manager.Client, args []string, flags parsedFlags) error {
-	return c.PostNodesInMaintenance(args, flags.extraVars)
+func nodesUpdate(c *manager.Client, args []string, flags parsedFlags) error {
+	return c.PostNodesUpdate(args, flags.extraVars, flags.hostGroup)
 }
 
 func validateMultiNodeAddrs(args []string) error {

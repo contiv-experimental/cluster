@@ -87,10 +87,11 @@ func (c *Client) doGet(rsrc string) ([]byte, error) {
 // PostNodeCommission posts the request to commission a node
 func (c *Client) PostNodeCommission(nodeName, extraVars, hostGroup string) error {
 	req := &APIRequest{
+		Nodes:     []string{nodeName},
 		HostGroup: hostGroup,
 		ExtraVars: extraVars,
 	}
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeCommissionPrefix, nodeName), req)
+	return c.doPost(PostNodesCommission, req)
 }
 
 // PostNodesCommission posts the request to commission a set of nodes
@@ -106,9 +107,10 @@ func (c *Client) PostNodesCommission(nodeNames []string, extraVars, hostGroup st
 // PostNodeDecommission posts the request to decommission a node
 func (c *Client) PostNodeDecommission(nodeName, extraVars string) error {
 	req := &APIRequest{
+		Nodes:     []string{nodeName},
 		ExtraVars: extraVars,
 	}
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeDecommissionPrefix, nodeName), req)
+	return c.doPost(PostNodesDecommission, req)
 }
 
 // PostNodesDecommission posts the request to decommission a set of nodes
@@ -124,10 +126,11 @@ func (c *Client) PostNodesDecommission(nodeNames []string, extraVars string) err
 // it's host-group when it is specified.
 func (c *Client) PostNodeUpdate(nodeName, extraVars, hostGroup string) error {
 	req := &APIRequest{
+		Nodes:     []string{nodeName},
 		ExtraVars: extraVars,
 		HostGroup: hostGroup,
 	}
-	return c.doPost(fmt.Sprintf("%s/%s", PostNodeUpdatePrefix, nodeName), req)
+	return c.doPost(PostNodesUpdate, req)
 }
 
 // PostNodesUpdate posts the request to update a set of node and optionally change

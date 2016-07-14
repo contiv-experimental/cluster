@@ -77,11 +77,8 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + getJob, emptyHdrs, get(m.jobGet)},
 		},
 		"POST": {
-			{"/" + postNodeCommission, jsonContentHdrs, post(m.nodesCommission)},
 			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},
-			{"/" + postNodeDecommission, jsonContentHdrs, post(m.nodesDecommission)},
 			{"/" + PostNodesDecommission, jsonContentHdrs, post(m.nodesDecommission)},
-			{"/" + postNodeUpdate, jsonContentHdrs, post(m.nodesUpdate)},
 			{"/" + PostNodesUpdate, jsonContentHdrs, post(m.nodesUpdate)},
 			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
 			{"/" + PostGlobals, jsonContentHdrs, post(m.globalsSet)},

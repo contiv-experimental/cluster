@@ -3,7 +3,7 @@
 
 gopath_dir="/opt/gopath"
 gobin_dir="#{gopath_dir}/bin"
-base_ip = "192.168.2."
+base_ip = "172.16.2."
 
 num_nodes = 1
 if ENV['CONTIV_NODES'] && ENV['CONTIV_NODES'] != "" then
@@ -27,7 +27,7 @@ if ENV['CONTIV_BOX'] then
     box = ENV['CONTIV_BOX']
 end
 
-box_version = "0.6.0"
+box_version = "0.7.0"
 if ENV['CONTIV_BOX_VERSION'] then
     box_version = ENV['CONTIV_BOX_VERSION']
 end

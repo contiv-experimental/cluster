@@ -109,7 +109,7 @@ system-test:
 	 export CONTIV_SOE=${CONTIV_SOE}; \
 	 export GOPATH=/opt/gopath/; \
 	 export PATH=\$$PATH:\$$GOPATH/bin; \
-	 export CONTIV_NODE_IPS='192.168.2.10,192.168.2.11'; \
+	 export CONTIV_NODE_IPS='172.16.2.10,172.16.2.11'; \
 	 if [ \"${http_proxy}\" != \"\" ]; then export http_proxy=${http_proxy}; fi; \
 	 if [ \"${https_proxy}\" != \"\" ]; then export https_proxy=${https_proxy}; fi; \
 	 cd \$$GOPATH/src/github.com/contiv/cluster/management/src; \

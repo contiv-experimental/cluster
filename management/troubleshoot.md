@@ -8,6 +8,7 @@ This section details what goes on behind the scenes when a cluster manager workf
 - [Discovery](#discovery): lists details of discovery process
 - [Commission](#commission): lists details of the node(s) commission process
 - [Decommission](#decommission): lists details of the node(s) decommission process
+- [Update](#update): lists details of the node(s) update process
 
 Clusterm uses [ansible](https://www.ansible.com/get-started) playbooks for handling different workflows. So being able to find the ansible task that failed is crucial to troubleshooting configuration failure. [Parsing Ansible Logs](#parsing-ansible-logs) section walks through a few samples of ansible logs and patterns to look for failures.
 
@@ -27,9 +28,9 @@ Once the configuration job is done, i.e. when `clusterctl job get active` return
 Refer [Useful Commands](#useful-commands) section to see commands to run and making sense of the logs.
 
 #### Commission
-The [Commission workflow](./README.md#commission-a-node) runs [site.yml playbook](https://github.com/contiv/ansible/blob/master/site.yml) with the nodes that are being commissioned added to either `service-master` or `service-worker` host-group as specified in the commission command.
+The [Commission workflow](./README.md#commission-a-node) runs [site.yml playbook](https://github.com/contiv/ansible/blob/master/site.yml) with the nodes, that are being commissioned, added to either `service-master` or `service-worker` host-group as specified in the commission command.
 
-While commission is in progress the node's status is changed to 'Provisioning'.
+While commission is in progress the node's status is changed to `Provisioning`.
 
 ##### On Success:
 Once the configuration job is done, i.e. when `clusterctl job get active` returns `info for "active" job doesn't exist` error, the node status is be updated to `Allocated` in the  `clusterctl nodes get` command.
@@ -42,12 +43,25 @@ Refer [Useful Commands](#useful-commands) section to see commands to run and mak
 #### Decommission
 The [Decommission workflow](./README.md#decommission-a-node) runs [cleanup.yml playbook](https://github.com/contiv/ansible/blob/master/cleanup.yml) on the nodes that are being decommissioned. This shall stop the infra services and cleanup any service state from the node.
 
-While decommission is in progress the node's status is changed to 'Cancelled'.
+While decommission is in progress the node's status is changed to `Cancelled`.
 
 ##### On Success and Failure:
 Once the configuration job is done, i.e. `clusterctl job get active` returns `info for "active" job doesn't exist` error, the node status is be updated to `Decommissioned` in the  `clusterctl nodes get` command.
 
 The decommission playbook runs in it's entirety to do the best effort cleanup and is not expected to return failure.
+
+#### Update
+The [Update workflow](./README.md#update-a-node) runs [cleanup.yml playbook](https://github.com/contiv/ansible/blob/master/cleanup.yml) followed by the [site.yml playbook](https://github.com/contiv/ansible/blob/master/site.yml) with the nodes, that are being updated, added to previously-set host-group as specified in the commission command. If `--host-group` flag is provides then all nodes are provisioned as part of that host-group.
+
+While update is in progress the node's status is changed to `Maintenance`.
+
+##### On Success:
+Once the configuration job is done, i.e. when `clusterctl job get active` returns `info for "active" job doesn't exist` error, the node status is be updated to `Allocated` in the  `clusterctl nodes get` command.
+
+##### On Failure:
+Once the configuration job is done, i.e. when `clusterctl job get active` returns `info for "active" job doesn't exist` error, the node status is be updated to `Unallocated` in the  `clusterctl nodes get` command. The [cleanup.yml playbook](https://github.com/contiv/ansible/blob/master/cleanup.yml) is run on the node to remove any partial configuration remanants.
+
+Refer [Useful Commands](#useful-commands) section to see commands to run and making sense of the logs.
 
 ### Useful commands
 This section lists the a few useful commands, with sample outputs and common examples of parsing the logs.

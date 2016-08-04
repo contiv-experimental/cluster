@@ -72,12 +72,19 @@ clusterctl node decommission <node-name>
 
 Decommissioning a node involves stopping and cleaning the configuration for infra services on that node using `ansible` based configuration management.
 
-#### Perform an upgrade
+#### Update a node
 ```
-clusterctl node maintain <node-name>
+clusterctl node update <node-name>
 ```
 
-Upgrading a node involves upgrading the configuration for infra services on that node using `ansible` based configuration management.
+Updating a node involves updating the configuration for infra services on that node using `ansible` based configuration management. Other use-cases for updating a node include installing newer versions of infra services or changing the host-group of the node like changing a node from worker to master and vice-versa.
+
+**Note**:
+```
+clusterctl node update node1 --extra-vars='{"env" : {}, "control_interface": "eth1", "netplugin_if": "eth2" }' --host-group "service-worker"
+```
+- similar to [commission](#commission-a-node) command, the `--extra-vars` flag can be used with the `update` command to specify ansible variables needed for provisioning the node.
+- to change the host-group of a node, the `--host-group` flag is used. If this flag is not specified then node's configuration is updated with the last set host-group.
 
 #### Set/Get global variables
 ```
@@ -103,10 +110,10 @@ Common cluster management workflows like commission, decommission and so on invo
 ```
 clusterctl nodes commission <space separated node-name(s)>
 clusterctl nodes decommission <space separated node-name(s)>
-clusterctl nodes maintain <space separated node-name(s)>
+clusterctl nodes update <space separated node-name(s)>
 ```
 
-The worflow to commission, decommission or upgrade all or a subset of nodes can be performed by using `clusterctl nodes` subcommands. Please refer the documentation of individual commands above for details.
+The worflow to commission, decommission or update all or a subset of nodes can be performed by using `clusterctl nodes` subcommands. Please refer the documentation of individual commands above for details.
 
 ##Want to learn more?
-Read the [design spec](DESIGN.md) and/or see the remaining/upcoming items in [roadmap](ROADMAP.md)
+Read the [design spec](DESIGN.md) and/or see the remaining/upcoming features in [github issues page](https://github.com/contiv/cluster/issues)

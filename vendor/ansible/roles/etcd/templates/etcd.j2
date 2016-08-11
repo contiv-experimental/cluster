@@ -103,10 +103,10 @@ add_member() {
     res=1
     for i in {1..10}; do
         sleep $[ ( $RANDOM % 10 )  + 1 ]s
-        # XXX: There seems an issue using etcdctl with ETCD_INITIAL_ADVERTISE_PEER_URLS so passing
-        # ETCD_LISTEN_PEER_URLS for now
+        # XXX: There seems an issue using etcdctl with multiple urls set in ETCD_INITIAL_ADVERTISE_PEER_URLS
+        # so setting the single url manually here
         out=`etcdctl {{ etcdctl_flags("${1}") }} \
-            member add {{ node_name }} "$ETCD_LISTEN_PEER_URLS" 2>&1`
+            member add {{ node_name }} "http://{{ node_addr }}:{{ etcd_peer_port1 }}" 2>&1`
         res=$?
         if [ "${res}" == "0" ]; then
             break

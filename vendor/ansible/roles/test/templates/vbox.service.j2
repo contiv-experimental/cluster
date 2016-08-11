@@ -1,13 +1,13 @@
 [Unit]
-Description=Serf
+Description=Virtualbox Server
 After=network.target auditd.service systemd-user-sessions.service time-sync.target
 
 [Service]
-ExecStart=/usr/bin/serf.sh start
-ExecStop=/usr/bin/serf.sh stop
+ExecStart=/usr/lib/virtualbox/VBoxSVC --pidfile VBoxSVC.pid
 Restart=on-failure
 RestartSec=10
 KillMode=control-group
+User={{ ansible_user }}
 
 [Install]
 WantedBy=multi-user.target

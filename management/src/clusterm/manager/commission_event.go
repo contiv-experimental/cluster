@@ -136,7 +136,7 @@ func (e *commissionEvent) eventValidate() error {
 	return nil
 }
 
-// prepareInventory adds the specifed nodes to the specified host-group
+// prepareInventory adds the specified nodes to the specified host-group
 func (e *commissionEvent) prepareInventory() error {
 	hosts := []*configuration.AnsibleHost{}
 	for _, node := range e._enodes {

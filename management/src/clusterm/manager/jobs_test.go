@@ -171,7 +171,7 @@ func (s *jobsSuite) TestJobLogs(c *C) {
 	rcvdLogs, err := ioutil.ReadAll(j.Logs())
 	c.Assert(err, IsNil)
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr))
-	// read again to make sure it works everytime
+	// read again to make sure it works every time
 	rcvdLogs, err = ioutil.ReadAll(j.Logs())
 	c.Assert(err, IsNil)
 	c.Assert([]byte(rcvdLogs), DeepEquals, []byte(exptdLogStr))

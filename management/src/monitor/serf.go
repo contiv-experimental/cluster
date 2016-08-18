@@ -124,7 +124,7 @@ func (sm *SerfSubsys) Start() error {
 		if err := sm.restore(); err != nil {
 			log.Errorf("error occurred while restoring monitor state. Error: %v", err)
 		} else if err := sm.router.InitSerfFromConfigAndServe(sm.config); err != nil {
-			log.Errorf("error occured in monitor loop. Error: %s", err)
+			log.Errorf("error occurred in monitor loop. Error: %s", err)
 		}
 
 		// wait and retry for serf errors to be resolved

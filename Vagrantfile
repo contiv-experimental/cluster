@@ -43,7 +43,15 @@ end
 if ENV["http_proxy"]
   host_env["HTTP_PROXY"]  = host_env["http_proxy"]  = ENV["http_proxy"]
   host_env["HTTPS_PROXY"] = host_env["https_proxy"] = ENV["https_proxy"]
-  host_env["NO_PROXY"]    = host_env["no_proxy"]    = ENV["no_proxy"]
+  host_env["NO_PROXY"]    = host_env["no_proxy"]    = (ENV["no_proxy"] || "127.0.0.1,localhost,netmaster")
+end
+
+# CONTIV_SCHEDULER can be set to select the scheduler provider for the cluster.
+# The allowed values are documented in ./vendor/ansible/roles/scheduler_stack/defaults/main.yml
+scheduler = (ENV['CONTIV_SCHEDULER'] || "native-swarm")
+netplugin_mode ="docker"
+if scheduler == "kubernetes"
+    netplugin_mode = "kubernetes"
 end
 
 ceph_vars = {
@@ -67,7 +75,8 @@ ansible_extra_vars = {
     "control_interface" => "eth1",
     "netplugin_if" => "eth2",
     "docker_version" => "1.11.1",
-    "scheduler_provider" => "native-swarm",
+    "scheduler_provider" => scheduler,
+    "netplugin_mode" => netplugin_mode,
 }
 ansible_extra_vars = ansible_extra_vars.merge(ceph_vars)
 

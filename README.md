@@ -9,7 +9,8 @@ Contiv Cluster intends on supporting a range of clustering software such as Dock
 Apache Mesos, and others. Currently, Contiv Cluster supports the following cluster formation:
 
 * **Cluster Type**: Docker [Unified Control Plane]
-(https://www.docker.com/products/docker-universal-control-plane) | Docker [Swarm](https://docs.docker.com/swarm/)
+(https://www.docker.com/products/docker-universal-control-plane) | Docker [Swarm](https://docs.docker.com/swarm/) |
+ [Kubernetes](http://kubernetes.io/)
 * **Cluster OS**: [CentOS 7.2](https://www.centos.org/)
 * **Cluster Target**: Bare Metal | [Vagrant](https://www.vagrantup.com/)
 

@@ -50,7 +50,7 @@ There are several variables that are made available to provide a good level of p
   ```
 
 ####Scheduler stack
-- **scheduler_provider** identifies the scheduler stack to use. We support two stacks viz. `native-swarm` and `ucp-swarm`. The first brings-up a swarm cluster using the stock swarm image from dockerhub. The seconds brings-up a ucp cluster which bundles swarm in it.
+- **scheduler_provider** identifies the scheduler stack to use. We support three stacks viz. `native-swarm`, `ucp-swarm` and `kubernetes`. The first brings-up a swarm cluster using the stock swarm image from dockerhub. The second brings-up a ucp cluster which bundles swarm in it. And the third brings up a kubernetes cluster using the hyberkube container image.
   - **scheduler_provider** is specified as a JSON string
   ```
   {"scheduler_provider": "ucp-swarm"}
@@ -116,6 +116,14 @@ There are several variables that are made available to provide a good level of p
     ```
     {"fwd_mode": "routing"}
     ```
+
+  **Following are the relevant variables when `scheduler_provider` is set to `kubernetes`**
+  - **netplugin_mode** specifies whether netplugin shall operate in docker's libnetwork plugin mode or the cni mode of kubernetes. Netplugin supports two modes viz. `docker` (default) and `kubernetes`
+    - **netplugin_mode** is specified as a JSON string
+    ```
+    {"netplugin_mode": "kubernetes"}
+    ```
+    **Note**: when `scheduler_provider` is set to `kubernetes`, the `netplugin_mode` must be set to `kubernetes`, otherwise it can be left unset.
 
 ####Contiv Storage
 **TBD**

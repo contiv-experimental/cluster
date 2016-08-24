@@ -8,63 +8,18 @@
 // - get user driven configuration push and trigger cluster wide configuration management as below:
 //   - upgrade:
 // - handle configuration changes
-//   - TBD
 
 package manager
 
 import (
 	"github.com/contiv/cluster/management/src/boltdb"
-	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/inventory"
 	boltdbinv "github.com/contiv/cluster/management/src/inventory/boltdb"
 	collinsinv "github.com/contiv/cluster/management/src/inventory/collins"
 	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
-	"github.com/mapuri/serf/client"
 )
-
-type clustermConfig struct {
-	Addr string `json:"addr"`
-}
-
-type inventorySubsysConfig struct {
-	Collins *collins.Config `json:"collins,omitempty"`
-	BoltDB  *boltdb.Config  `json:"boltdb,omitempty"`
-}
-
-// Config is the configuration to cluster manager daemon
-type Config struct {
-	Serf      client.Config                     `json:"serf"`
-	Inventory inventorySubsysConfig             `json:"inventory"`
-	Ansible   configuration.AnsibleSubsysConfig `json:"ansible"`
-	Manager   clustermConfig                    `json:"manager"`
-}
-
-// DefaultConfig returns the default configuration values for the cluster manager
-// and it's sub-systems
-func DefaultConfig() *Config {
-	return &Config{
-		Serf: client.Config{
-			Addr: "127.0.0.1:7373",
-		},
-		Inventory: inventorySubsysConfig{
-			BoltDB:  nil,
-			Collins: nil,
-		},
-		Ansible: configuration.AnsibleSubsysConfig{
-			ConfigurePlaybook: "site.yml",
-			CleanupPlaybook:   "cleanup.yml",
-			UpgradePlaybook:   "rolling-upgrade.yml",
-			PlaybookLocation:  "/vagrant/vendor/ansible",
-			User:              "vagrant",
-			PrivKeyFile:       "/vagrant/management/src/demo/files/insecure_private_key",
-		},
-		Manager: clustermConfig{
-			Addr: "0.0.0.0:9007",
-		},
-	}
-}
 
 // node is an aggregate structure that contains information about a cluster
 // node as seen by cluster management subsystems.
@@ -85,6 +40,7 @@ type Manager struct {
 	nodes         map[string]*node
 	activeJob     *Job // there can be only one active job at a time
 	lastJob       *Job
+	config        *Config
 }
 
 // NewManager initializes and returns an instance of the Manager. It returns nil
@@ -107,6 +63,7 @@ func NewManager(config *Config) (*Manager, error) {
 		reqQ:          make(chan event, 100),
 		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
+		config:        config,
 	}
 	// We give priority to boltdb inventory if both are set in config
 	if config.Inventory.BoltDB != nil {

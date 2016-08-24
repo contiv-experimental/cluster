@@ -55,21 +55,21 @@ var (
 					Name:    "commission",
 					Aliases: []string{"c"},
 					Usage:   "commission a node",
-					Action:  doAction(newPostActioner(validateOneNodeName, nodeCommission)),
+					Action:  doAction(newPostActioner(validateOneArg, nodeCommission)),
 					Flags:   postHostGroupFlags,
 				},
 				{
 					Name:    "decommission",
 					Aliases: []string{"d"},
 					Usage:   "decommission a node",
-					Action:  doAction(newPostActioner(validateOneNodeName, nodeDecommission)),
+					Action:  doAction(newPostActioner(validateOneArg, nodeDecommission)),
 					Flags:   postFlags,
 				},
 				{
 					Name:    "update",
 					Aliases: []string{"u"},
 					Usage:   "update a node",
-					Action:  doAction(newPostActioner(validateOneNodeName, nodeUpdate)),
+					Action:  doAction(newPostActioner(validateOneArg, nodeUpdate)),
 					Flags:   postHostGroupFlags,
 				},
 				{
@@ -157,6 +157,26 @@ var (
 			Usage:   "provision one or more nodes for discovery",
 			Action:  doAction(newPostActioner(validateMultiNodeAddrs, nodesDiscover)),
 			Flags:   postFlags,
+		},
+		{
+			Name:    "config",
+			Aliases: []string{"c"},
+			Usage:   "set/get clusterm configuration",
+			Subcommands: []cli.Command{
+				{
+					Name:    "get",
+					Aliases: []string{"g"},
+					Usage:   "get clusterm configuration",
+					Action:  doAction(newGetActioner(configGet)),
+					Flags:   getFlags,
+				},
+				{
+					Name:    "set",
+					Aliases: []string{"s"},
+					Usage:   "set clusterm configuration. use '-' as the arg to read JSON configuration from stdin, else provide a path to the file containing JSON configuration",
+					Action:  doAction(newPostActioner(validateOneArg, configSet)),
+				},
+			},
 		},
 	}
 )

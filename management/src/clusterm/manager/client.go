@@ -172,6 +172,14 @@ func (c *Client) PostMonitorEvent(event string, nodes []MonitorNode) error {
 	return c.doPost(PostMonitorEvent, req)
 }
 
+// PostConfig posts the request to set clusterm configuration
+func (c *Client) PostConfig(config *Config) error {
+	req := &APIRequest{
+		Config: config,
+	}
+	return c.doPost(GetPostConfig, req)
+}
+
 // GetNode requests info of a specified node
 func (c *Client) GetNode(nodeName string) ([]byte, error) {
 	return c.doGet(fmt.Sprintf("%s/%s", GetNodeInfoPrefix, nodeName))
@@ -185,6 +193,11 @@ func (c *Client) GetAllNodes() ([]byte, error) {
 // GetGlobals requests the value global extra vars
 func (c *Client) GetGlobals() ([]byte, error) {
 	return c.doGet(GetGlobals)
+}
+
+// GetConfig requests the value of current clusterm configuration
+func (c *Client) GetConfig() ([]byte, error) {
+	return c.doGet(GetPostConfig)
 }
 
 // GetJob requests the info of a provisioning job specified by jobLabel.

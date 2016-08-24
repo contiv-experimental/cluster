@@ -23,6 +23,8 @@ type jobInfo map[string]interface{}
 
 type globalInfo map[string]interface{}
 
+type configInfo map[string]interface{}
+
 // printHelper stores indent related metadat along with the value being printed
 type printHelper struct {
 	Indent string
@@ -89,6 +91,9 @@ var (
 
 	globalPrint    = `{{ template "typePrint" newPrintHelper "" .}}`
 	globalTemplate = template.Must(template.Must(typeTemplate.Clone()).Parse(globalPrint))
+
+	configPrint    = `{{ template "typePrint" newPrintHelper "" .}}`
+	configTemplate = template.Must(template.Must(typeTemplate.Clone()).Parse(configPrint))
 
 	nodePrint = `
 {{- define "nodePrint" }}
@@ -216,6 +221,20 @@ func jobGet(c *manager.Client, job string, flags parsedFlags) error {
 
 	if !flags.jsonOutput {
 		return printTemplate(out, jobTemplate, &jobInfo{})
+	}
+
+	ppJSON(out)
+	return nil
+}
+
+func configGet(c *manager.Client, noop string, flags parsedFlags) error {
+	out, err := c.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	if !flags.jsonOutput {
+		return printTemplate(out, configTemplate, &configInfo{})
 	}
 
 	ppJSON(out)

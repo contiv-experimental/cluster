@@ -103,7 +103,7 @@ host-system-test: checks
 
 system-test:
 	@echo "running system-tests"
-	CONTIV_NODES=2 time vagrant up; \
+	CONTIV_NODES=2 time vagrant up
 	time vagrant ssh cluster-node1 -c \
 	"set -e; \
 	 export CONTIV_SOE=${CONTIV_SOE}; \

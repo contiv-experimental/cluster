@@ -58,8 +58,9 @@ func main() {
 	app.Run(os.Args)
 }
 
-func getConfig(c *cli.Context) (*manager.Config, error) {
+func getConfig(c *cli.Context) (*manager.Config, string, error) {
 	var reader io.Reader
+	configFile := ""
 	config := manager.DefaultConfig()
 	if !c.GlobalIsSet("config") {
 		log.Debugf("no configuration was specified, starting with default.")
@@ -69,22 +70,23 @@ func getConfig(c *cli.Context) (*manager.Config, error) {
 	} else {
 		f, err := os.Open(c.GlobalString("config"))
 		if err != nil {
-			return nil, errored.Errorf("failed to open config file. Error: %v", err)
+			return nil, "", errored.Errorf("failed to open config file. Error: %v", err)
 		}
 		defer func() { f.Close() }()
 		log.Debugf("reading configuration from file: %q", c.GlobalString("config"))
 		reader = bufio.NewReader(f)
+		configFile = c.GlobalString("config")
 	}
 	if reader != nil {
 		uConfig := &manager.Config{}
 		if err := uConfig.Read(reader); err != nil {
-			return nil, errored.Errorf("failed to read configuration. Error: %v", err)
+			return nil, "", errored.Errorf("failed to read configuration. Error: %v", err)
 		}
 		if err := config.Merge(uConfig); err != nil {
-			return nil, errored.Errorf("failed to merge configuration. Error: %v", err)
+			return nil, "", errored.Errorf("failed to merge configuration. Error: %v", err)
 		}
 	}
-	return config, nil
+	return config, configFile, nil
 }
 
 func startDaemon(c *cli.Context) {
@@ -93,12 +95,12 @@ func startDaemon(c *cli.Context) {
 	log.SetLevel(level.value)
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 
-	config, err := getConfig(c)
+	config, configFile, err := getConfig(c)
 	if err != nil {
 		log.Fatalf("failed to get configuration. Error: %v", err)
 	}
 
-	mgr, err := manager.NewManager(config)
+	mgr, err := manager.NewManager(config, configFile)
 	if err != nil {
 		log.Fatalf("failed to initialize the manager. Error: %s", err)
 	}

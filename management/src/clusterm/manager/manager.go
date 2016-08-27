@@ -41,11 +41,12 @@ type Manager struct {
 	activeJob     *Job // there can be only one active job at a time
 	lastJob       *Job
 	config        *Config
+	configFile    string // file containing clusterm config, when clusterm is started with a config file
 }
 
 // NewManager initializes and returns an instance of the Manager. It returns nil
 // if a failure occurs as part of initialization.
-func NewManager(config *Config) (*Manager, error) {
+func NewManager(config *Config, configFile string) (*Manager, error) {
 	if config == nil {
 		return nil, errored.Errorf("nil config passed")
 	}
@@ -64,6 +65,7 @@ func NewManager(config *Config) (*Manager, error) {
 		addr:          config.Manager.Addr,
 		nodes:         make(map[string]*node),
 		config:        config,
+		configFile:    configFile,
 	}
 	// We give priority to boltdb inventory if both are set in config
 	if config.Inventory.BoltDB != nil {
@@ -105,6 +107,10 @@ func (m *Manager) Run(errCh chan error) {
 	// Additionally, we wait for api loop to signal that it has setup socket to receive requests
 	<-apiServingCh
 	go m.monitorLoop(errCh)
+
+	// start signal handler loop.
+	// It needs to be started after api loop as signal handler posts events through API endpoints.
+	go m.signalLoop()
 
 	// start the event loop. It processes the events.
 	go m.eventLoop()

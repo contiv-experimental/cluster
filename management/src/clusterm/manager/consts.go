@@ -45,6 +45,10 @@ const (
 	// 'active' or 'last'
 	GetJobPrefix = "info/job"
 	getJob       = GetJobPrefix + "/{job}"
+
+	// GetPostConfig is the prefix for the REST endpoint
+	// to GET current or POST updated clusterm's configuration
+	GetPostConfig = "config"
 )
 
 const (

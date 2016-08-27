@@ -59,11 +59,11 @@ func DefaultConfig() *Config {
 func (c *Config) Read(r io.Reader) error {
 	bytes, err := ioutil.ReadAll(r)
 	if err != nil {
-		return err
+		return errored.Errorf("failed to read config. Error: %v", err)
 	}
 
 	if err := json.Unmarshal(bytes, c); err != nil {
-		return err
+		return errInvalidJSON("config", err)
 	}
 
 	return nil

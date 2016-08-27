@@ -35,6 +35,7 @@ type APIRequest struct {
 	ExtraVars string       `json:"extra_vars,omitempty"`
 	Job       string       `json:"job,omitempty"`
 	Event     MonitorEvent `json:"monitor_event,omitempty"`
+	Config    *Config      `json:"config,omitempty"`
 }
 
 // errInvalidJSON is the error returned when an invalid json value is specified for
@@ -60,6 +61,12 @@ func errInvalidEventName(event string) error {
 	return errored.Errorf("Invalid or empty event name specified: %q", event)
 }
 
+// errNilConfig is the error returned when a nil configuration value is
+// specified as part of clusterm configuration update request
+func errNilConfig() error {
+	return errored.Errorf("nil value specified for clusterm configuration")
+}
+
 func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 	//set following headers for requests expecting a body
 	jsonContentHdrs := []string{"Content-Type", "application/json"}
@@ -75,6 +82,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + GetNodesInfo, emptyHdrs, get(m.allNodes)},
 			{"/" + GetGlobals, emptyHdrs, get(m.globalsGet)},
 			{"/" + getJob, emptyHdrs, get(m.jobGet)},
+			{"/" + GetPostConfig, emptyHdrs, get(m.configGet)},
 		},
 		"POST": {
 			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},
@@ -83,6 +91,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + PostNodesDiscover, jsonContentHdrs, post(m.nodesDiscover)},
 			{"/" + PostGlobals, jsonContentHdrs, post(m.globalsSet)},
 			{"/" + PostMonitorEvent, jsonContentHdrs, post(m.monitorEvent)},
+			{"/" + GetPostConfig, jsonContentHdrs, post(m.configSet)},
 		},
 	}
 
@@ -227,6 +236,16 @@ func (m *Manager) monitorEvent(req *APIRequest) error {
 	return nil
 }
 
+func (m *Manager) configSet(req *APIRequest) error {
+	if req.Config == nil {
+		return errNilConfig()
+	}
+
+	me := newWaitableEvent(newSetConfigEvent(m, req.Config))
+	m.reqQ <- me
+	return me.waitForCompletion()
+}
+
 type getCallback func(req *APIRequest) ([]byte, error)
 
 func get(getCb getCallback) http.HandlerFunc {
@@ -301,6 +320,15 @@ func (m *Manager) jobGet(req *APIRequest) ([]byte, error) {
 	}
 
 	out, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func (m *Manager) configGet(noop *APIRequest) ([]byte, error) {
+	out, err := json.Marshal(m.config)
 	if err != nil {
 		return nil, err
 	}

@@ -35,6 +35,13 @@ func (s *apiSuite) TestPostHandlerErrorCase(c *C) {
 			},
 			exptdErr: errInvalidEventName(""),
 		},
+		"config-event-nil-config": {
+			cb: m.configSet,
+			arg: &APIRequest{
+				Config: nil,
+			},
+			exptdErr: errNilConfig(),
+		},
 	}
 
 	for key, test := range tests {

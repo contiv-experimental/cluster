@@ -11,6 +11,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
+
+	"github.com/mapuri/serf/client"
 
 	. "gopkg.in/check.v1"
 )
@@ -22,15 +25,17 @@ type managerSuite struct {
 }
 
 var (
-	_                = Suite(&managerSuite{})
-	baseURL          = "baseUrl.foo:1234"
-	testNodeName     = "testNode"
-	testGetData      = []byte("testdata123")
-	testExtraVars    = "extraVars"
-	testJobLabel     = "testjob"
+	_             = Suite(&managerSuite{})
+	baseURL       = "baseUrl.foo:1234"
+	testNodeName  = "testNode"
+	testGetData   = []byte("testdata123")
+	testExtraVars = "extraVars"
+	testJobLabel  = "testjob"
+
 	testReqNodesBody = APIRequest{
 		Nodes: []string{testNodeName},
 	}
+
 	testReqEmptyBody = APIRequest{}
 
 	testReqExtraVarsBody = APIRequest{
@@ -69,6 +74,12 @@ var (
 	testReqDiscoverExtraVarsBody = APIRequest{
 		Addrs:     []string{testNodeName},
 		ExtraVars: testExtraVars,
+	}
+
+	testReqConfigBody = APIRequest{
+		Config: &Config{
+			Serf: client.Config{Timeout: 12 * time.Second},
+		},
 	}
 
 	failureReturner = func(c *C, expURL *url.URL, expBody []byte) http.HandlerFunc {
@@ -337,6 +348,23 @@ func (s *managerSuite) TestPostMonitorEvent(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *managerSuite) TestPostConfigSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, GetPostConfig)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	var reqConfigBody bytes.Buffer
+	c.Assert(json.NewEncoder(&reqConfigBody).Encode(testReqConfigBody), IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okReturner(c, expURL, reqConfigBody.Bytes()))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	err = clstrC.PostConfig(testReqConfigBody.Config)
+	c.Assert(err, IsNil)
+}
+
 func (s *managerSuite) TestPostError(c *C) {
 	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, PostNodesUpdate)
 	expURL, err := url.Parse(expURLStr)
@@ -397,6 +425,22 @@ func (s *managerSuite) TestGetGlobalsSuccess(c *C) {
 	}
 
 	resp, err := clstrC.GetGlobals()
+	c.Assert(err, IsNil)
+	c.Assert(resp, DeepEquals, testGetData)
+}
+
+func (s *managerSuite) TestGetConfigSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s", baseURL, GetPostConfig)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okGetReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	resp, err := clstrC.GetConfig()
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }

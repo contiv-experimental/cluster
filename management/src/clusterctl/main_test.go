@@ -23,7 +23,7 @@ func (s *mainSuite) TestCommandArgValidationError(c *C) {
 		exptdErr error
 	}{
 		"one-node-name": {
-			f:        validateOneNodeName,
+			f:        validateOneArg,
 			args:     []string{"", ""},
 			exptdErr: errUnexpectedArgCount("1", len([]string{"", ""})),
 		},

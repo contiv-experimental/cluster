@@ -71,6 +71,7 @@ func getConfig(c *cli.Context) (*manager.Config, error) {
 		if err != nil {
 			return nil, errored.Errorf("failed to open config file. Error: %v", err)
 		}
+		defer func() { f.Close() }()
 		log.Debugf("reading configuration from file: %q", c.GlobalString("config"))
 		reader = bufio.NewReader(f)
 	}

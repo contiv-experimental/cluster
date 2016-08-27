@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"io"
 	"net"
+	"os"
 
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
+	"github.com/contiv/errored"
 )
 
 type postCallback func(c *manager.Client, args []string, flags parsedFlags) error
@@ -40,7 +44,7 @@ func (npa *postActioner) action(c *manager.Client) error {
 	return npa.postCb(c, npa.args, npa.flags)
 }
 
-func validateOneNodeName(args []string) error {
+func validateOneArg(args []string) error {
 	if len(args) != 1 {
 		return errUnexpectedArgCount("1", len(args))
 	}
@@ -106,4 +110,26 @@ func validateZeroArgs(args []string) error {
 
 func globalsSet(c *manager.Client, noop []string, flags parsedFlags) error {
 	return c.PostGlobals(flags.extraVars)
+}
+
+func configSet(c *manager.Client, args []string, noop parsedFlags) error {
+	var reader io.Reader
+
+	if args[0] == "-" {
+		reader = bufio.NewReader(os.Stdin)
+	} else {
+		f, err := os.Open(args[0])
+		if err != nil {
+			return errored.Errorf("failed to open config file. Error: %v", err)
+		}
+		defer func() { f.Close() }()
+		reader = bufio.NewReader(f)
+	}
+
+	config := &manager.Config{}
+	if err := config.Read(reader); err != nil {
+		return err
+	}
+
+	return c.PostConfig(config)
 }

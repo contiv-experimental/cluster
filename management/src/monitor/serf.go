@@ -27,8 +27,10 @@ type SerfSubsys struct {
 
 // NewSerfSubsys initializes and return a SerfSubsys instance
 func NewSerfSubsys(config *client.Config) *SerfSubsys {
+	//XXX: make a copy of the config as the serf client changes the config
+	c := *config
 	sm := &SerfSubsys{
-		config: config,
+		config: &c,
 		router: serfer.NewRouter(),
 	}
 	return sm

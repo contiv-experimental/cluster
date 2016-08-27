@@ -61,7 +61,6 @@ func main() {
 func getConfig(c *cli.Context) (*manager.Config, string, error) {
 	var reader io.Reader
 	configFile := ""
-	config := manager.DefaultConfig()
 	if !c.GlobalIsSet("config") {
 		log.Debugf("no configuration was specified, starting with default.")
 	} else if c.GlobalString("config") == "-" {
@@ -77,12 +76,9 @@ func getConfig(c *cli.Context) (*manager.Config, string, error) {
 		reader = bufio.NewReader(f)
 		configFile = c.GlobalString("config")
 	}
+	config := manager.DefaultConfig()
 	if reader != nil {
-		uConfig := &manager.Config{}
-		if err := uConfig.Read(reader); err != nil {
-			return nil, "", errored.Errorf("failed to read configuration. Error: %v", err)
-		}
-		if err := config.Merge(uConfig); err != nil {
+		if _, err := config.MergeFromReader(reader); err != nil {
 			return nil, "", errored.Errorf("failed to merge configuration. Error: %v", err)
 		}
 	}

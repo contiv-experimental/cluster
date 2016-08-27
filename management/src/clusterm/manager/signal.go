@@ -19,12 +19,8 @@ func (m *Manager) reparseConfig() (*Config, error) {
 	defer func() { f.Close() }()
 	log.Debugf("re-reading configuration from file: %q", m.configFile)
 	reader := bufio.NewReader(f)
-	config := DefaultConfig()
-	uConfig := &Config{}
-	if err := uConfig.Read(reader); err != nil {
-		return nil, errored.Errorf("failed to read configuration. Error: %v", err)
-	}
-	if err := config.Merge(uConfig); err != nil {
+	config, err := DefaultConfig().MergeFromReader(reader)
+	if err != nil {
 		return nil, errored.Errorf("failed to merge configuration. Error: %v", err)
 	}
 	return config, nil

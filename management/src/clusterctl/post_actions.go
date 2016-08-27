@@ -126,8 +126,8 @@ func configSet(c *manager.Client, args []string, noop parsedFlags) error {
 		reader = bufio.NewReader(f)
 	}
 
-	config := &manager.Config{}
-	if err := config.Read(reader); err != nil {
+	config, err := (&manager.Config{}).MergeFromReader(reader)
+	if err != nil {
 		return err
 	}
 

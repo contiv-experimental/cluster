@@ -47,9 +47,9 @@ Edit the cluster manager configuration file that is created at `/etc/default/clu
     }
 }
 ```
-After the changes look good, restart cluster manager
+After the changes look good, signal cluster manager to load the updated configuration
 ```
-sudo systemctl restart clusterm
+sudo systemctl kill -sHUP clusterm
 ```
 
 ###3. Ready to rock and roll!

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/errored"
 )
@@ -40,7 +40,7 @@ func (e *discoverEvent) process() error {
 		e.discoverRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
-				log.Errorf("provisioning discovery job failed. Error: %v", errRet)
+				logrus.Errorf("provisioning discovery job failed. Error: %v", errRet)
 			}
 		})
 	if err != nil {
@@ -98,7 +98,7 @@ func (e *discoverEvent) pepareInventory() error {
 func (e *discoverEvent) discoverRunner(cancelCh CancelChannel, jobLogs io.Writer) error {
 	outReader, cancelFunc, errCh := e.mgr.configuration.Configure(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
-		log.Errorf("discover failed. Error: %s", err)
+		logrus.Errorf("discover failed. Error: %s", err)
 		return err
 	}
 	return nil

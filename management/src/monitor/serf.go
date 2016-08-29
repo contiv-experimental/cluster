@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
 	"github.com/mapuri/serf/client"
 	"github.com/mapuri/serfer"
@@ -53,10 +53,10 @@ func serferCb(cb EventCb) serfer.HandlerFunc {
 			case "member-failed":
 				e.Type = Disappeared
 			default:
-				log.Infof("Unexpected serf event: %q", name)
+				logrus.Infof("Unexpected serf event: %q", name)
 				break for_label
 			}
-			log.Debugf("monitor event: %+v", e)
+			logrus.Debugf("monitor event: %+v", e)
 			events = append(events, e)
 		}
 		cb(events)
@@ -90,17 +90,17 @@ func (sm *SerfSubsys) restore() error {
 	}
 	output, err := exec.Command("serf", "members", "-format", "json").CombinedOutput()
 	if err != nil {
-		log.Errorf("serf members failed. Output: %s, Error: %s", output, err)
+		logrus.Errorf("serf members failed. Output: %s, Error: %s", output, err)
 		return err
 	}
 	info := &serfMemberInfo{}
 	if err := json.Unmarshal(output, info); err != nil {
-		log.Errorf("failed to parse serf members. Output: %s, Error: %s", output, err)
+		logrus.Errorf("failed to parse serf members. Output: %s, Error: %s", output, err)
 		return err
 	}
 	events := []Event{}
 	for _, mbr := range info.Members {
-		log.Debugf("considering member: %+v", mbr)
+		logrus.Debugf("considering member: %+v", mbr)
 		if mbr.Status != "alive" {
 			continue
 		}
@@ -113,7 +113,7 @@ func (sm *SerfSubsys) restore() error {
 				addr:   mbr.Tags[nodeAddr],
 			},
 		}
-		log.Debugf("monitor event: %+v", e)
+		logrus.Debugf("monitor event: %+v", e)
 		events = append(events, e)
 	}
 	sm.discoveredCb(events)
@@ -124,9 +124,9 @@ func (sm *SerfSubsys) restore() error {
 func (sm *SerfSubsys) Start() error {
 	for {
 		if err := sm.restore(); err != nil {
-			log.Errorf("error occurred while restoring monitor state. Error: %v", err)
+			logrus.Errorf("error occurred while restoring monitor state. Error: %v", err)
 		} else if err := sm.router.InitSerfFromConfigAndServe(sm.config); err != nil {
-			log.Errorf("error occurred in monitor loop. Error: %s", err)
+			logrus.Errorf("error occurred in monitor loop. Error: %s", err)
 		}
 
 		// wait and retry for serf errors to be resolved

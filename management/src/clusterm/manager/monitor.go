@@ -1,7 +1,7 @@
 package manager
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/monitor"
 )
 
@@ -9,7 +9,7 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 	// XXX: for now break the batch and inject one event per monitor event.
 	// revisit later as batching requirements become more clear
 	for _, e := range events {
-		log.Debugf("processing monitor event: %+v", e)
+		logrus.Debugf("processing monitor event: %+v", e)
 		eventName := ""
 		switch e.Type {
 		case monitor.Discovered:
@@ -17,7 +17,7 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 		case monitor.Disappeared:
 			eventName = monitor.Disappeared.String()
 		default:
-			log.Errorf("unexpected monitor event type %v", e.Type)
+			logrus.Errorf("unexpected monitor event type %v", e.Type)
 			continue
 		}
 		if err := NewClient(m.addr).PostMonitorEvent(eventName,
@@ -28,14 +28,14 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 					MgmtAddr: e.Node.GetMgmtAddress(),
 				},
 			}); err != nil {
-			log.Errorf("error posting monitor event %q. Error: %v", eventName, err)
+			logrus.Errorf("error posting monitor event %q. Error: %v", eventName, err)
 		}
 	}
 }
 
 func (m *Manager) monitorLoop(errCh chan error) {
 	if err := m.monitor.Start(); err != nil {
-		log.Errorf("monitoring subsystem encountered a failure. Error: %s", err)
+		logrus.Errorf("monitoring subsystem encountered a failure. Error: %s", err)
 		errCh <- err
 	}
 }

@@ -3,7 +3,7 @@ package manager
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/monitor"
 )
@@ -52,13 +52,13 @@ func (e *discoveredEvent) process() error {
 	if enode.Inv == nil {
 		if err := e.mgr.inventory.AddAsset(name); err != nil {
 			// XXX. Log this to collins
-			log.Errorf("adding asset %q to discovered in inventory failed. Error: %s", name, err)
+			logrus.Errorf("adding asset %q to discovered in inventory failed. Error: %s", name, err)
 			return err
 		}
 		enode.Inv = e.mgr.inventory.GetAsset(name)
 	} else if err := e.mgr.inventory.SetAssetDiscovered(name); err != nil {
 		// XXX. Log this to collins
-		log.Errorf("setting asset %q to discovered in inventory failed. Error: %s", name, err)
+		logrus.Errorf("setting asset %q to discovered in inventory failed. Error: %s", name, err)
 		return err
 	}
 	return nil

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
 )
 
@@ -83,7 +83,7 @@ func (c *Client) CreateAsset(tag, status string) error {
 	}
 
 	if resp.StatusCode == http.StatusConflict {
-		log.Warnf("asset %q already exists", tag)
+		logrus.Warnf("asset %q already exists", tag)
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func (c *Client) GetAsset(tag string) (Asset, error) {
 			resp.StatusCode, body)
 	}
 
-	log.Debugf("response: %s", body)
+	logrus.Debugf("response: %s", body)
 	collinsResp := &struct {
 		Data struct {
 			Asset Asset `json:"ASSET"`
@@ -123,7 +123,7 @@ func (c *Client) GetAsset(tag string) (Asset, error) {
 		return Asset{}, errored.Errorf("failed to unmarshal response. Error: %s", err)
 	}
 
-	log.Debugf("collins asset: %+v", collinsResp.Data.Asset)
+	logrus.Debugf("collins asset: %+v", collinsResp.Data.Asset)
 	return collinsResp.Data.Asset, nil
 }
 
@@ -151,7 +151,7 @@ func (c *Client) GetAllAssets() (interface{}, error) {
 			resp.StatusCode, body)
 	}
 
-	log.Debugf("response: %s", body)
+	logrus.Debugf("response: %s", body)
 	collinsResp := &struct {
 		Data struct {
 			Assets []struct {
@@ -165,7 +165,7 @@ func (c *Client) GetAllAssets() (interface{}, error) {
 
 	assets := []Asset{}
 	for _, d := range collinsResp.Data.Assets {
-		log.Debugf("collins asset: %+v", d.Asset)
+		logrus.Debugf("collins asset: %+v", d.Asset)
 		assets = append(assets, d.Asset)
 	}
 	return assets, nil
@@ -202,7 +202,7 @@ func (c *Client) CreateState(name, description, status string) error {
 	}
 
 	if resp.StatusCode == http.StatusConflict {
-		log.Warnf("state %q already exists", name)
+		logrus.Warnf("state %q already exists", name)
 	}
 
 	return nil

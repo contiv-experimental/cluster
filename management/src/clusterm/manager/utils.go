@@ -1,7 +1,7 @@
 package manager
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/errored"
 )
@@ -106,7 +106,7 @@ type setInvStateCallback func(name string) error
 func (m *Manager) setAssetsStatusBestEffort(names []string, newStatusCb setInvStateCallback) {
 	for _, name := range names {
 		if err := newStatusCb(name); err != nil {
-			log.Errorf("failed to update %s's state in inventory, Error: %v", name, err)
+			logrus.Errorf("failed to update %s's state in inventory, Error: %v", name, err)
 			continue
 		}
 	}
@@ -144,7 +144,7 @@ func (m *Manager) resetActiveJob() {
 // runActiveJob() is a wrapper to run the job and reset the active job once the actual job is done
 func (m *Manager) runActiveJob() {
 	if m.activeJob == nil {
-		log.Errorf("run called without an active job")
+		logrus.Errorf("run called without an active job")
 		return
 	}
 	m.activeJob.Run()

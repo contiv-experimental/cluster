@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/errored"
 )
@@ -48,7 +48,7 @@ func (e *commissionEvent) process() error {
 		e.configureOrCleanupOnErrorRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
-				log.Errorf("configuration job failed. Error: %v", errRet)
+				logrus.Errorf("configuration job failed. Error: %v", errRet)
 				// set assets as unallocated
 				e.mgr.setAssetsStatusBestEffort(e.nodeNames, e.mgr.inventory.SetAssetUnallocated)
 				return
@@ -110,7 +110,7 @@ func (e *commissionEvent) eventValidate() error {
 			isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
 			if err != nil || !isDiscoveredAndAllocated {
 				if err != nil {
-					log.Debugf("a node check failed for %q. Error: %s", name, err)
+					logrus.Debugf("a node check failed for %q. Error: %s", name, err)
 				}
 				// skip hosts that are not yet provisioned or not in discovered state
 				continue
@@ -119,7 +119,7 @@ func (e *commissionEvent) eventValidate() error {
 			isMasterNode, err := e.mgr.isMasterNode(name)
 			if err != nil || !isMasterNode {
 				if err != nil {
-					log.Debugf("a node check failed for %q. Error: %s", name, err)
+					logrus.Debugf("a node check failed for %q. Error: %s", name, err)
 				}
 				//skip the hosts that are not in master group
 				continue
@@ -157,10 +157,10 @@ func (e *commissionEvent) configureOrCleanupOnErrorRunner(cancelCh CancelChannel
 	if cfgErr == nil {
 		return nil
 	}
-	log.Errorf("configuration failed, starting cleanup. Error: %s", cfgErr)
+	logrus.Errorf("configuration failed, starting cleanup. Error: %s", cfgErr)
 	outReader, cancelFunc, errCh = e.mgr.configuration.Cleanup(e._hosts, e.extraVars)
 	if err := logOutputAndReturnStatus(outReader, errCh, cancelCh, cancelFunc, jobLogs); err != nil {
-		log.Errorf("cleanup failed. Error: %s", err)
+		logrus.Errorf("cleanup failed. Error: %s", err)
 	}
 
 	//return the error status from provisioning

@@ -50,8 +50,7 @@ func (e *setConfigEvent) process() error {
 	}()
 
 	// merge the config with default and validate
-	finalConfig := DefaultConfig()
-	err = finalConfig.Merge(e.config)
+	finalConfig, err := DefaultConfig().MergeFromConfig(e.config)
 	if err != nil {
 		return err
 	}

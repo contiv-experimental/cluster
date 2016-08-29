@@ -23,7 +23,7 @@ func (s *configSuite) TestReadConfigSuccess(c *C) {
 			"playbook_location" : "foo"
 		}
 	}`
-	err := config.Read(strings.NewReader(confStr))
+	_, err := config.read(strings.NewReader(confStr))
 	c.Assert(err, IsNil)
 	c.Assert(config.Ansible.PlaybookLocation, Equals, "foo")
 }
@@ -35,7 +35,7 @@ func (s *configSuite) TestReadConfigInvalidJSON(c *C) {
 			"playbook_location" : "extra-comma-error",
 		}
 	}`
-	err := config.Read(strings.NewReader(confStr))
+	_, err := config.read(strings.NewReader(confStr))
 	c.Assert(err, NotNil)
 }
 
@@ -47,7 +47,7 @@ func (s *configSuite) TestMergeConfigSuccess(c *C) {
 	exptdDst := DefaultConfig()
 	exptdDst.Ansible.PlaybookLocation = "override-location"
 
-	err := dst.Merge(src)
+	_, err := dst.MergeFromConfig(src)
 	c.Assert(err, IsNil)
 	c.Assert(dst, DeepEquals, exptdDst)
 }
@@ -57,7 +57,7 @@ func (s *configSuite) TestMergeConfigSuccessNoInventory(c *C) {
 	src := &Config{}
 	exptdDst := DefaultConfig()
 
-	err := dst.Merge(src)
+	_, err := dst.MergeFromConfig(src)
 	c.Assert(err, IsNil)
 	c.Assert(dst, DeepEquals, exptdDst)
 	c.Assert(dst.Inventory.Collins, Equals, (*collins.Config)(nil))
@@ -72,7 +72,7 @@ func (s *configSuite) TestMergeConfigSuccessCollinsInventory(c *C) {
 	exptdDst := DefaultConfig()
 	exptdDst.Inventory.Collins = &collins.Config{}
 
-	err := dst.Merge(src)
+	_, err := dst.MergeFromConfig(src)
 	c.Assert(err, IsNil)
 	c.Assert(dst, DeepEquals, exptdDst)
 	c.Assert(dst.Inventory.BoltDB, Equals, (*boltdb.Config)(nil))
@@ -87,7 +87,7 @@ func (s *configSuite) TestMergeConfigSuccessBoltdbInventory(c *C) {
 	exptdDst := DefaultConfig()
 	exptdDst.Inventory.BoltDB = &boltdb.Config{}
 
-	err := dst.Merge(src)
+	_, err := dst.MergeFromConfig(src)
 	c.Assert(err, IsNil)
 	c.Assert(dst, DeepEquals, exptdDst)
 	c.Assert(dst.Inventory.BoltDB, DeepEquals, exptdDst.Inventory.BoltDB)

@@ -55,24 +55,37 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Read parses the configuration from the specified reader
-func (c *Config) Read(r io.Reader) error {
+// read parses the configuration from the specified reader
+// On success, it also return the updated receiver configuration
+func (c *Config) read(r io.Reader) (*Config, error) {
 	bytes, err := ioutil.ReadAll(r)
 	if err != nil {
-		return errored.Errorf("failed to read config. Error: %v", err)
+		return nil, errored.Errorf("failed to read config. Error: %v", err)
 	}
 
 	if err := json.Unmarshal(bytes, c); err != nil {
-		return errInvalidJSON("config", err)
+		return nil, errInvalidJSON("config", err)
 	}
 
-	return nil
+	return c, nil
 }
 
-// Merge merges the passed configuration into the receiving configuration
-func (c *Config) Merge(src *Config) error {
+// MergeFromConfig merges the specified configuration into the receiver configuration
+// On success, it also return the updated receiver configuration
+func (c *Config) MergeFromConfig(src *Config) (*Config, error) {
 	if err := mergo.MergeWithOverwrite(c, src); err != nil {
-		return errored.Errorf("failed to merge configuration. Error: %s", err)
+		return nil, errored.Errorf("failed to merge configuration. Error: %s", err)
 	}
-	return nil
+	return c, nil
+}
+
+// MergeFromReader merges the configuration from the specified reader
+// On success, it also return the updated receiver configuration
+func (c *Config) MergeFromReader(r io.Reader) (*Config, error) {
+	config, err := (&Config{}).read(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.MergeFromConfig(config)
 }

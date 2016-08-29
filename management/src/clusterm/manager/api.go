@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
@@ -104,7 +104,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 
 	l, err := net.Listen("tcp", m.addr)
 	if err != nil {
-		log.Errorf("Error setting up listener. Error: %s", err)
+		logrus.Errorf("Error setting up listener. Error: %s", err)
 		errCh <- err
 		return
 	}
@@ -113,7 +113,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 	servingCh <- struct{}{}
 
 	if err := http.Serve(l, r); err != nil {
-		log.Errorf("Error listening for http requests. Error: %s", err)
+		logrus.Errorf("Error listening for http requests. Error: %s", err)
 		errCh <- err
 		return
 	}
@@ -176,7 +176,7 @@ func validateAndSanitizeEmptyExtraVars(errorPrefix, extraVars string) (string, e
 	// extra vars string should be valid json.
 	vars := &map[string]interface{}{}
 	if err := json.Unmarshal([]byte(extraVars), vars); err != nil {
-		log.Errorf("failed to parse json: '%s'. Error: %v", extraVars, err)
+		logrus.Errorf("failed to parse json: '%s'. Error: %v", extraVars, err)
 		return "", errInvalidJSON(errorPrefix, err)
 	}
 	return extraVars, nil

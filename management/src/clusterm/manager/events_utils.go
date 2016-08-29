@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
 )
 
@@ -34,18 +34,18 @@ func logOutputAndReturnStatus(r io.Reader, errCh chan error, cancelCh CancelChan
 			err = errJobCancelled
 			cancelFunc()
 			for s.Scan() {
-				log.Infof("%s", s.Bytes())
+				logrus.Infof("%s", s.Bytes())
 			}
 			return err
 		case err := <-errCh:
 			for s.Scan() {
-				log.Infof("%s", s.Bytes())
+				logrus.Infof("%s", s.Bytes())
 			}
 			return err
 		case <-ticker:
 			// scan any available output while waiting
 			if s.Scan() {
-				log.Infof("%s", s.Bytes())
+				logrus.Infof("%s", s.Bytes())
 			}
 		}
 	}

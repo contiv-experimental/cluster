@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
 )
 
@@ -17,7 +17,7 @@ func (m *Manager) reparseConfig() (*Config, error) {
 		return nil, errored.Errorf("failed to open config file. Error: %v", err)
 	}
 	defer func() { f.Close() }()
-	log.Debugf("re-reading configuration from file: %q", m.configFile)
+	logrus.Debugf("re-reading configuration from file: %q", m.configFile)
 	reader := bufio.NewReader(f)
 	config, err := DefaultConfig().MergeFromReader(reader)
 	if err != nil {
@@ -28,7 +28,7 @@ func (m *Manager) reparseConfig() (*Config, error) {
 
 func (m *Manager) signalLoop() {
 	if strings.TrimSpace(m.configFile) == "" {
-		log.Infof("clusterm started without a config file, not registering signal handler")
+		logrus.Infof("clusterm started without a config file, not registering signal handler")
 		return
 	}
 
@@ -40,11 +40,11 @@ func (m *Manager) signalLoop() {
 		case <-c:
 			config, err := m.reparseConfig()
 			if err != nil {
-				log.Errorf("failed to reparse config. Error: %v", err)
+				logrus.Errorf("failed to reparse config. Error: %v", err)
 				continue
 			}
 			if err := NewClient(m.addr).PostConfig(config); err != nil {
-				log.Errorf("error posting config. Error: %v", err)
+				logrus.Errorf("error posting config. Error: %v", err)
 			}
 		}
 	}

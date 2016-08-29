@@ -1,6 +1,6 @@
 package manager
 
-import log "github.com/Sirupsen/logrus"
+import "github.com/Sirupsen/logrus"
 
 // event associates an event to corresponding processing logic
 type event interface {
@@ -11,10 +11,10 @@ type event interface {
 func (m *Manager) eventLoop() {
 	for {
 		me := <-m.reqQ
-		log.Debugf("dequeued manager event: %+v", me)
+		logrus.Debugf("dequeued manager event: %+v", me)
 		if err := me.process(); err != nil {
 			// log and continue
-			log.Errorf("error handling event %q. Error: %s", me, err)
+			logrus.Errorf("error handling event %q. Error: %s", me, err)
 		}
 	}
 }

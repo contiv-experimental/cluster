@@ -1,8 +1,7 @@
 package main
 
 import (
-	"log"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
 	"github.com/contiv/errored"
@@ -207,7 +206,7 @@ func doAction(a actioner) func(*cli.Context) {
 		a.procArgs(c)
 		a.procFlags(c)
 		if err := a.action(cClient); err != nil {
-			log.Fatalf(err.Error())
+			logrus.Fatalf(err.Error())
 		}
 	}
 }

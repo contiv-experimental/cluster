@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/configuration"
 	"github.com/contiv/errored"
 )
@@ -41,7 +41,7 @@ func (e *decommissionEvent) process() error {
 		e.cleanupRunner,
 		func(status JobStatus, errRet error) {
 			if status == Errored {
-				log.Errorf("cleanup job failed. Error: %v", errRet)
+				logrus.Errorf("cleanup job failed. Error: %v", errRet)
 			}
 
 			// set assets as decommissioned
@@ -93,7 +93,7 @@ func (e *decommissionEvent) prepareInventory() error {
 		isDiscoveredAndAllocated, err := e.mgr.isDiscoveredAndAllocatedNode(name)
 		if err != nil || !isDiscoveredAndAllocated {
 			if err != nil {
-				log.Debugf("a node check failed for %q. Error: %s", name, err)
+				logrus.Debugf("a node check failed for %q. Error: %s", name, err)
 			}
 			// skip hosts that are not yet provisioned or not in discovered state
 			continue
@@ -101,7 +101,7 @@ func (e *decommissionEvent) prepareInventory() error {
 		isWorkerNode, err := e.mgr.isWorkerNode(name)
 		if err != nil {
 			// skip this node
-			log.Debugf("a node check failed for %q. Error: %s", name, err)
+			logrus.Debugf("a node check failed for %q. Error: %s", name, err)
 			continue
 		}
 		if isWorkerNode {

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/executor"
 )
 
@@ -44,7 +44,7 @@ func (r *Runner) Run(stdout, stderr io.Writer) error {
 	}
 	defer os.Remove(hostsFile.Name())
 
-	log.Debugf("going to run playbook: %q with hosts file: %q and vars: %s", r.playbook, hostsFile.Name(), r.extraVars)
+	logrus.Debugf("going to run playbook: %q with hosts file: %q and vars: %s", r.playbook, hostsFile.Name(), r.extraVars)
 	cmd := exec.Command("ansible-playbook", "-i", hostsFile.Name(), "--user", r.user,
 		"--private-key", r.privKeyFile, "--extra-vars", r.extraVars, r.playbook)
 	// turn off host key checking as we are in non-interactive mode
@@ -56,6 +56,6 @@ func (r *Runner) Run(stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("executor result: %s", res)
+	logrus.Debugf("executor result: %s", res)
 	return nil
 }

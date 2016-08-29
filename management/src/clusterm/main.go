@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
 	"github.com/contiv/errored"
@@ -16,12 +16,12 @@ import (
 var version = ""
 
 type logLevel struct {
-	value log.Level
+	value logrus.Level
 }
 
 func (l *logLevel) Set(value string) error {
 	var err error
-	if l.value, err = log.ParseLevel(value); err != nil {
+	if l.value, err = logrus.ParseLevel(value); err != nil {
 		return err
 	}
 	return nil
@@ -32,8 +32,8 @@ func (l *logLevel) String() string {
 }
 
 func (l *logLevel) usage() string {
-	return fmt.Sprintf("debug trace level: %s, %s, %s, %s, %s or %s", log.PanicLevel,
-		log.FatalLevel, log.ErrorLevel, log.WarnLevel, log.InfoLevel, log.DebugLevel)
+	return fmt.Sprintf("debug trace level: %s, %s, %s, %s, %s or %s", logrus.PanicLevel,
+		logrus.FatalLevel, logrus.ErrorLevel, logrus.WarnLevel, logrus.InfoLevel, logrus.DebugLevel)
 }
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.GenericFlag{
 			Name:  "debug",
-			Value: &logLevel{value: log.DebugLevel},
+			Value: &logLevel{value: logrus.DebugLevel},
 			Usage: (&logLevel{}).usage(),
 		},
 		cli.StringFlag{
@@ -62,9 +62,9 @@ func getConfig(c *cli.Context) (*manager.Config, string, error) {
 	var reader io.Reader
 	configFile := ""
 	if !c.GlobalIsSet("config") {
-		log.Debugf("no configuration was specified, starting with default.")
+		logrus.Debugf("no configuration was specified, starting with default.")
 	} else if c.GlobalString("config") == "-" {
-		log.Debugf("reading configuration from stdin")
+		logrus.Debugf("reading configuration from stdin")
 		reader = bufio.NewReader(os.Stdin)
 	} else {
 		f, err := os.Open(c.GlobalString("config"))
@@ -72,7 +72,7 @@ func getConfig(c *cli.Context) (*manager.Config, string, error) {
 			return nil, "", errored.Errorf("failed to open config file. Error: %v", err)
 		}
 		defer func() { f.Close() }()
-		log.Debugf("reading configuration from file: %q", c.GlobalString("config"))
+		logrus.Debugf("reading configuration from file: %q", c.GlobalString("config"))
 		reader = bufio.NewReader(f)
 		configFile = c.GlobalString("config")
 	}
@@ -88,17 +88,17 @@ func getConfig(c *cli.Context) (*manager.Config, string, error) {
 func startDaemon(c *cli.Context) {
 	// set log level
 	level := c.GlobalGeneric("debug").(*logLevel)
-	log.SetLevel(level.value)
-	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
+	logrus.SetLevel(level.value)
+	logrus.SetFormatter(&logrus.TextFormatter{DisableTimestamp: true})
 
 	config, configFile, err := getConfig(c)
 	if err != nil {
-		log.Fatalf("failed to get configuration. Error: %v", err)
+		logrus.Fatalf("failed to get configuration. Error: %v", err)
 	}
 
 	mgr, err := manager.NewManager(config, configFile)
 	if err != nil {
-		log.Fatalf("failed to initialize the manager. Error: %s", err)
+		logrus.Fatalf("failed to initialize the manager. Error: %s", err)
 	}
 
 	// start manager's processing loop
@@ -106,6 +106,6 @@ func startDaemon(c *cli.Context) {
 	go mgr.Run(errCh)
 	select {
 	case err := <-errCh:
-		log.Fatalf("encountered an error: %s", err)
+		logrus.Fatalf("encountered an error: %s", err)
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/errored"
 )
 
@@ -141,7 +141,7 @@ func NewAsset(client SubsysClient, name string) (*Asset, error) {
 		return nil, err
 	}
 
-	log.Debugf("created asset: %+v", a)
+	logrus.Debugf("created asset: %+v", a)
 	return a, nil
 }
 
@@ -149,7 +149,7 @@ func NewAsset(client SubsysClient, name string) (*Asset, error) {
 // performing lifecyslce related validations.
 func (a *Asset) SetStatus(status AssetStatus, state AssetState) error {
 	if a.status == status && a.state == state {
-		log.Infof("asset already in status: %q and state: %q, no action required", status, state)
+		logrus.Infof("asset already in status: %q and state: %q, no action required", status, state)
 		return nil
 	}
 

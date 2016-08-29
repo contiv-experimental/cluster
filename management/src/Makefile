@@ -1,4 +1,4 @@
-.PHONY: build build-docker-img build-docker-shell checks check-format check-code check-spell clean-generate clean-tar deps generate host-system-test unit-test system-test tar release
+.PHONY: build build-docker-img build-docker-shell checks check-format check-code check-spell check-cyclo clean-generate clean-tar deps generate host-system-test unit-test system-test tar release
 
 cluster_dir:=/go/src/github.com/contiv/cluster
 work_dir:=$(cluster_dir)/management/src
@@ -39,9 +39,10 @@ deps:
 	@go get github.com/golang/mock/gomock
 	@go get github.com/golang/mock/mockgen
 	@go get github.com/client9/misspell/cmd/misspell
+	@go get github.com/fzipp/gocyclo
 	@echo "done checking and downloading dependencies"
 
-checks: deps clean-generate check-format check-code check-spell
+checks: deps clean-generate check-format check-code check-spell check-cyclo
 
 godeps-save:
 	$(all_packages) | xargs godep save
@@ -75,6 +76,11 @@ check-spell:
 	@echo "checking spellings..."
 	@find ./../../ -name '*.md' -o -name '*.go' -type f | grep -v vendor | xargs misspell -error
 	@echo "done checking spellings..."
+
+check-cyclo:
+	@echo "checking cyclomatic complexity..."
+	@find ./ -name '*.go' -type f | grep -v vendor | xargs gocyclo -over 15
+	@echo "done checking cyclomatic complexity..."
 
 build-docker-img:
 	docker build -t "$(docker_img)" $(docker_buildargs) .

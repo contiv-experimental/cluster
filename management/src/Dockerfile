@@ -16,6 +16,7 @@ RUN go get github.com/golang/lint/golint
 RUN go get golang.org/x/tools/cmd/stringer
 RUN go get github.com/golang/mock/gomock
 RUN go get github.com/golang/mock/mockgen
+RUN go get github.com/client9/misspell/cmd/misspell
 
 # set GOBIN to make go install cluster binaries there
 ARG work_dir

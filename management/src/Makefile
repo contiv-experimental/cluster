@@ -1,6 +1,7 @@
-.PHONY: build build-docker-img build-docker-shell checks check-format check-code clean-generate clean-tar deps generate host-system-test unit-test system-test tar release
+.PHONY: build build-docker-img build-docker-shell checks check-format check-code check-spell clean-generate clean-tar deps generate host-system-test unit-test system-test tar release
 
-work_dir:=/go/src/github.com/contiv/cluster/management/src
+cluster_dir:=/go/src/github.com/contiv/cluster
+work_dir:=$(cluster_dir)/management/src
 docker_buildargs:= \
 	--build-arg "uid=$$(id -u)" \
 	--build-arg "user=$$(id -un)" \
@@ -10,9 +11,9 @@ docker_buildargs:= \
 	$(if $(http_proxy), --build-arg "http_proxy=$(http_proxy)") \
 	$(if $(https_proxy), --build-arg "https_proxy=$(https_proxy)")
 docker_img:=cluster-dev
-docker_run:=docker run --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
+docker_run:=docker run --rm -u `id -un`:`id -un` -v `pwd`/../..:$(cluster_dir) \
 	-w $(work_dir) "$(docker_img)"
-docker_run_interactive:=docker run -it --rm -u `id -un`:`id -un` -v `pwd`:$(work_dir) \
+docker_run_interactive:=docker run -it --rm -u `id -un`:`id -un` -v `pwd`/../..:$(cluster_dir) \
 	-w $(work_dir) "$(docker_img)"
 unittest_tag:=unittest
 systemtest_tag:=systemtest
@@ -37,9 +38,10 @@ deps:
 	@go get golang.org/x/tools/cmd/stringer
 	@go get github.com/golang/mock/gomock
 	@go get github.com/golang/mock/mockgen
+	@go get github.com/client9/misspell/cmd/misspell
 	@echo "done checking and downloading dependencies"
 
-checks: deps clean-generate check-format check-code
+checks: deps clean-generate check-format check-code check-spell
 
 godeps-save:
 	$(all_packages) | xargs godep save
@@ -68,6 +70,11 @@ check-code:
 	@test -z "$$($(all_packages) | xargs -n1 golint | tee /dev/stderr)"
 	@$(all_packages) | xargs -n1 go vet
 	@echo "done checking code..."
+
+check-spell:
+	@echo "checking spellings..."
+	@find ./../../ -name '*.md' -o -name '*.go' -type f | grep -v vendor | xargs misspell -error
+	@echo "done checking spellings..."
 
 build-docker-img:
 	docker build -t "$(docker_img)" $(docker_buildargs) .

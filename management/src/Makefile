@@ -63,7 +63,7 @@ clean-generate:
 
 check-format:
 	@echo "checking format..."
-	@test -z "$$(gofmt -l . | grep -v vendor/ | tee /dev/stderr)"
+	@test -z "$$(find ./ -name '*.go' -type f | grep -v vendor | xargs gofmt -s -d | tee /dev/stderr)"
 	@echo "done checking format..."
 
 check-code:

@@ -204,9 +204,8 @@ func (s *collinsSuite) TestGetAllAssets(c *C) {
 						Assets: []struct {
 							Asset Asset `json:"ASSET"`
 						}{
-							struct {
-								Asset Asset `json:"ASSET"`
-							}{
+
+							{
 								Asset: asset,
 							},
 						},

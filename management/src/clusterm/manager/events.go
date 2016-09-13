@@ -11,10 +11,9 @@ type event interface {
 func (m *Manager) eventLoop() {
 	for {
 		me := <-m.reqQ
-		logrus.Debugf("dequeued manager event: %+v", me)
-		if err := me.process(); err != nil {
-			// log and continue
-			logrus.Errorf("error handling event %q. Error: %s", me, err)
-		}
+		logrus.Debugf("dequeued manager event: %s", me)
+		err := me.process()
+		// log and continue
+		logrus.Debugf("done handling event %s. Error(if any): %v", me, err)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/contiv/cluster/management/src/clusterm/manager"
+	"github.com/contiv/errored"
 )
 
 type nodeInfo struct {
@@ -159,15 +160,22 @@ func (nga *getActioner) action(c *manager.Client) error {
 	return nga.getCb(c, nga.arg, nga.flags)
 }
 
-func ppJSON(out []byte) {
+func errInvalidJSON(body []byte, err error) error {
+	return errored.Errorf("failed to parse json: '%s'. Error: %v", body, err)
+}
+
+func ppJSON(out []byte) error {
 	var outBuf bytes.Buffer
-	json.Indent(&outBuf, out, "", "    ")
+	if err := json.Indent(&outBuf, out, "", "    "); err != nil {
+		return errInvalidJSON(out, err)
+	}
 	outBuf.WriteTo(os.Stdout)
+	return nil
 }
 
 func printTemplate(out []byte, t *template.Template, i interface{}) error {
 	if err := json.Unmarshal(out, i); err != nil {
-		return err
+		return errInvalidJSON(out, err)
 	}
 	return t.Execute(os.Stdout, i)
 }
@@ -186,8 +194,7 @@ func nodeGet(c *manager.Client, nodeName string, flags parsedFlags) error {
 		return printTemplate(out, oneNodeTemplate, &nodeInfo{})
 	}
 
-	ppJSON(out)
-	return nil
+	return ppJSON(out)
 }
 
 func nodesGet(c *manager.Client, noop string, flags parsedFlags) error {
@@ -200,8 +207,7 @@ func nodesGet(c *manager.Client, noop string, flags parsedFlags) error {
 		return printTemplate(out, multiNodeTemplate, &nodesInfo{})
 	}
 
-	ppJSON(out)
-	return nil
+	return ppJSON(out)
 }
 
 func globalsGet(c *manager.Client, noop string, flags parsedFlags) error {
@@ -214,8 +220,7 @@ func globalsGet(c *manager.Client, noop string, flags parsedFlags) error {
 		return printTemplate(out, globalTemplate, &globalInfo{})
 	}
 
-	ppJSON(out)
-	return nil
+	return ppJSON(out)
 }
 
 func jobGet(c *manager.Client, job string, flags parsedFlags) error {
@@ -256,8 +261,7 @@ func jobGet(c *manager.Client, job string, flags parsedFlags) error {
 		return printTemplate(out, jobTemplate, &jobInfo{})
 	}
 
-	ppJSON(out)
-	return nil
+	return ppJSON(out)
 }
 
 func configGet(c *manager.Client, noop string, flags parsedFlags) error {
@@ -270,6 +274,5 @@ func configGet(c *manager.Client, noop string, flags parsedFlags) error {
 		return printTemplate(out, configTemplate, &configInfo{})
 	}
 
-	ppJSON(out)
-	return nil
+	return ppJSON(out)
 }

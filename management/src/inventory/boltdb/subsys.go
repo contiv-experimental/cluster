@@ -1,6 +1,7 @@
 package boltdb
 
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/boltdb"
 	"github.com/contiv/cluster/management/src/inventory"
 )
@@ -22,7 +23,10 @@ func NewBoltdbSubsys(config boltdb.Config) (*inventory.GeneralSubsys, error) {
 	for _, asset := range assets1 {
 		a := inventory.NewAssetWithState(client, asset.Name, inventory.AssetStatusVals[asset.Status],
 			inventory.AssetStateVals[asset.State])
-		subsys.RestoreAsset(asset.Name, a)
+		if err := subsys.RestoreAsset(asset.Name, a); err != nil {
+			logrus.Infof("failed to restore asset %q. Error: %v", asset.Name, err)
+			continue
+		}
 	}
 
 	return subsys, nil

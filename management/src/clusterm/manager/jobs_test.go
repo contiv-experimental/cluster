@@ -209,6 +209,34 @@ func (s *jobsSuite) TestJobLogsLongRunning(c *C) {
 	checkDoneCb(c, cbCh)
 }
 
+func (s *jobsSuite) TestJobPipeLogs(c *C) {
+	wg := &sync.WaitGroup{}
+	cbCh := make(chan struct{}, 1)
+	exptdLogStr1 := `
+	foo
+	bar 1 2 3
+	multi line.
+	`
+	exptdLogStr2 := `
+	foo1
+	bar1 1 2 3
+	multi line. 1
+	`
+	j := NewJob("", logRunnerLong(c, wg, 3*time.Second, exptdLogStr1, exptdLogStr2), expectDoneCb(c, cbCh, Complete, nil))
+	wg.Add(1)
+	go j.Run()
+	// give some time for job to start
+	time.Sleep(1 * time.Second)
+	var logBuf bytes.Buffer
+	j.PipeLogs(&logBuf)
+
+	waitAndCheckJobStatus(c, wg, j, Complete, nil)
+
+	c.Assert(logBuf.String(), Equals, exptdLogStr2)
+
+	checkDoneCb(c, cbCh)
+}
+
 func (s *jobsSuite) TestJobInfoMarshal(c *C) {
 	exptdLogStr := `
 	foo

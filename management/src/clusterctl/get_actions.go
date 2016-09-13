@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"text/template"
@@ -123,6 +124,13 @@ Logs:
 {{ template "typePrint" newPrintHelper "    " .logs }}
 `
 	jobTemplate = template.Must(template.Must(typeTemplate.Clone()).Parse(jobPrint))
+
+	shortJobPrint = `
+Description: {{ .desc }}
+Status: {{ .status }}
+Error: {{ .error }}
+`
+	shortJobTemplate = template.Must(template.Must(typeTemplate.Clone()).Parse(shortJobPrint))
 )
 
 type getCallback func(c *manager.Client, arg string, flags parsedFlags) error
@@ -139,6 +147,7 @@ func newGetActioner(getCb getCallback) *getActioner {
 
 func (nga *getActioner) procFlags(c *cli.Context) {
 	nga.flags.jsonOutput = c.Bool("json")
+	nga.flags.streamLogs = c.Bool("follow")
 	return
 }
 
@@ -217,6 +226,30 @@ func jobGet(c *manager.Client, job string, flags parsedFlags) error {
 	out, err := c.GetJob(job)
 	if err != nil {
 		return err
+	}
+
+	// if streaming logs then we just print a short job info followed by the
+	// log stream
+	if flags.streamLogs {
+		if err := printTemplate(out, shortJobTemplate, &jobInfo{}); err != nil {
+			return err
+		}
+		logs, err := c.StreamLogs(job)
+		if err != nil {
+			return err
+		}
+		defer logs.Close()
+		log := make([]byte, 128)
+		for {
+			n, err := logs.Read(log)
+			if n > 0 {
+				fmt.Printf("%s", log[:n])
+			}
+			if err != nil {
+				break
+			}
+		}
+		return nil
 	}
 
 	if !flags.jsonOutput {

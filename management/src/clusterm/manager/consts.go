@@ -46,6 +46,12 @@ const (
 	GetJobPrefix = "info/job"
 	getJob       = GetJobPrefix + "/{job}"
 
+	// GetJobLogPrefix is the prefix for the GET REST endpoint
+	// to stream the logs of a provisioning job. {job} value can be
+	// 'active'
+	GetJobLogPrefix = "info/logs"
+	getJobLog       = GetJobLogPrefix + "/{job}"
+
 	// GetPostConfig is the prefix for the REST endpoint
 	// to GET current or POST updated clusterm's configuration
 	GetPostConfig = "config"

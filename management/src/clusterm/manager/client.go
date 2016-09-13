@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -51,6 +52,7 @@ func (c *Client) doPost(rsrc string, req *APIRequest) error {
 	} else {
 		resp, err = c.httpC.Post(c.formURL(rsrc), "application/json", reqJSON)
 	}
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -66,22 +68,22 @@ func (c *Client) doPost(rsrc string, req *APIRequest) error {
 	return nil
 }
 
-func (c *Client) doGet(rsrc string) ([]byte, error) {
+func (c *Client) doGet(rsrc string) (io.ReadCloser, error) {
 	resp, err := c.httpC.Get(c.formURL(rsrc))
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	if resp.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte{}
+		}
+		resp.Body.Close()
 		return nil, httpErrorResp(rsrc, nil, resp.Status, body)
 	}
 
-	return body, nil
+	return resp.Body, nil
 }
 
 // PostNodeCommission posts the request to commission a node
@@ -180,28 +182,48 @@ func (c *Client) PostConfig(config *Config) error {
 	return c.doPost(GetPostConfig, req)
 }
 
+func (c *Client) readAll(rsrc string) ([]byte, error) {
+	resp, err := c.doGet(rsrc)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Close()
+
+	body, err := ioutil.ReadAll(resp)
+	if err != nil {
+		return nil, err
+	}
+	return body, err
+}
+
 // GetNode requests info of a specified node
 func (c *Client) GetNode(nodeName string) ([]byte, error) {
-	return c.doGet(fmt.Sprintf("%s/%s", GetNodeInfoPrefix, nodeName))
+	return c.readAll(fmt.Sprintf("%s/%s", GetNodeInfoPrefix, nodeName))
 }
 
 // GetAllNodes requests info of all known nodes
 func (c *Client) GetAllNodes() ([]byte, error) {
-	return c.doGet(GetNodesInfo)
+	return c.readAll(GetNodesInfo)
 }
 
 // GetGlobals requests the value global extra vars
 func (c *Client) GetGlobals() ([]byte, error) {
-	return c.doGet(GetGlobals)
+	return c.readAll(GetGlobals)
 }
 
 // GetConfig requests the value of current clusterm configuration
 func (c *Client) GetConfig() ([]byte, error) {
-	return c.doGet(GetPostConfig)
+	return c.readAll(GetPostConfig)
 }
 
 // GetJob requests the info of a provisioning job specified by jobLabel.
 // Accepted values of jobLabel are "active" and "last"
 func (c *Client) GetJob(jobLabel string) ([]byte, error) {
-	return c.doGet(fmt.Sprintf("%s/%s", GetJobPrefix, jobLabel))
+	return c.readAll(fmt.Sprintf("%s/%s", GetJobPrefix, jobLabel))
+}
+
+// StreamLogs requests the log stream of a provisioning job specified by jobLabel.
+// It is caller's responsibility to Close the returned stream
+func (c *Client) StreamLogs(jobLabel string) (io.ReadCloser, error) {
+	return c.doGet(fmt.Sprintf("%s/%s", GetJobLogPrefix, jobLabel))
 }

@@ -31,6 +31,14 @@ var (
 		jsonFlag,
 	}
 
+	getJobFlags = []cli.Flag{
+		jsonFlag,
+		cli.BoolFlag{
+			Name:  "follow, f",
+			Usage: "stream job logs (just like tail -f). Only applicable for an active job",
+		},
+	}
+
 	postFlags = []cli.Flag{
 		extraVarsFlag,
 	}
@@ -146,7 +154,7 @@ var (
 					Aliases: []string{"g"},
 					Usage:   "get job info. Expects an arg with value 'active' or 'last'",
 					Action:  doAction(newGetActioner(jobGet)),
-					Flags:   getFlags,
+					Flags:   getJobFlags,
 				},
 			},
 		},
@@ -192,6 +200,7 @@ type parsedFlags struct {
 	extraVars  string
 	hostGroup  string
 	jsonOutput bool
+	streamLogs bool
 }
 
 type actioner interface {

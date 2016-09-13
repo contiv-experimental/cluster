@@ -78,6 +78,25 @@ func (s *apiSuite) TestGetHandlerErrorCase(c *C) {
 			},
 			exptdErr: errJobNotExist("active"),
 		},
+		"logs-invalid-label": {
+			cb: m.jobGet,
+			arg: &APIRequest{
+				Job: "foo",
+			},
+			exptdErr: errInvalidJobLabel("foo"),
+		},
+		"logs-empty-label": {
+			cb:       m.jobGet,
+			arg:      &APIRequest{},
+			exptdErr: errInvalidJobLabel(""),
+		},
+		"logs-non-existent": {
+			cb: m.jobGet,
+			arg: &APIRequest{
+				Job: "active",
+			},
+			exptdErr: errJobNotExist("active"),
+		},
 	}
 
 	for key, test := range tests {

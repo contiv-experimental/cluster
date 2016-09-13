@@ -32,26 +32,16 @@ func (c *Client) formURL(rsrc string) string {
 
 func (c *Client) doPost(rsrc string, req *APIRequest) error {
 
-	var reqJSON *bytes.Buffer
-	if req != nil {
-		reqJSON = new(bytes.Buffer)
-		if err := json.NewEncoder(reqJSON).Encode(req); err != nil {
-			return err
-		}
+	var reqJSON bytes.Buffer
+	if err := json.NewEncoder(&reqJSON).Encode(req); err != nil {
+		return err
 	}
 
-	// XXX: http.NewRequest (that http.Post()) calls panics when a reqJSON
-	// variable is nil, hence doing this explicit check here.
-	// golang issue: https://github.com/golang/go/issues/15455
 	var (
 		resp *http.Response
 		err  error
 	)
-	if reqJSON == nil {
-		resp, err = c.httpC.Post(c.formURL(rsrc), "application/json", nil)
-	} else {
-		resp, err = c.httpC.Post(c.formURL(rsrc), "application/json", reqJSON)
-	}
+	resp, err = c.httpC.Post(c.formURL(rsrc), "application/json", &reqJSON)
 	defer resp.Body.Close()
 	if err != nil {
 		return err

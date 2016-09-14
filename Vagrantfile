@@ -174,8 +174,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
                 #in a test specific conf file (see the test-suite setup function)
                 node.vm.synced_folder ".", "/vagrant"
 
-                # expose collins port to host for ease of management
-                node.vm.network "forwarded_port", guest: 9000, host: 9000
+                # expose clusterm port to host for ease of trying out cluster API
+                node.vm.network "forwarded_port", guest: 9007, host: 9007
 
                 # expose UCP UI to the host on port
                 node.vm.network "forwarded_port", guest: 443, host:9091 

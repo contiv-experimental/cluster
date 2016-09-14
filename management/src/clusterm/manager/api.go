@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -86,6 +87,12 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + getJob, emptyHdrs, get(m.jobGet)},
 			{"/" + getJobLog, emptyHdrs, get(m.logsGet)},
 			{"/" + GetPostConfig, emptyHdrs, get(m.configGet)},
+			{"/" + getDebugPrefix + "/", emptyHdrs, pprof.Index},
+			{"/" + getDebugPrefix + "/cmdline", emptyHdrs, pprof.Cmdline},
+			{"/" + getDebugPrefix + "/profile", emptyHdrs, pprof.Profile},
+			{"/" + getDebugPrefix + "/symbol", emptyHdrs, pprof.Symbol},
+			{"/" + getDebugPrefix + "/trace", emptyHdrs, pprof.Trace},
+			{"/" + getDebug, emptyHdrs, pprof.Index},
 		},
 		"POST": {
 			{"/" + PostNodesCommission, jsonContentHdrs, post(m.nodesCommission)},

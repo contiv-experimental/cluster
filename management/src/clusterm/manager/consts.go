@@ -55,6 +55,14 @@ const (
 	// GetPostConfig is the prefix for the REST endpoint
 	// to GET current or POST updated clusterm's configuration
 	GetPostConfig = "config"
+
+	// GetDebug is the prefix for the GET REST endpoint
+	// to fetch the debug/profile information for clusterm
+	// as provided by net/http/pprof package
+	// Note: We can't use our custom prefix style here as net/http/pprof
+	// package requires the request prefix to be 'debug/pprof'
+	getDebugPrefix = "debug/pprof"
+	getDebug       = getDebugPrefix + "/{profile}"
 )
 
 const (

@@ -13,6 +13,8 @@ import (
 	"github.com/contiv/errored"
 )
 
+var notRunningErr = errored.Errorf("job is not Running")
+
 // CancelChannel is type of the channle used to signal cancellation of job
 type CancelChannel chan struct{}
 
@@ -26,25 +28,29 @@ type DoneCallback func(status JobStatus, errVal error)
 // Job corresponds to a long running task, triggered by an event
 type Job struct {
 	sync.Mutex
-	runner   JobRunner
-	done     DoneCallback
-	cancelCh CancelChannel
-	status   JobStatus
-	errVal   error
-	logs     bytes.Buffer
-	desc     string
+	runner    JobRunner
+	done      DoneCallback
+	cancelCh  CancelChannel
+	status    JobStatus
+	errVal    error
+	logs      bytes.Buffer
+	logWriter *MultiWriter
+	desc      string
 }
 
 // NewJob initializes and returns an instance of a job described by the runner and done callback
 func NewJob(desc string, jr JobRunner, done DoneCallback) *Job {
-	return &Job{
-		runner:   jr,
-		done:     done,
-		desc:     desc,
-		cancelCh: make(chan struct{}),
-		status:   Queued,
-		errVal:   nil,
+	j := &Job{
+		runner:    jr,
+		done:      done,
+		desc:      desc,
+		cancelCh:  make(chan struct{}),
+		status:    Queued,
+		errVal:    nil,
+		logWriter: &MultiWriter{},
 	}
+	j.logWriter.Add(&j.logs)
+	return j
 }
 
 func (j *Job) runnerName() string {
@@ -68,9 +74,10 @@ func (j *Job) Run() {
 	j.setStatus(Running, nil)
 	defer func() {
 		j.done(j.status, j.errVal)
+		j.logWriter.Close()
 	}()
 
-	if err := j.runner(j.cancelCh, &j.logs); err != nil {
+	if err := j.runner(j.cancelCh, j.logWriter); err != nil {
 		j.setStatus(Errored, err)
 		return
 	}
@@ -87,7 +94,7 @@ func (j *Job) Cancel() error {
 		j.cancelCh <- struct{}{}
 		return nil
 	}
-	return errored.Errorf("job is not Running")
+	return notRunningErr
 }
 
 // Status returns the status of a job at the time of call
@@ -101,6 +108,16 @@ func (j *Job) Logs() io.Reader {
 	// a reader created over current contents of the buffer without changing
 	// it's read offset. This will allow accessing logs over and over again.
 	return bytes.NewReader(j.logs.Bytes())
+}
+
+// PipeLogs pipes the job logs to the specified writer (in addition to underlying log buffer).
+// This is useful to stream ongoing job logs to additional writer(s).
+func (j *Job) PipeLogs(w io.Writer) error {
+	if s, _ := j.Status(); s != Running {
+		return notRunningErr
+	}
+	j.logWriter.Add(w)
+	return nil
 }
 
 // MarshalJSON marshals and returns the JSON for job info

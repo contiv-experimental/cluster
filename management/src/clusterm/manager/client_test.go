@@ -408,7 +408,7 @@ func (s *managerSuite) TestGetNodesSuccess(c *C) {
 		httpC: httpC,
 	}
 
-	resp, err := clstrC.GetNode(testNodeName)
+	resp, err := clstrC.GetAllNodes()
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
 }
@@ -459,6 +459,24 @@ func (s *managerSuite) TestGetJobSuccess(c *C) {
 	resp, err := clstrC.GetJob(testJobLabel)
 	c.Assert(err, IsNil)
 	c.Assert(resp, DeepEquals, testGetData)
+}
+
+func (s *managerSuite) TestStreamLogsSuccess(c *C) {
+	expURLStr := fmt.Sprintf("http://%s/%s/%s", baseURL, GetJobLogPrefix, testJobLabel)
+	expURL, err := url.Parse(expURLStr)
+	c.Assert(err, IsNil)
+	httpS, httpC := getHTTPTestClientAndServer(c, okGetReturner(c, expURL))
+	defer httpS.Close()
+	clstrC := Client{
+		url:   baseURL,
+		httpC: httpC,
+	}
+
+	resp, err := clstrC.StreamLogs(testJobLabel)
+	c.Assert(err, IsNil)
+	body, err := ioutil.ReadAll(resp)
+	c.Assert(err, IsNil)
+	c.Assert(body, DeepEquals, testGetData)
 }
 
 func (s *managerSuite) TestGetError(c *C) {

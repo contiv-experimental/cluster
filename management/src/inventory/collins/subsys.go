@@ -1,6 +1,7 @@
 package collins
 
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/contiv/cluster/management/src/collins"
 	"github.com/contiv/cluster/management/src/inventory"
 	"github.com/contiv/errored"
@@ -27,7 +28,10 @@ func NewCollinsSubsys(config collins.Config) (*inventory.GeneralSubsys, error) {
 	for _, asset := range assets1 {
 		a := inventory.NewAssetWithState(client, asset.Tag, inventory.AssetStatusVals[asset.Status],
 			inventory.AssetStateVals[asset.State.Name])
-		subsys.RestoreAsset(asset.Tag, a)
+		if err := subsys.RestoreAsset(asset.Tag, a); err != nil {
+			logrus.Infof("failed to restore asset %q. Error: %v", asset.Tag, err)
+			continue
+		}
 	}
 
 	return subsys, nil

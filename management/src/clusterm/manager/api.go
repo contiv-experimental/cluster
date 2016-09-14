@@ -1,7 +1,9 @@
 package manager
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -82,6 +84,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 			{"/" + GetNodesInfo, emptyHdrs, get(m.allNodes)},
 			{"/" + GetGlobals, emptyHdrs, get(m.globalsGet)},
 			{"/" + getJob, emptyHdrs, get(m.jobGet)},
+			{"/" + getJobLog, emptyHdrs, get(m.logsGet)},
 			{"/" + GetPostConfig, emptyHdrs, get(m.configGet)},
 		},
 		"POST": {
@@ -246,7 +249,7 @@ func (m *Manager) configSet(req *APIRequest) error {
 	return me.waitForCompletion()
 }
 
-type getCallback func(req *APIRequest) ([]byte, error)
+type getCallback func(req *APIRequest) (io.Reader, error)
 
 func get(getCb getCallback) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -262,11 +265,27 @@ func get(getCb getCallback) http.HandlerFunc {
 				http.StatusInternalServerError)
 			return
 		}
-		w.Write(out)
+		// can't use a zero value of slice here as the byte Reader returned by
+		// bytes package checks for 0 length slice and returns without error
+		buf := make([]byte, 128)
+		for {
+			n, err := out.Read(buf)
+			if n > 0 {
+				if _, err := w.Write(buf[:n]); err != nil {
+					logrus.Errorf("failed to write response bytes '%s'. Error: %v", buf, err)
+				}
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
 	}
 }
 
-func (m *Manager) oneNode(req *APIRequest) ([]byte, error) {
+func (m *Manager) oneNode(req *APIRequest) (io.Reader, error) {
 	node, err := m.findNode(req.Nodes[0])
 	if err != nil {
 		return nil, err
@@ -276,18 +295,18 @@ func (m *Manager) oneNode(req *APIRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return bytes.NewReader(out), nil
 }
 
-func (m *Manager) allNodes(noop *APIRequest) ([]byte, error) {
+func (m *Manager) allNodes(noop *APIRequest) (io.Reader, error) {
 	out, err := json.Marshal(m.nodes)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return bytes.NewReader(out), nil
 }
 
-func (m *Manager) globalsGet(noop *APIRequest) ([]byte, error) {
+func (m *Manager) globalsGet(noop *APIRequest) (io.Reader, error) {
 	globals := m.configuration.GetGlobals()
 	globalData := struct {
 		ExtraVars map[string]interface{} `json:"extra_vars"`
@@ -301,10 +320,10 @@ func (m *Manager) globalsGet(noop *APIRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return bytes.NewReader(out), nil
 }
 
-func (m *Manager) jobGet(req *APIRequest) ([]byte, error) {
+func (m *Manager) jobGet(req *APIRequest) (io.Reader, error) {
 	var j *Job
 	switch req.Job {
 	case jobLabelActive:
@@ -324,14 +343,37 @@ func (m *Manager) jobGet(req *APIRequest) ([]byte, error) {
 		return nil, err
 	}
 
-	return out, nil
+	return bytes.NewReader(out), nil
 }
 
-func (m *Manager) configGet(noop *APIRequest) ([]byte, error) {
+func (m *Manager) logsGet(req *APIRequest) (io.Reader, error) {
+	var j *Job
+	switch req.Job {
+	case jobLabelActive:
+		j = m.activeJob
+	case jobLabelLast:
+		j = m.lastJob
+	default:
+		return nil, errInvalidJobLabel(req.Job)
+	}
+
+	if j == nil {
+		return nil, errJobNotExist(req.Job)
+	}
+
+	r, w := io.Pipe()
+	if err := j.PipeLogs(w); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (m *Manager) configGet(noop *APIRequest) (io.Reader, error) {
 	out, err := json.Marshal(m.config)
 	if err != nil {
 		return nil, err
 	}
 
-	return out, nil
+	return bytes.NewReader(out), nil
 }

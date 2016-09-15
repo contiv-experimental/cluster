@@ -42,3 +42,6 @@ cscope.*
 
 # shared files
 shared/*
+
+# svg file
+*.svg

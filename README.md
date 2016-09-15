@@ -1,4 +1,4 @@
-[![Build Status](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/badge/icon)](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/) [![Go Report Card](https://goreportcard.com/badge/github.com/contiv/cluster/management/src)](https://goreportcard.com/report/github.com/contiv/cluster/management/src)
+[![Build Status](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/badge/icon)](http://contiv.ngrok.io/view/Cluster%20CI/job/Cluster%20Push%20Build%20Master/)[![Go Report Card](https://goreportcard.com/badge/github.com/contiv/cluster)](https://goreportcard.com/report/github.com/contiv/cluster) 
 
 ##Overview
 Contiv Cluster is an integrated collection of software that simplifies deployment, management, and maintenance

@@ -132,6 +132,15 @@ system-test:
 	exit $${res}
 	@echo "done running system-tests"
 
+profile:
+	@echo "running go-torch"
+	docker run --net=host \
+		-e PPROF_BINARY_PATH=/opt/golang/bin/ \
+		-v `pwd`/bin/:/opt/golang/bin/ \
+		uber/go-torch -u http://:9007 -p > torch.svg
+	@echo "=> Generated the flamegraph file ./torch.svg. It can be opened in a web browser for analysis <="
+	@echo "done running go-torch"
+
 # We are using date based versioning, so for consistent version during a build
 # we evaluate and set the value of version once in a file and use it in 'tar'
 # and 'release' targets.

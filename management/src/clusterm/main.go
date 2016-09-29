@@ -102,10 +102,7 @@ func startDaemon(c *cli.Context) {
 	}
 
 	// start manager's processing loop
-	errCh := make(chan error, 5)
-	go mgr.Run(errCh)
-	select {
-	case err := <-errCh:
+	if err := mgr.Run(); err != nil {
 		logrus.Fatalf("encountered an error: %s", err)
 	}
 }

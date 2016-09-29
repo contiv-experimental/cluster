@@ -33,9 +33,10 @@ func (m *Manager) enqueueMonitorEvent(events []monitor.Event) {
 	}
 }
 
-func (m *Manager) monitorLoop(errCh chan error) {
+func (m *Manager) monitorLoop() error {
 	if err := m.monitor.Start(); err != nil {
 		logrus.Errorf("monitoring subsystem encountered a failure. Error: %s", err)
-		errCh <- err
+		return err
 	}
+	return nil
 }

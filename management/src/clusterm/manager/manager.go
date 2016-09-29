@@ -19,6 +19,8 @@ import (
 	collinsinv "github.com/contiv/cluster/management/src/inventory/collins"
 	"github.com/contiv/cluster/management/src/monitor"
 	"github.com/contiv/errored"
+	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
 )
 
 // node is an aggregate structure that contains information about a cluster
@@ -95,23 +97,34 @@ func NewManager(config *Config, configFile string) (*Manager, error) {
 }
 
 // Run triggers the manager loops
-func (m *Manager) Run(errCh chan error) {
+func (m *Manager) Run() error {
 
-	apiServingCh := make(chan struct{}, 1)
+	eg, _ := errgroup.WithContext(context.Background())
 
 	// start http server for servicing REST api endpoints. It feeds api/ux events.
-	go m.apiLoop(errCh, apiServingCh)
+	apiServingCh := make(chan struct{}, 1)
+	eg.Go(func() error { return m.apiLoop(apiServingCh) })
 
 	// start monitor subsystem. It feeds node state monitoring events.
 	// It needs to be started after api loop as monitor subsystem post events through API endpoints.
 	// Additionally, we wait for api loop to signal that it has setup socket to receive requests
 	<-apiServingCh
-	go m.monitorLoop(errCh)
+	eg.Go(m.monitorLoop)
 
 	// start signal handler loop.
 	// It needs to be started after api loop as signal handler posts events through API endpoints.
-	go m.signalLoop()
+	eg.Go(
+		func() error {
+			m.signalLoop()
+			return nil
+		})
 
 	// start the event loop. It processes the events.
-	go m.eventLoop()
+	eg.Go(
+		func() error {
+			m.eventLoop()
+			return nil
+		})
+
+	return eg.Wait()
 }

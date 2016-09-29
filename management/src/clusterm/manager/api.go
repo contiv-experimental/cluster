@@ -70,7 +70,7 @@ func errNilConfig() error {
 	return errored.Errorf("nil value specified for clusterm configuration")
 }
 
-func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
+func (m *Manager) apiLoop(servingCh chan struct{}) error {
 	//set following headers for requests expecting a body
 	jsonContentHdrs := []string{"Content-Type", "application/json"}
 	//set following headers for requests that don't expect a body like get node info.
@@ -115,8 +115,7 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 	l, err := net.Listen("tcp", m.addr)
 	if err != nil {
 		logrus.Errorf("Error setting up listener. Error: %s", err)
-		errCh <- err
-		return
+		return err
 	}
 
 	//signal that socket is being served
@@ -124,9 +123,10 @@ func (m *Manager) apiLoop(errCh chan error, servingCh chan struct{}) {
 
 	if err := http.Serve(l, r); err != nil {
 		logrus.Errorf("Error listening for http requests. Error: %s", err)
-		errCh <- err
-		return
+		return err
 	}
+
+	return nil
 }
 
 type postCallback func(req *APIRequest) error
